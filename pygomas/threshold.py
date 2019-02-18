@@ -1,11 +1,11 @@
-class CThreshold:
+class Threshold(object):
 
     def __init__(self):
-        self.m_iHealth = 50
-        self.m_iAmmo = 50
-        self.m_iAim = 1
-        self.m_iShot = 1
-        self.m_iLook = 1
+        self.health = 50
+        self.ammo = 50
+        self.aim = 1
+        self.shot = 1
+        self.look = 1
 
     '''/**
     * Get the stablished limit of health. Agent can perform some actions if
@@ -14,8 +14,8 @@ class CThreshold:
     * @return m_iHealth: current threshold for health
     *
     */'''
-    def GetHealth(self):
-        return self.m_iHealth
+    def get_health(self):
+        return self.health
 
     '''/**
     * Get the stablished limit of ammunition. Agent can perform some actions
@@ -24,8 +24,8 @@ class CThreshold:
     * @return m_iAmmo: current threshold for ammo
     *
     */'''
-    def GetAmmo(self):
-        return self.m_iAmmo
+    def get_ammo(self):
+        return self.ammo
 
     '''/**
     * Get the stablished number of times that the agent must aim the enemy
@@ -34,8 +34,8 @@ class CThreshold:
     * @return m_iAim: current threshold for aim
     *
     */'''
-    def GetAim(self):
-        return self.m_iAim
+    def get_aim(self):
+        return self.aim
 
     '''/**
     * Get the stablished number of times that the agent must shoot
@@ -44,8 +44,8 @@ class CThreshold:
     * @return m_iShot: current threshold for shot
     *
     */'''
-    def GetShot(self):
-        return self.m_iShot
+    def get_shot(self):
+        return self.shot
 
     '''/**
     * Get the stablished number of times (cycles) that the agent must wait
@@ -54,8 +54,8 @@ class CThreshold:
     * @return m_iLook: current threshold for look
     *
     */'''
-    def GetLook(self):
-        return self.m_iLook
+    def get_look(self):
+        return self.look
 
     '''/**
     * Stablish the limit of health. Agent can perform some actions if its
@@ -65,12 +65,12 @@ class CThreshold:
     * @param _iHealth desired threshold for health
     *
     */'''
-    def SetHealth(self, _iHealth):
-        if _iHealth > 100:
-            _iHealth = 100
-        if _iHealth < 0:
-            _iHealth = 0
-        self.m_iHealth = _iHealth
+    def set_health(self, health):
+        if health > 100:
+            health = 100
+        if health < 0:
+            health = 0
+        self.health = health
 
     '''/**
     * Stablish the limit of ammunition. Agent can perform some actions if its
@@ -80,12 +80,12 @@ class CThreshold:
     * @param _iAmmo desired threshold for ammo
     *
     */'''
-    def SetAmmo(self, _iAmmo):
-        if _iAmmo > 100:
-            _iAmmo = 100
-        if _iAmmo < 0:
-            _iAmmo = 0
-        self.m_iAmmo = _iAmmo
+    def set_ammo(self, ammo):
+        if ammo > 100:
+            ammo = 100
+        if ammo < 0:
+            ammo = 0
+        self.ammo = ammo
 
     '''/**
     * Stablish the number of times that the agent must aim the enemy before
@@ -95,12 +95,12 @@ class CThreshold:
     * @param _iAim desired threshold for aim
     *
     */'''
-    def SetAim(self, _iAim):
-        if _iAim > 20:
-            _iAim = 20
-        if _iAim < 1:
-            _iAim = 1
-        self.m_iAim = _iAim
+    def set_aim(self, aim):
+        if aim > 20:
+            aim = 20
+        if aim < 1:
+            aim = 1
+        self.aim = aim
 
     '''/**
     * Stablish the number of times that the agent must shoot consecutively
@@ -110,12 +110,12 @@ class CThreshold:
     * @param _iShot desired threshold for shot
     *
     */'''
-    def SetShot(self, _iShot):
-        if _iShot > 20:
-            _iShot = 20
-        if _iShot < 1:
-            _iShot = 1
-        self.m_iShot = _iShot
+    def set_shot(self, shot):
+        if shot > 20:
+            shot = 20
+        if shot < 1:
+            shot = 1
+        self.shot = shot
 
     '''/**
     * Stablish the number of times (cycles) that the agent must wait (moving
@@ -124,9 +124,9 @@ class CThreshold:
     * @param _iLook desired threshold for look
     *
     */'''
-    def SetLook(self, _iLook):
-        if _iLook > 100:
-            _iLook = 100
-        if _iLook < 0:
-            _iLook = 0
-        self.m_iLook = _iLook
+    def set_look(self, look):
+        if look > 100:
+            look = 100
+        if look < 0:
+            look = 0
+        self.look = look

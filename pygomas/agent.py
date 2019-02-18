@@ -1,30 +1,33 @@
+from loguru import logger
+
 from spade.agent import Agent
 from spade.behaviour import OneShotBehaviour
 from spade.message import Message
 
 
-class CJGomasAgent(Agent):
+class AbstractAgent(Agent):
     def __init__(self, jid, passwd="secret", team=0, service_jid="cservice@localhost", verify_security=False):
-        self.m_ServiceList = list()
+        self.services = list()
         self._name = jid
-        self.m_iPositionX = None
-        self.m_iPositionZ = None
-        self.m_eTeam = team
+        self.position_x = None
+        self.position_z = None
+        self.team = team
         self.service_jid = service_jid
 
-        Agent.__init__(self, jid, passwd, verify_security)
+        super().__init__(jid=jid, password=passwd, verify_security=verify_security)
 
     def start(self, auto_register=True):
-        Agent.start(self, auto_register=auto_register)
-        if self.m_ServiceList:
-            for service in self.m_ServiceList:
-                print("   * Name: " + self.name)
-                print("   * Type: " + service)
+        future = super().start(auto_register=auto_register)
+        if self.services:
+            for service in self.services:
+                logger.info("   * Name: " + self.name)
+                logger.info("   * Type: " + service)
                 self.register_service(service)
+        return future
 
-    def take_down(self):
+    def stop(self, timeout=5):
         self.deregister_agent()
-        self.stop()
+        super().stop(timeout=timeout)
 
     def register_service(self, service_name):
         class RegisterBehaviour(OneShotBehaviour):

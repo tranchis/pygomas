@@ -1,7 +1,7 @@
 import math
 
 
-class Vector3D:
+class Vector3D(object):
 
     # Modulo
     def length(self):

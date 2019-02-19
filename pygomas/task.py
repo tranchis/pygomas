@@ -1,3 +1,7 @@
+import time
+from pqdict import maxpq
+
+from .ontology import X, Y, Z
 from .vector import Vector3D
 
 TASK_NONE = 0
@@ -69,3 +73,74 @@ class Task(object):
         self.m_Position.y = _Position.y
         self.m_Position.z = _Position.z
     """
+
+
+class TaskManager(object):
+
+    def __init__(self):
+        self.tasks = dict()
+        self.tasks_heap = maxpq()
+        self.current_task = None
+        self.task_priority = dict()
+
+    def add_task(self, task_type, owner, content, priority=None):
+        """
+        Adds a task to the task list with a modified priority.
+
+        This method adds a task to the task list with the priority passed as parameter, non the standard priority.
+        If there is a task of same type and same owner, it doesn't create a new task:
+        simply substitutes some attributes with newer values.
+
+        :param task_type: one of the defined types of tasks.
+        :param owner: the agent that induces the creation of the task.
+        :param content: is a position: ( x , y , z ).
+        :param priority: priority of task
+        """
+
+        if priority is None:
+            priority = self.task_priority[task_type]
+
+        if task_type in self.tasks.keys():
+            task = self.tasks[task_type]
+
+        else:
+            task = Task()
+            task.jid = owner
+            task.type = task_type
+            if task_type in [TASK_PATROLLING, TASK_GET_OBJECTIVE, TASK_WALKING_PATH]:
+                task.is_erasable = False
+
+        task.priority = priority
+        task.stamp_time = time.time()
+
+        task.position.x = float(content[X])
+        task.position.y = float(content[Y])
+        task.position.z = float(content[Z])
+
+        self.tasks[task_type] = task
+        try:
+            self.tasks_heap.additem(task, priority)
+        except KeyError:
+            self.tasks_heap.pop(task)
+            self.tasks_heap.additem(task, priority)
+
+    def get_current_task(self):
+        return self.current_task
+
+    def set_priority(self, type_, priority):
+        self.task_priority[type_] = priority
+
+    def clear(self):
+        self.tasks = dict()
+        self.tasks_heap.clear()
+
+    def select_highest_priority_task(self):
+        task = self.tasks_heap.top()
+        self.current_task = task
+
+    def delete(self, type_):
+        self.tasks_heap.pop(self.tasks[type_])
+        del self.tasks[type_]
+
+    def __len__(self):
+        return len(self.tasks)

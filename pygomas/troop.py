@@ -2,7 +2,6 @@ import asyncio
 import json
 import random
 import time
-import threading
 
 from loguru import logger
 
@@ -16,11 +15,12 @@ from .ontology import MEDIC_SERVICE, AMMO_SERVICE, BACKUP_SERVICE, PERFORMATIVE,
     ANGLE, DISTANCE, HEALTH, AIM, SHOTS, DEC_HEALTH, VEL_X, VEL_Y, VEL_Z, HEAD_X, HEAD_Y, HEAD_Z, AMMO, \
     PERFORMATIVE_OBJECTIVE, PERFORMATIVE_INIT, PERFORMATIVE_GAME, PERFORMATIVE_PACK_TAKEN, PERFORMATIVE_SHOT, \
     PERFORMATIVE_DATA, PERFORMATIVE_SIGHT, PERFORMATIVE_GET, PERFORMATIVE_CFM, PERFORMATIVE_CFA, PERFORMATIVE_CFB
-from .agent import AbstractAgent
+from .agent import AbstractAgent, LONG_RECEIVE_WAIT
 from .threshold import Threshold
 from .map import TerrainMap
 from .mobile import Mobile
-from .task import Task, TASK_GET_OBJECTIVE, TASK_PATROLLING, TASK_WALKING_PATH, TASK_RUN_AWAY, TASK_GOTO_POSITION
+from .task import TASK_GET_OBJECTIVE, TASK_PATROLLING, TASK_WALKING_PATH, TASK_RUN_AWAY, TASK_GOTO_POSITION, \
+    TaskManager
 from .vector import Vector3D
 from .sight import Sight
 from .pack import PACK_MEDICPACK, PACK_AMMOPACK, PACK_OBJPACK, PACK_NONE
@@ -36,8 +36,6 @@ PRECISION_X = 0.5
 
 INTERVAL_TO_MOVE = 0.033
 INTERVAL_TO_LOOK = 0.500
-
-LONG_RECEIVE_WAIT = 1000000
 
 ARG_TEAM = 0
 
@@ -74,8 +72,7 @@ class Troop(AbstractAgent):
 
     def __init__(self, jid, passwd, team=TEAM_NONE, manager_jid="cmanager@localhost", service_jid="cservice@localhost"):
 
-        # Task List Lock
-        self.task_list_lock = threading.Lock()
+        self.task_manager = TaskManager()
 
         self.service_types = []
 
@@ -83,17 +80,8 @@ class Troop(AbstractAgent):
         self.manager = manager_jid
         self.service = service_jid
 
-        # List of ready-to-execute tasks
-        self.tasks = {}
-
-        # Variable used to point the current task in execution
-        self.current_task = None
-
         # Variable indicating if this agent is carrying the objective pack (flag)
         self.is_objective_carried = False
-
-        # Array of default values of priorities for each task
-        self.task_priority = {}
 
         # Array of points used in patrolling task
         self.control_points = []
@@ -146,11 +134,11 @@ class Troop(AbstractAgent):
         super().__init__(jid, passwd, team=team, service_jid=service_jid)
 
     def start(self, auto_register=True):
-        self.health = 100
+        self.health = MAX_HEALTH
         self.protection = 25
-        self.stamina = 100
-        self.power = 100
-        self.ammo = 100
+        self.stamina = MAX_STAMINA
+        self.power = MAX_POWER
+        self.ammo = MAX_AMMO
 
         # Send a welcome message, and wait for the beginning of match
         self.add_behaviour(self.CreateBasicTroopBehaviour())
@@ -179,7 +167,7 @@ class Troop(AbstractAgent):
         t.set_metadata(PERFORMATIVE, PERFORMATIVE_SHOT)
         self.add_behaviour(self.ShotBehaviour(period=0), t)
 
-        # Behaviour to inform JGomasManager our position, status, and so on
+        # Behaviour to inform manager our position, status, and so on
         self.add_behaviour(self.DataFromTroopBehaviour(period=0.3))
 
         # Behaviour to increment inner variables (Power, Stamina and Health Bars)
@@ -233,14 +221,14 @@ class Troop(AbstractAgent):
             if msg:
                 content = json.loads(msg.body)
                 if self.agent.team == TEAM_ALLIED:
-                    self.agent.add_task(TASK_GET_OBJECTIVE, self.agent.name, content)
+                    self.agent.task_manager.add_task(TASK_GET_OBJECTIVE, self.agent.name, content)
                     logger.info("Allied {} has its objective at {}".format(self.agent.name, content))
                 elif self.agent.team == TEAM_AXIS:
                     self.agent.create_control_points()
                     new_position = {X: self.agent.control_points[0].x,
                                     Y: self.agent.control_points[0].y,
                                     Z: self.agent.control_points[0].z}
-                    self.agent.add_task(TASK_PATROLLING, self.agent.name, new_position)
+                    self.agent.task_manager.add_task(TASK_PATROLLING, self.agent.name, new_position)
                     logger.info("Axis {} has its objective at {}".format(self.agent.name, str(new_position)))
 
     # Behaviour to listen to manager if game has finished
@@ -279,7 +267,7 @@ class Troop(AbstractAgent):
                               self.agent.map.allied_base.get_init_z()) / 2) + \
                             self.agent.map.allied_base.get_init_z()
                         new_position = {X: x, Y: y, Z: z}
-                        self.agent.add_task(TASK_GET_OBJECTIVE, self.agent.name, new_position)
+                        self.agent.task_manager.add_task(TASK_GET_OBJECTIVE, self.agent.name, new_position)
 
     # Behaviour to handle Shot messages
     class ShotBehaviour(PeriodicBehaviour):
@@ -292,9 +280,7 @@ class Troop(AbstractAgent):
                 self.agent.decrease_health(decrease_health)
                 if self.agent.health <= 0:
                     logger.info(self.agent.name + ": DEAD!!")
-                    self.agent.task_list_lock.acquire()
-                    self.agent.tasks = {}
-                    self.agent.task_list_lock.release()
+                    self.agent.task_manager.clear()
                     if self.agent.is_objective_carried:
                         self.agent.is_objective_carried = False
                     self.agent.stop()
@@ -445,9 +431,7 @@ class Troop(AbstractAgent):
     # Behaviours to handle our FSM
     class StandingState(State):
         async def run(self):
-            self.agent.task_list_lock.acquire()
-            num_tasks = len(self.agent.tasks)
-            self.agent.task_list_lock.release()
+            num_tasks = len(self.agent.task_manager)
             if num_tasks <= 0:
                 self.set_next_state(STATE_STANDING)
                 logger.info(self.agent.name + ": Behaviour ............ NO TASKS!!!")
@@ -455,27 +439,20 @@ class Troop(AbstractAgent):
                 return
 
             if self.agent.health <= 0:
-                self.agent.task_list_lock.acquire()
-                self.agent.tasks = {}
-                self.agent.task_list_lock.release()
+                self.agent.task_manager.clear()
                 self.set_next_state(STATE_STANDING)  # if we have nothing to do, go to QUIT state
 
                 return
 
             self.agent.update_targets()
 
-            max_priority = -100000
-            self.agent.task_list_lock.acquire()
-            for task in self.agent.tasks.values():
-                if task.priority > max_priority:
-                    max_priority = task.priority
-                    self.agent.current_task = task
-            logger.info(self.agent.name + ": nos quedamos con la tarea con prioridad " + str(self.agent.current_task))
-            self.agent.task_list_lock.release()
+            self.agent.task_manager.select_highest_priority_task()
+            logger.info(self.agent.name + ": select task with priority {}".
+                        format(self.agent.task_manager.get_current_task()))
 
-            self.agent.movement.destination.x = self.agent.current_task.position.x
-            self.agent.movement.destination.y = self.agent.current_task.position.y
-            self.agent.movement.destination.z = self.agent.current_task.position.z
+            self.agent.movement.destination.x = self.agent.task_manager.get_current_task().position.x
+            self.agent.movement.destination.y = self.agent.task_manager.get_current_task().position.y
+            self.agent.movement.destination.z = self.agent.task_manager.get_current_task().position.z
 
             self.agent.movement.calculate_new_orientation()
             self.set_next_state(STATE_GOTO_TARGET)
@@ -551,13 +528,11 @@ class Troop(AbstractAgent):
             logger.trace("position: {} destination: {}"
                          .format(self.agent.movement.position, self.agent.movement.destination))
 
-            self.agent.perform_target_reached(self.agent.current_task)
+            self.agent.perform_target_reached(self.agent.task_manager.get_current_task())
 
-            if self.agent.current_task.is_erasable:
-                self.agent.task_list_lock.acquire()
-                logger.info("Deleting task: {}".format(self.agent.current_task))
-                del self.agent.tasks[self.agent.current_task.type]
-                self.agent.task_list_lock.release()
+            if self.agent.task_manager.get_current_task().is_erasable:
+                logger.info("Deleting task: {}".format(self.agent.task_manager.get_current_task()))
+                self.agent.task_manager.delete(self.agent.task_manager.get_current_task().type)
 
             self.set_next_state(STATE_STANDING)
 
@@ -697,43 +672,6 @@ class Troop(AbstractAgent):
         x = int(int(x) / MAP_SCALE)
         z = int(int(z) / MAP_SCALE)
         return self.map.can_walk(x, z)
-
-    def add_task(self, task_type, owner, content, priority=None):
-        """
-        Adds a task to the task list with a modified priority.
-
-        This method adds a task to the task list with the priority passed as parameter, non the standard priority.
-        If there is a task of same type and same owner, it doesn't create a new task:
-        simply substitutes some attributes with newer values.
-
-        :param task_type: one of the defined types of tasks.
-        :param owner: the agent that induces the creation of the task.
-        :param content: is a position: ( x , y , z ).
-        :param priority: priority of task
-        """
-        self.task_list_lock.acquire()
-        if priority is None:
-            priority = self.task_priority[task_type]
-
-        if task_type in self.tasks.keys():
-            task = self.tasks[task_type]
-
-        else:
-            task = Task()
-            task.jid = owner
-            task.type = task_type
-            if task_type in [TASK_PATROLLING, TASK_GET_OBJECTIVE, TASK_WALKING_PATH]:
-                task.is_erasable = False
-
-        task.priority = priority
-        task.stamp_time = time.time()
-
-        task.position.x = float(content[X])
-        task.position.y = float(content[Y])
-        task.position.z = float(content[Z])
-
-        self.tasks[task_type] = task
-        self.task_list_lock.release()
 
     async def look(self):
         """
@@ -1052,7 +990,7 @@ class Troop(AbstractAgent):
             new_position = {X: self.control_points[self.control_points_index].x,
                             Y: self.control_points[self.control_points_index].y,
                             Z: self.control_points[self.control_points_index].z}
-            self.add_task(TASK_PATROLLING, self.name, new_position)
+            self.task_manager.add_task(TASK_PATROLLING, self.name, new_position)
 
         elif current_task.type == TASK_WALKING_PATH:
             self.a_star_path_index += 1
@@ -1063,7 +1001,7 @@ class Troop(AbstractAgent):
                 new_position = {X: self.a_star_path[self.a_star_path_index].x,
                                 Y: self.a_star_path[self.a_star_path_index].y,
                                 Z: self.a_star_path[self.a_star_path_index].z}
-                self.add_task(TASK_WALKING_PATH, self.name, new_position)
+                self.task_manager.add_task(TASK_WALKING_PATH, self.name, new_position)
 
         elif current_task.type == TASK_RUN_AWAY:
             self.is_escaping = False
@@ -1107,7 +1045,8 @@ class Troop(AbstractAgent):
                 new_position = {X: self.movement.destination.x,
                                 Y: self.movement.destination.y,
                                 Z: self.movement.destination.z}
-                self.add_task(TASK_GOTO_POSITION, self.name, new_position, self.current_task.priority + 1)
+                self.task_manager.add_task(TASK_GOTO_POSITION, self.name, new_position,
+                                           self.task_manager.get_current_task().priority + 1)
                 is_done = True
                 break
 

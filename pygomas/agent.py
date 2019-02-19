@@ -4,6 +4,8 @@ from spade.agent import Agent
 from spade.behaviour import OneShotBehaviour
 from spade.message import Message
 
+LONG_RECEIVE_WAIT: int = 1000000
+
 
 class AbstractAgent(Agent):
     def __init__(self, jid, passwd="secret", team=0, service_jid="cservice@localhost", verify_security=False):

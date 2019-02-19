@@ -17,7 +17,7 @@ from .stats import GameStatistic
 from .mobile import Mobile
 from .vector import Vector3D
 from .pack import PACK_NAME, PACK_NONE, PACK_OBJPACK, PACK_MEDICPACK, PACK_AMMOPACK
-from .agent import AbstractAgent
+from .agent import AbstractAgent, LONG_RECEIVE_WAIT
 from .config import Config
 from .service import Service
 from .server import Server, TCP_AGL, TCP_COM
@@ -27,8 +27,6 @@ from .map import TerrainMap
 from .sight import Sight
 
 MILLISECONDS_IN_A_SECOND: int = 1000
-
-LONG_RECEIVE_WAIT: int = 100000
 
 DEFAULT_PACK_QTY: int = 20
 
@@ -77,8 +75,8 @@ class Manager(AbstractAgent):
                  name="cmanager@localhost",
                  passwd="secret",
                  players=10,
-                 # fps=0.033,
-                 fps=1,
+                 fps=0.033,
+                 #fps=1,
                  match_time=380,
                  path=None,
                  map_name="map_01",
@@ -244,19 +242,19 @@ class Manager(AbstractAgent):
             async def run(self):
                 self.counter += 1
                 # logger.error("INIT BEHAV [{}]".format(self.counter))
-                buffer = {}
-                for _ in range(self.agent.max_total_agents + 1):
-                   msg = await self.receive(timeout=0)
-                   if msg:
-                       buffer[msg.sender] = msg
-                   else:
-                       break
-                #msg = await self.receive(timeout=LONG_RECEIVE_WAIT)
+                #buffer = {}
+                #for _ in range(self.agent.max_total_agents + 1):
+                #   msg = await self.receive(timeout=0)
+                #   if msg:
+                #       buffer[msg.sender] = msg
+                #   else:
+                #       break
+                msg = await self.receive(timeout=LONG_RECEIVE_WAIT)
                 # logger.error("POST RECEIVE [{}]".format(self.counter))
                 if self.mailbox_size() > 0:
                     logger.error("TOO MUCH PENDING MSG: {}".format(self.mailbox_size()))
-                for msg in buffer.values():
-                #if msg:
+                #for msg in buffer.values():
+                if msg:
                     content = json.loads(msg.body)
                     id_agent = content[NAME]
                     self.agent.agents[id_agent].locate.position.x = float(content[X])
@@ -530,11 +528,6 @@ class Manager(AbstractAgent):
         xmax = self.agents[id_agent].locate.position.x + WIDTH
         zmax = self.agents[id_agent].locate.position.z + WIDTH
 
-        # logger.info("[{}] MANAGER [{} <{:.2f},{:.2f}>]".format(datetime.datetime.now(),
-        #                                                 id_agent,
-        #                                                 self.agents[id_agent].locate.position.x,
-        #                                                 self.agents[id_agent].locate.position.z))
-
         for din_object in self.din_objects.values():
             if din_object.type == PACK_MEDICPACK and self.agents[id_agent].health >= 100:
                 continue
@@ -548,7 +541,6 @@ class Manager(AbstractAgent):
                 # Agent has stepped on pack
                 send = False
                 id_ = din_object.jid
-                quantity = 0
                 type_ = din_object.type
                 owner = str(din_object.jid)
                 content = ""
@@ -670,12 +662,11 @@ class Manager(AbstractAgent):
             # check distance
             if distance < agent.locate.view_radius and distance < distance_terrain:
 
-                # testeamos el angulo
+                # check angle
                 angle = agent.locate.heading.dot(v)
                 try:
                     angle /= agent.locate.heading.length() * v.length()
-                except:
-                    # Division BY ZEROOOOO!!!!
+                except ZeroDivisionError:
                     pass
 
                 if angle >= 0:
@@ -726,13 +717,14 @@ class Manager(AbstractAgent):
 
         return objects_in_sight
 
-    # El agente con id '_idAgent' dispara
-    # mejor pasar el agente?
-    # @return el agente al que ha dado, o null si nada
     def shot(self, id_agent):
-
+        """
+        Agent with id id_agent shots
+        :param id_agent: agent who shots
+        :return: agent shot or None
+        """
         victim = None
-        min_distance = 1e10  # numero grande :-)
+        min_distance = 1e10  # big number
 
         agent = None
 
@@ -743,9 +735,8 @@ class Manager(AbstractAgent):
 
         if agent is None:
             return None
-            # return -1
 
-        # agentes
+        # agents
         for a in self.agents.values():
             if a.jid == id_agent:
                 continue
@@ -785,8 +776,12 @@ class Manager(AbstractAgent):
 
         return victim
 
-    # devuelve 0.0 si no intersecta
     def intersect(self, origin, vector):
+        """
+        :param origin:
+        :param vector:
+        :return: 0.0 if it does not intersect
+        """
 
         try:
             step = Vector3D(v=vector)

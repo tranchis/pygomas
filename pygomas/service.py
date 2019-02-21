@@ -6,6 +6,9 @@ from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour
 from spade.template import Template
 
+from .agent import LONG_RECEIVE_WAIT
+from .ontology import PERFORMATIVE, PERFORMATIVE_GET
+
 
 class Service(Agent):
 
@@ -52,37 +55,41 @@ class Service(Agent):
         self.add_behaviour(DeregisterAgentBehaviour(), template3)
 
         template4 = Template()
-        template4.set_metadata("performative", "get")
+        template4.set_metadata(PERFORMATIVE, PERFORMATIVE_GET)
         self.add_behaviour(GetServiceBehaviour(), template4)
 
 
 class RegisterServiceBehaviour(CyclicBehaviour):
     async def run(self):
-        msg = await self.receive(timeout=1000000)
-        self.agent.register_service(msg.body, str(msg.sender.bare()))
-        logger.info("Service " + msg.body + " of " + str(msg.sender) + " registered")
+        msg = await self.receive(timeout=LONG_RECEIVE_WAIT)
+        if msg:
+            self.agent.register_service(msg.body, str(msg.sender.bare()))
+            logger.info("Service " + msg.body + " of " + str(msg.sender) + " registered")
 
 
 class DeregisterServiceBehaviour(CyclicBehaviour):
     async def run(self):
-        msg = await self.receive(timeout=1000000)
-        self.agent.deregister_service(msg.body, msg.sender)
-        logger.info("Service " + msg.body + " of " + str(msg.sender) + " deregistered")
+        msg = await self.receive(timeout=LONG_RECEIVE_WAIT)
+        if msg:
+            self.agent.deregister_service(msg.body, msg.sender)
+            logger.info("Service " + msg.body + " of " + str(msg.sender) + " deregistered")
 
 
 class DeregisterAgentBehaviour(CyclicBehaviour):
     async def run(self):
-        msg = await self.receive(timeout=1000000)
-        self.agent.deregister_agent(str(msg.sender))
-        logger.info("Agent " + str(msg.sender) + " deregistered")
+        msg = await self.receive(timeout=LONG_RECEIVE_WAIT)
+        if msg:
+            self.agent.deregister_agent(str(msg.sender))
+            logger.info("Agent " + str(msg.sender) + " deregistered")
 
 
 class GetServiceBehaviour(CyclicBehaviour):
     async def run(self):
-        msg = await self.receive(timeout=1000000)
-        logger.info("Requesting service {}".format(msg.body))
-        names = self.agent.get_service(msg.body)
-        reply = msg.make_reply()
-        reply.body = json.dumps(names)
-        await self.send(reply)
-        logger.info("Services sent: {}".format(reply.body))
+        msg = await self.receive(timeout=LONG_RECEIVE_WAIT)
+        if msg:
+            logger.info("Requesting service {}".format(msg.body))
+            names = self.agent.get_service(msg.body)
+            reply = msg.make_reply()
+            reply.body = json.dumps(names)
+            await self.send(reply)
+            logger.info("Services sent: {}".format(reply.body))

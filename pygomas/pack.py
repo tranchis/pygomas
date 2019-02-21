@@ -1,8 +1,8 @@
 import random
 from loguru import logger
 
-from .ontology import PERFORMATIVE
-from .agent import AbstractAgent
+from .ontology import PERFORMATIVE, PERFORMATIVE_PACK
+from .agent import AbstractAgent, LONG_RECEIVE_WAIT
 from .vector import Vector3D
 from spade.message import Message
 from spade.behaviour import OneShotBehaviour, CyclicBehaviour
@@ -41,20 +41,20 @@ class Pack(AbstractAgent):
 
     async def setup(self):
         if self.type != PACK_OBJPACK:
-            offset = 10.0  # OJO
+            offset = 10.0  # WARN
             self.position.x += random.random() * offset
             self.position.z += random.random() * offset
 
         self.add_behaviour(self.CreatePackBehaviour())
 
         t = Template()
-        t.set_metadata(PERFORMATIVE, "pack")
+        t.set_metadata(PERFORMATIVE, PERFORMATIVE_PACK)
         self.add_behaviour(self.PackTakenResponderBehaviour(), t)
 
     class CreatePackBehaviour(OneShotBehaviour):
         async def run(self):
             msg = Message(to=self.agent.manager)
-            msg.set_metadata(PERFORMATIVE, "pack")
+            msg.set_metadata(PERFORMATIVE, PERFORMATIVE_PACK)
             msg.body = "NAME: " + self.agent.name + " CREATE TYPE: " + str(self.agent.type) + " TEAM: " + str(
                 self.agent.team) + " ( " + str(self.agent.position.x) + " , " + str(
                 self.agent.position.y) + " , " + str(self.agent.position.z) + " ) "
@@ -63,7 +63,7 @@ class Pack(AbstractAgent):
 
     class PackTakenResponderBehaviour(CyclicBehaviour):
         async def run(self):
-            msg = await self.receive(timeout=1000000)
+            msg = await self.receive(timeout=LONG_RECEIVE_WAIT)
             if msg is not None:
                 logger.info("PACK TAKEN: {}".format(msg))
                 self.agent.perform_pack_taken(msg.body)

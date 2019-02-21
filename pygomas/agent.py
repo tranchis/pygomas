@@ -4,7 +4,7 @@ from spade.agent import Agent
 from spade.behaviour import OneShotBehaviour
 from spade.message import Message
 
-LONG_RECEIVE_WAIT: int = 1000000
+LONG_RECEIVE_WAIT: int = 1
 
 
 class AbstractAgent(Agent):
@@ -30,6 +30,7 @@ class AbstractAgent(Agent):
     def stop(self, timeout=5):
         self.deregister_agent()
         super().stop(timeout=timeout)
+        logger.info("Agent {} was stopped.".format(self.name))
 
     def register_service(self, service_name):
         class RegisterBehaviour(OneShotBehaviour):

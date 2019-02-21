@@ -1,4 +1,4 @@
-from .pack import PACK_MEDICPACK, PACK_AMMOPACK
+from .pack import PACK_MEDICPACK, PACK_AMMOPACK, PACK_OBJPACK
 from .troop import TEAM_ALLIED, TEAM_AXIS
 
 
@@ -132,6 +132,59 @@ class GameStatistic:
         }
 
         self.match_duration = 0
+
+    def pack_taken(self, pack, team):
+        pack_team = TEAM_ALLIED if pack.team == TEAM_ALLIED else TEAM_AXIS
+
+        if pack.type == PACK_OBJPACK:
+            if team == TEAM_ALLIED:
+                self.team_statistic[TEAM_ALLIED].total_objective_taken += 1
+                self.team_statistic[TEAM_AXIS].total_objective_lost += 1
+            elif team == TEAM_AXIS:
+                self.team_statistic[TEAM_AXIS].total_objective_taken += 1
+        else:
+            if pack.team == team:
+                self.team_statistic[pack_team].packs[pack.type].team_taken += 1
+            else:
+                self.team_statistic[pack_team].packs[pack.type].enemy_taken += 1
+
+    def shot(self, victim, team):
+        team = TEAM_ALLIED if team == TEAM_ALLIED else TEAM_AXIS
+        self.team_statistic[team].total_shots += 1
+
+        if victim is None:
+            self.team_statistic[team].failed_shots += 1
+        elif team == victim.team:
+            self.team_statistic[team].team_hit_shots += 1
+        else:
+            self.team_statistic[team].enemy_hit_shots += 1
+
+    def objective_lost(self):
+        self.team_statistic[0].total_objective_lost += 1
+
+    def pack_destroyed(self, din_object):
+        if din_object.team == TEAM_ALLIED:
+            pack_team = TEAM_ALLIED
+        else:
+            pack_team = TEAM_AXIS
+        pack_type = -1
+        if din_object.type == PACK_MEDICPACK:
+            pack_type = PACK_MEDICPACK
+        elif din_object.type == PACK_AMMOPACK:
+            pack_type = PACK_AMMOPACK
+        if pack_type >= 0:
+            self.team_statistic[pack_team].packs[pack_type].not_taken += 1
+
+    def pack_created(self, din_object, team):
+        pack_team = TEAM_ALLIED if team == TEAM_ALLIED else TEAM_AXIS
+        pack_type = -1
+        if din_object.type == PACK_MEDICPACK:
+            pack_type = PACK_MEDICPACK
+        elif din_object.type == PACK_AMMOPACK:
+            pack_type = PACK_AMMOPACK
+
+        if pack_type >= 0:
+            self.team_statistic[pack_team].packs[pack_type].delivered += 1
 
     def calculate_data(self, allied_alive_players, axis_alive_players, allied_health, axis_health):
 

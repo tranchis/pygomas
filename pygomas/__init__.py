@@ -2,7 +2,6 @@ import pygomas.vector
 import pygomas.sight
 import pygomas.mobile
 import pygomas.service
-# import jgomas.registry
 import pygomas.threshold
 import pygomas.config
 import pygomas.map

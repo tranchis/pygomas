@@ -1,17 +1,19 @@
+import json
 import random
 from loguru import logger
 
-from .ontology import PERFORMATIVE, PERFORMATIVE_PACK
+from .ontology import PERFORMATIVE, PERFORMATIVE_PACK, PERFORMATIVE_PACK_TAKEN, TEAM, X, Y, Z, NAME, ACTION, CREATE, \
+    TYPE
 from .agent import AbstractAgent, LONG_RECEIVE_WAIT
 from .vector import Vector3D
 from spade.message import Message
 from spade.behaviour import OneShotBehaviour, CyclicBehaviour
 from spade.template import Template
 
-PACK_NONE = 1000
-PACK_MEDICPACK = 1001
-PACK_AMMOPACK = 1002
-PACK_OBJPACK = 1003
+PACK_NONE: int = 1000
+PACK_MEDICPACK: int = 1001
+PACK_AMMOPACK: int = 1002
+PACK_OBJPACK: int = 1003
 
 PACK_NAME = {
     PACK_NONE: 'NONE',
@@ -19,6 +21,8 @@ PACK_NAME = {
     PACK_AMMOPACK: 'AMMO',
     PACK_OBJPACK: 'OBJ'
 }
+
+PACK_AUTODESTROY_TIMEOUT: int = 25
 
 
 class Pack(AbstractAgent):
@@ -33,9 +37,9 @@ class Pack(AbstractAgent):
         self.manager = manager_jid
 
         self.position = Vector3D()
-        self.position.x = (x * 8)
+        self.position.x = x
         self.position.y = 0
-        self.position.z = (z * 8)
+        self.position.z = z
 
         self.team = team
 
@@ -48,16 +52,22 @@ class Pack(AbstractAgent):
         self.add_behaviour(self.CreatePackBehaviour())
 
         t = Template()
-        t.set_metadata(PERFORMATIVE, PERFORMATIVE_PACK)
+        t.set_metadata(PERFORMATIVE, PERFORMATIVE_PACK_TAKEN)
         self.add_behaviour(self.PackTakenResponderBehaviour(), t)
 
     class CreatePackBehaviour(OneShotBehaviour):
         async def run(self):
             msg = Message(to=self.agent.manager)
             msg.set_metadata(PERFORMATIVE, PERFORMATIVE_PACK)
-            msg.body = "NAME: " + self.agent.name + " CREATE TYPE: " + str(self.agent.type) + " TEAM: " + str(
-                self.agent.team) + " ( " + str(self.agent.position.x) + " , " + str(
-                self.agent.position.y) + " , " + str(self.agent.position.z) + " ) "
+            msg.body = json.dumps({
+                NAME: self.agent.name,
+                ACTION: CREATE,
+                TYPE: self.agent.type,
+                TEAM: self.agent.team,
+                X: self.agent.position.x,
+                Y: self.agent.position.y,
+                Z: self.agent.position.z
+            })
             await self.send(msg)
             logger.info("CreatePack msg sent: {}".format(msg))
 
@@ -65,7 +75,6 @@ class Pack(AbstractAgent):
         async def run(self):
             msg = await self.receive(timeout=LONG_RECEIVE_WAIT)
             if msg is not None:
-                logger.info("PACK TAKEN: {}".format(msg))
                 self.agent.perform_pack_taken(msg.body)
 
     # virtual function for overloading

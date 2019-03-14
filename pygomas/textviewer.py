@@ -44,7 +44,7 @@ def agl_parse(data):
         agent_data = agent_data[15:]
 
     f.write("DIN_DATA:" + str(din_data))
-    ndin = int(din_data[0])
+    ndin = int(din_data[0]) if din_data else 0
     f.write("NDIN = %s\n" % (str(ndin)))
     din_data = din_data[1:]
     for din in range(ndin):
@@ -83,6 +83,8 @@ def draw():
             for x in range(int(axis_base[0]) * factor, int(axis_base[2]) * factor):
                 f.write("BASE " + str(y) + " " + str(x))
                 stdscr.addch(y, x, " ", curses.color_pair(3))
+
+
         curses.init_pair(2, curses.COLOR_BLACK, curses.COLOR_YELLOW)  # DINOBJECTS
         # stdscr.addch(objective_y, objective_x*factor, "F", curses.color_pair(2))
         # f.write("OBJECTIVE "+str(objective_y)+" "+str(objective_x))
@@ -138,13 +140,11 @@ def draw():
             # Write stats
             if int(v["health"]):
                 if v["team"] == "100":
-                    # stats_allied += " | " + k + " " + v["health"] + " " + v["ammo"] + " "
                     if int(v["health"]) > 0:
                         stats_allied += " | %s %s %03d %03d " % (c, k, int(v["health"]), int(v["ammo"]))
                     else:
                         stats_allied += " | %s %s --- --- " % (c, k)
                 elif v["team"] == "200":
-                    # stats_axis += k + " " + v["health"] + " " + v["ammo"] + " "
                     if int(v["health"]) > 0:
                         stats_axis += " | %s %s %03d %03d " % (c, k, int(v["health"]), int(v["ammo"]))
                     else:

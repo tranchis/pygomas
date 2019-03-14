@@ -1,5 +1,5 @@
 from .pack import PACK_MEDICPACK, PACK_AMMOPACK, PACK_OBJPACK
-from .troop import TEAM_ALLIED, TEAM_AXIS
+from pygomas.ontology import TEAM_ALLIED, TEAM_AXIS
 
 
 class PackStatistic:

@@ -1,8 +1,11 @@
 import os
 
+import numpy as np
 from loguru import logger
 
 from .vector import Vector3D
+
+MAP_SCALE = 8
 
 
 class Base:
@@ -47,7 +50,7 @@ class Terrain:
 
 class TerrainMap:
     def __init__(self):
-        self.terrain = None
+        self.terrain = np.full((0, 0), 0)
         self.allied_base = Base()
         self.axis_base = Base()
         self.target = Vector3D()
@@ -71,15 +74,15 @@ class TerrainMap:
         return self.target.z
 
     def can_walk(self, x, z):
-        if x < 0 or z < 0 or x >= self.size_x or z >= self.size_z or not self.terrain:
+        if x < 0 or z < 0 or x >= self.size_x or z >= self.size_z or len(self.terrain) == 0:
             logger.info("Can't walk outside the map! {}:{} <> {}:{}".format(x, z, self.size_x, self.size_z))
             return False
 
-        # logger.info("self.terrain[{}][{}]: {}".format(x, z, self.terrain[x][z]))
+        # logger.info("self.terrain[{}][{}]: {}".format(x, z, self.terrain[x][z].can_walk))
         return self.terrain[x][z].can_walk
 
     def get_cost(self, x, z):
-        if x < 0 or z < 0 or x >= self.size_x or z >= self.size_z or not self.terrain:
+        if x < 0 or z < 0 or x >= self.size_x or z >= self.size_z or len(self.terrain) == 0:
             return 2 * 10000
 
         return self.terrain[x][z].cost
@@ -92,36 +95,36 @@ class TerrainMap:
         line = file.readline()  # JADE_OBJECTIVE:  x y
         tokens = line.split()
         # JADE_OBJECTIVE:
-        self.target.x = int(tokens[1]) * 8  # x
+        self.target.x = int(tokens[1]) * MAP_SCALE  # x
         self.target.y = 0
-        self.target.z = int(tokens[2]) * 8  # y
-        logger.info(f" OBJECTIVE: ( {self.target.x}, {self.target.z} )")
+        self.target.z = int(tokens[2]) * MAP_SCALE  # y
+        logger.info(f" OBJECTIVE: ({self.target.x}, {self.target.z})")
 
         line = file.readline()  # JADE_SPAWN_ALLIED: x1 y1 x2 y2
         tokens = line.split()
         # JADE_OBJECTIVE:
-        self.allied_base.init.x = int(tokens[1]) * 8  # x1
-        self.allied_base.init.z = int(tokens[2]) * 8  # z1
-        self.allied_base.end.x = int(tokens[3]) * 8  # x2
-        self.allied_base.end.z = int(tokens[4]) * 8  # z2
+        self.allied_base.init.x = int(tokens[1]) * MAP_SCALE  # x1
+        self.allied_base.init.z = int(tokens[2]) * MAP_SCALE  # z1
+        self.allied_base.end.x = int(tokens[3]) * MAP_SCALE  # x2
+        self.allied_base.end.z = int(tokens[4]) * MAP_SCALE  # z2
         logger.info(f" ALLIED BASE: ({self.allied_base.init.x}, {self.allied_base.init.z})"
                     f" ({self.allied_base.end.x}, {self.allied_base.end.z})")
 
         line = file.readline()  # JADE_SPAWN_AXIS: x1 y1 x2 y2
         tokens = line.split()
         # JADE_OBJECTIVE:
-        self.axis_base.init.x = int(tokens[1]) * 8  # x1
-        self.axis_base.init.z = int(tokens[2]) * 8  # z1
-        self.axis_base.end.x = int(tokens[3]) * 8  # x2
-        self.axis_base.end.z = int(tokens[4]) * 8  # z2
+        self.axis_base.init.x = int(tokens[1]) * MAP_SCALE  # x1
+        self.axis_base.init.z = int(tokens[2]) * MAP_SCALE  # z1
+        self.axis_base.end.x = int(tokens[3]) * MAP_SCALE  # x2
+        self.axis_base.end.z = int(tokens[4]) * MAP_SCALE  # z2
         logger.info(f" AXIS BASE: ({self.axis_base.init.x}, {self.axis_base.init.z}) "
-                    f"({self.axis_base.end.x}, {self.axis_base.end.z}")
+                    f"({self.axis_base.end.x}, {self.axis_base.end.z})")
 
         line = file.readline()  # JADE_COST_MAP: w h name
         tokens = line.split()
         # JADE_COST_MAP:
-        self.size_x = int(tokens[1])
-        self.size_z = int(tokens[2])
+        self.size_x = int(tokens[1]) * MAP_SCALE
+        self.size_z = int(tokens[2]) * MAP_SCALE
         cost_map_name = tokens[3]
         logger.info(f" COST MAP: ({self.size_x} x {self.size_z}) {cost_map_name}")
 
@@ -134,23 +137,31 @@ class TerrainMap:
         self.terrain = []
         for i in range(self.size_x):
             self.terrain.append([])
-            for j in range(self.size_z):
+            for _ in range(self.size_z):
                 self.terrain[i].append(Terrain())
 
         file = open(config.data_path + main_file + os.sep + cost_map_name)
 
-        for z in range(self.size_z):
-            for x in range(self.size_x):
+        for z in range(self.size_z // MAP_SCALE):
+            for x in range(self.size_x // MAP_SCALE):
                 c = file.read(1)
                 while c == '\n' or c == "\r":
                     c = file.read(1)  # read next char
                 if c == '*':
-                    self.terrain[x][z].can_walk = False
-                    self.terrain[x][z].cost = 10000
+                    for kx in range(MAP_SCALE):
+                        for kz in range(MAP_SCALE):
+                            self.terrain[x * MAP_SCALE + kx][z * MAP_SCALE + kz].can_walk = False
+                            self.terrain[x * MAP_SCALE + kx][z * MAP_SCALE + kz].cost = 10000
+                            self.terrain[x * MAP_SCALE + kx][z * MAP_SCALE + kz].height = 0.0
                 elif c == ' ':
-                    self.terrain[x][z].can_walk = True
-                    self.terrain[x][z].cost = 1
-                self.terrain[x][z].height = 0.0
+                    for kx in range(MAP_SCALE):
+                        for kz in range(MAP_SCALE):
+                            self.terrain[x * MAP_SCALE + kx][z * MAP_SCALE + kz].can_walk = True
+                            self.terrain[x * MAP_SCALE + kx][z * MAP_SCALE + kz].cost = 1
+                            self.terrain[x * MAP_SCALE + kx][z * MAP_SCALE + kz].height = 0.0
+                    #self.terrain[x][z].can_walk = True
+                    #self.terrain[x][z].cost = 1
+                #self.terrain[x][z].height = 0.0
         file.close()
 
     def __str__(self):

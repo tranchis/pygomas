@@ -2,7 +2,8 @@ import json
 
 from loguru import logger
 
-from .ontology import X, Y, Z
+from pygomas.ontology import TEAM_AXIS
+from .ontology import X, Y, Z, TEAM, PERFORMATIVE, PERFORMATIVE_INFORM
 from .pack import Pack, PACK_OBJPACK
 from .vector import Vector3D
 from spade.behaviour import CyclicBehaviour
@@ -25,16 +26,18 @@ class ObjectivePack(Pack):
         self.origin.y = self.position.y
         self.origin.z = self.position.z
         t = Template()
-        t.set_metadata("performative", "inform")
+        t.set_metadata(PERFORMATIVE, PERFORMATIVE_INFORM)
         self.add_behaviour(self.PackLostResponderBehaviour(), t)
 
+        await super().setup()
+
     def perform_pack_taken(self, content):
-        logger.info("[" + self.name + "]: Objective Taken!!")
+        logger.info("[{}]: Objective Taken!!".format(self.name ))
 
-        tokens = content.split()
-        team = tokens[5]
+        content = json.loads(content)
+        team = content[TEAM]
 
-        if team.upper() == "AXIS":
+        if team == TEAM_AXIS:
             self.is_taken = False
             self.position.x = self.origin.x
             self.position.y = self.origin.y

@@ -1,5 +1,6 @@
 import time
 from pqdict import maxpq
+from loguru import logger
 
 from .ontology import X, Y, Z
 from .vector import Vector3D
@@ -15,6 +16,7 @@ TASK_GOTO_POSITION = 7
 TASK_PATROLLING = 8
 TASK_WALKING_PATH = 9
 TASK_STOP_WALKING = 10
+TASK_RETURN_TO_BASE = 11
 MAX_TASK = 100
 
 TASK_NAME = {TASK_NONE: 'NONE',
@@ -27,7 +29,8 @@ TASK_NAME = {TASK_NONE: 'NONE',
              TASK_GOTO_POSITION: 'GOTO_POSITION',
              TASK_PATROLLING: 'PATROLLING',
              TASK_WALKING_PATH: 'WALKING_PATH',
-             TASK_STOP_WALKING: 'STOP_WALKING'
+             TASK_STOP_WALKING: 'STOP_WALKING',
+             TASK_RETURN_TO_BASE: 'RETURN_TO_BASE'
              }
 
 
@@ -83,7 +86,7 @@ class TaskManager(object):
         self.current_task = None
         self.task_priority = dict()
 
-    def add_task(self, task_type, owner, content, priority=None):
+    def add_task(self, task_type, jid, content, priority=None):
         """
         Adds a task to the task list with a modified priority.
 
@@ -92,23 +95,24 @@ class TaskManager(object):
         simply substitutes some attributes with newer values.
 
         :param task_type: one of the defined types of tasks.
-        :param owner: the agent that induces the creation of the task.
+        :param jid: the agent that induces the creation of the task.
         :param content: is a position: ( x , y , z ).
         :param priority: priority of task
         """
 
+        logger.info("Adding task type: {} owner: {}, content: {}".format(task_type, jid, content))
         if priority is None:
             priority = self.task_priority[task_type]
 
         if task_type in self.tasks.keys():
-            task = self.tasks[task_type]
+            task = self.tasks[(task_type, jid)]
 
         else:
             task = Task()
-            task.jid = owner
+            task.jid = jid
             task.type = task_type
-            if task_type in [TASK_PATROLLING, TASK_GET_OBJECTIVE, TASK_WALKING_PATH]:
-                task.is_erasable = False
+            #if task_type in [TASK_PATROLLING, TASK_WALKING_PATH, TASK_GET_OBJECTIVE]:
+            #    task.is_erasable = False
 
         task.priority = priority
         task.stamp_time = time.time()
@@ -117,7 +121,7 @@ class TaskManager(object):
         task.position.y = float(content[Y])
         task.position.z = float(content[Z])
 
-        self.tasks[task_type] = task
+        self.tasks[(task_type, jid)] = task
         try:
             self.tasks_heap.additem(task, priority)
         except KeyError:
@@ -127,8 +131,8 @@ class TaskManager(object):
     def get_current_task(self):
         return self.current_task
 
-    def set_priority(self, type_, priority):
-        self.task_priority[type_] = priority
+    def set_priority(self, task_type, priority):
+        self.task_priority[task_type] = priority
 
     def clear(self):
         self.tasks = dict()
@@ -138,9 +142,10 @@ class TaskManager(object):
         task = self.tasks_heap.top()
         self.current_task = task
 
-    def delete(self, type_):
-        self.tasks_heap.pop(self.tasks[type_])
-        del self.tasks[type_]
+    def delete(self, task):
+        task_type, jid = task.type, task.jid
+        self.tasks_heap.pop(self.tasks[(task_type, jid)])
+        del self.tasks[(task_type, jid)]
 
     def __len__(self):
         return len(self.tasks)

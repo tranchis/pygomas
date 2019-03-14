@@ -9,18 +9,19 @@ from spade.message import Message
 from spade.behaviour import OneShotBehaviour, PeriodicBehaviour, FSMBehaviour, State, CyclicBehaviour
 from spade.template import Template
 
+from pygomas.ontology import TEAM_NONE, TEAM_ALLIED, TEAM_AXIS
 from . import MIN_POWER, POWER_UNIT, MIN_STAMINA, STAMINA_UNIT, MIN_AMMO, MAX_AMMO, MAX_STAMINA, MAX_POWER, \
     MAX_HEALTH, MIN_HEALTH
 from .ontology import MEDIC_SERVICE, AMMO_SERVICE, BACKUP_SERVICE, PERFORMATIVE, NAME, TYPE, TEAM, MAP, X, Y, Z, QTY, \
     ANGLE, DISTANCE, HEALTH, AIM, SHOTS, DEC_HEALTH, VEL_X, VEL_Y, VEL_Z, HEAD_X, HEAD_Y, HEAD_Z, AMMO, \
     PERFORMATIVE_OBJECTIVE, PERFORMATIVE_INIT, PERFORMATIVE_GAME, PERFORMATIVE_SHOT, PERFORMATIVE_DATA, \
-    PERFORMATIVE_GET, PERFORMATIVE_CFM, PERFORMATIVE_CFA, PERFORMATIVE_CFB, FOV, PACKS
+    PERFORMATIVE_GET, PERFORMATIVE_CFM, PERFORMATIVE_CFA, PERFORMATIVE_CFB, FOV, PACKS, PERFORMATIVE_PACK_TAKEN
 from .agent import AbstractAgent, LONG_RECEIVE_WAIT
 from .threshold import Threshold
 from .map import TerrainMap
 from .mobile import Mobile
 from .task import TASK_GET_OBJECTIVE, TASK_PATROLLING, TASK_WALKING_PATH, TASK_RUN_AWAY, TASK_GOTO_POSITION, \
-    TaskManager
+    TaskManager, TASK_RETURN_TO_BASE
 from .vector import Vector3D
 from .sight import Sight
 from .pack import PACK_MEDICPACK, PACK_AMMOPACK, PACK_OBJPACK, PACK_NONE
@@ -29,8 +30,6 @@ from .config import Config
 DEFAULT_RADIUS = 20
 ESCAPE_RADIUS = 50
 
-MAP_SCALE = 8
-
 PRECISION_Z = 0.5
 PRECISION_X = 0.5
 
@@ -38,10 +37,6 @@ INTERVAL_TO_MOVE = 0.033
 INTERVAL_TO_LOOK = 0.500
 
 ARG_TEAM = 0
-
-TEAM_NONE = 0
-TEAM_ALLIED = 100
-TEAM_AXIS = 200
 
 CLASS_NONE = 0
 CLASS_SOLDIER = 1
@@ -92,14 +87,14 @@ class Troop(AbstractAgent):
         # Array of points used in walking (a calculated) path task
         self.a_star_path = []
 
-        # Current position in array m_AStarPath
+        # Current position in array AStarPath
         self.a_star_path_index = 0
 
         # List of objects in the agent's Field Of Vision
         self.fov_objects = []
 
         # Current aimed enemy
-        self.aimed_agent = None  # CSight
+        self.aimed_agent = None  # Sight
 
         self.eclass = 0
         self.health = 0
@@ -124,7 +119,7 @@ class Troop(AbstractAgent):
         self.team_count = 0
 
         # Limits of some variables (to trigger some events)
-        self.threshold = Threshold()  # CThreshold
+        self.threshold = Threshold()
 
         # Current Map
         self.map = None  # TerrainMap
@@ -158,9 +153,9 @@ class Troop(AbstractAgent):
         self.add_behaviour(self.GameFinishedBehaviour(), t)
 
         # Behaviour to handle Pack Taken messages
-        # t = Template()
-        # t.set_metadata(PERFORMATIVE, PERFORMATIVE_PACK_TAKEN)
-        # self.add_behaviour(self.PackTakenBehaviour(), t)
+        t = Template()
+        t.set_metadata(PERFORMATIVE, PERFORMATIVE_PACK_TAKEN)
+        self.add_behaviour(self.PackTakenBehaviour(), t)
 
         # Behaviour to handle Shot messages
         t = Template()
@@ -241,7 +236,7 @@ class Troop(AbstractAgent):
             if msg:
                 logger.info("[" + self.agent.name + "]: Bye!")
                 self.kill()
-                self.agent.stop()
+                await self.agent.die()
 
     # Behaviour to handle Pack Taken messages
     class PackTakenBehaviour(CyclicBehaviour):
@@ -249,8 +244,8 @@ class Troop(AbstractAgent):
             msg = await self.receive(timeout=LONG_RECEIVE_WAIT)
             if msg:
                 # Agent has stepped on pack
-                logger.info("PACK TAKEN:", msg.body)
                 content = json.loads(msg.body)
+                logger.info("{} got pack {}:".format(self.agent.name, content))
                 pack_type = int(content[TYPE])
                 quantity = int(content[QTY])
 
@@ -273,14 +268,13 @@ class Troop(AbstractAgent):
                     self.agent.task_manager.clear()
                     if self.agent.is_objective_carried:
                         self.agent.is_objective_carried = False
-                    self.agent.stop()
+                    await self.agent.die()
 
                 self.agent.perform_injury_action()
 
     # Behaviour to inform JGomasManager our position, status, and so on
     class DataFromTroopBehaviour(PeriodicBehaviour):
         async def run(self):
-            logger.info("Agent {} sending data.".format(self.agent.name))
             if not self.agent.movement:
                 return
             content = {NAME: self.agent.name,
@@ -301,10 +295,13 @@ class Troop(AbstractAgent):
             await self.send(msg)
 
             info = await self.receive(LONG_RECEIVE_WAIT)
+            if info is None:
+                return
             info = json.loads(info.body)
 
             packs = info[PACKS] if info[PACKS] is not None else []
             for pack in packs:
+                pack = json.loads(pack)
                 quantity = pack[QTY]
                 type_ = pack[TYPE]
                 self.agent.pack_taken(pack_type=type_, quantity=quantity)
@@ -414,8 +411,10 @@ class Troop(AbstractAgent):
             offset_x = self.map.axis_base.init.x
             offset_z = self.map.axis_base.init.z
 
-        x = (random.random() * w) + offset_x
-        z = (random.random() * h) + offset_z
+        x = int((random.random() * w) + offset_x)
+        z = int((random.random() * h) + offset_z)
+
+        logger.info("Spawn position for agent {} is ({}, {})".format(self.name, x, z))
 
         self.movement.position.x = x
         self.movement.position.y = 0
@@ -472,7 +471,7 @@ class Troop(AbstractAgent):
     class QuitState(State):
         async def run(self):
             logger.info(self.agent.name + ": Behaviour ............ [QUIT]")
-            self.agent.stop()
+            await self.agent.die()
             return
 
     class GoToTargetState(State):
@@ -538,11 +537,13 @@ class Troop(AbstractAgent):
             logger.trace("position: {} destination: {}"
                          .format(self.agent.movement.position, self.agent.movement.destination))
 
-            self.agent.perform_target_reached(self.agent.task_manager.get_current_task())
+            task = self.agent.task_manager.get_current_task()
 
-            if self.agent.task_manager.get_current_task().is_erasable:
-                logger.info("Deleting task: {}".format(self.agent.task_manager.get_current_task()))
-                self.agent.task_manager.delete(self.agent.task_manager.get_current_task().type)
+            #if self.agent.task_manager.get_current_task().is_erasable:
+            logger.info("Deleting task: {}".format(task))
+            self.agent.task_manager.delete(task)
+
+            self.agent.perform_target_reached(task)
 
             self.set_next_state(STATE_STANDING)
 
@@ -577,7 +578,7 @@ class Troop(AbstractAgent):
                       self.map.allied_base.get_init_z()) / 2) + \
                     self.map.allied_base.get_init_z()
                 new_position = {X: x, Y: y, Z: z}
-                self.task_manager.add_task(TASK_GET_OBJECTIVE, self.name, new_position)
+                self.task_manager.add_task(TASK_RETURN_TO_BASE, self.name, new_position)
 
     def get_health(self):
         """
@@ -701,8 +702,8 @@ class Troop(AbstractAgent):
         if z is None:
             z = self.movement.position.z
 
-        x = int(int(x) / MAP_SCALE)
-        z = int(int(z) / MAP_SCALE)
+        x = int(x)
+        z = int(z)
         return self.map.can_walk(x, z)
 
     def shot(self, shot_num):
@@ -793,13 +794,15 @@ class Troop(AbstractAgent):
         msg = Message()
         msg.set_metadata(PERFORMATIVE, PERFORMATIVE_GET)
         msg.to = self.service_jid
-        msg.body = MEDIC_SERVICE
+        msg.body = json.dumps({NAME: MEDIC_SERVICE, TEAM: self.team})
         await behaviour.send(msg)
         result = await behaviour.receive(timeout=LONG_RECEIVE_WAIT)
 
         if result:
             result = json.loads(result.body)
             self.medics_count = len(result)
+
+            logger.info("{} got {} medics: {}".format(self.name, self.medics_count, result))
 
             # Fill the REQUEST message
             msg = Message()
@@ -833,7 +836,7 @@ class Troop(AbstractAgent):
         msg = Message()
         msg.set_metadata(PERFORMATIVE, PERFORMATIVE_GET)
         msg.to = self.service_jid
-        msg.body = AMMO_SERVICE
+        msg.body = json.dumps({NAME: AMMO_SERVICE, TEAM: self.team})
         await behaviour.send(msg)
         result = await behaviour.receive(timeout=LONG_RECEIVE_WAIT)
 
@@ -1063,17 +1066,23 @@ class Troop(AbstractAgent):
             pass
 
         self.control_points = []  # Vector3D [iMaxCP]
-        for i in range(0, max_control_points - 1):
+        for i in range(max_control_points):
             control_point = Vector3D()
             while True:
                 x = self.map.get_target_x() + ((radius / 2) - (random.random() * radius))
+                x = max(0, x)
+                x = int(min(self.map.size_x - 1, x))
                 z = self.map.get_target_z() + ((radius / 2) - (random.random() * radius))
+                z = max(0, z)
+                z = int(min(self.map.size_z - 1, z))
 
                 if self.check_static_position(x, z):
                     control_point.x = x
                     control_point.z = z
                     self.control_points.append(control_point)
                     break
+
+            logger.success("Control point generated {}".format(control_point))
 
     def perform_escape_action(self):
         """

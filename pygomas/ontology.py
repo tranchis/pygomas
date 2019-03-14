@@ -1,3 +1,6 @@
+TEAM_NONE: int = 0
+TEAM_ALLIED:int = 100
+TEAM_AXIS: int = 200
 PERFORMATIVE: str = "performative"
 NAME: str = "name"
 TYPE: str = "type"
@@ -41,3 +44,10 @@ PERFORMATIVE_GET: str = "get"
 PERFORMATIVE_CFM: str = "cfm"
 PERFORMATIVE_CFA: str = "cfa"
 PERFORMATIVE_CFB: str = "cfb"
+ACTION: str = "ACTION"
+CREATE: str = "CREATE"
+DESTROY: str = "DESTROY"
+PERFORMATIVE_REGISTER_AGENT: str = "register_agent"
+PERFORMATIVE_DEREGISTER_AGENT: str = "deregister_agent"
+PERFORMATIVE_REGISTER_SERVICE: str = "register"
+PERFORMATIVE_DEREGISTER_SERVICE: str = "deregister_service"

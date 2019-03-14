@@ -9,11 +9,12 @@ from spade.behaviour import OneShotBehaviour, PeriodicBehaviour, CyclicBehaviour
 from spade.message import Message
 from spade.template import Template
 
-from pygomas import MIN_HEALTH
+from . import MIN_HEALTH
 from .ontology import PERFORMATIVE_GAME, PERFORMATIVE_PACK_TAKEN, PERFORMATIVE_PACK, PERFORMATIVE_SERVICES, \
     PERFORMATIVE_INFORM, PERFORMATIVE_PACK_LOST, PERFORMATIVE_SHOT, PERFORMATIVE_DATA, \
     MANAGEMENT_SERVICE, PERFORMATIVE_INIT, PERFORMATIVE, NAME, TYPE, TEAM, MAP, X, Y, Z, QTY, ANGLE, DISTANCE, HEALTH, \
-    AIM, SHOTS, DEC_HEALTH, VEL_X, VEL_Y, VEL_Z, HEAD_X, HEAD_Y, HEAD_Z, AMMO, PERFORMATIVE_OBJECTIVE, PACKS, FOV
+    AIM, SHOTS, DEC_HEALTH, VEL_X, VEL_Y, VEL_Z, HEAD_X, HEAD_Y, HEAD_Z, AMMO, PERFORMATIVE_OBJECTIVE, PACKS, FOV, \
+    ACTION, DESTROY, CREATE
 from .stats import GameStatistic
 from .mobile import Mobile
 from .vector import Vector3D
@@ -22,7 +23,8 @@ from .agent import AbstractAgent, LONG_RECEIVE_WAIT
 from .config import Config
 from .service import Service
 from .server import Server, TCP_AGL, TCP_COM
-from .troop import TEAM_ALLIED, TEAM_AXIS, CLASS_SOLDIER, TEAM_NONE
+from .troop import CLASS_SOLDIER
+from pygomas.ontology import TEAM_NONE, TEAM_ALLIED, TEAM_AXIS
 from .objpack import ObjectivePack
 from .map import TerrainMap
 from .sight import Sight
@@ -53,11 +55,11 @@ class MicroAgent:
         self.type = 0
 
     def __str__(self):
-        return "<{} Team({}) Health({}) Ammo({})>".format(self.jid, self.team, self.health, self.ammo)
+        return "<{} Team({}) Health({}) Ammo({}) Obj({})>".format(self.jid, self.team, self.health, self.ammo,
+                                                                  self.is_carrying_objective)
 
 
 class DinObject:
-    # index = 0
 
     def __str__(self):
         return "DO({},{})".format(PACK_NAME[self.type], self.position)
@@ -68,8 +70,6 @@ class DinObject:
         self.team = TEAM_NONE
         self.is_taken = False
         self.owner = 0
-        # DinObject.index += 1
-        # self.jid = DinObject.index
         self.jid = None
 
 
@@ -126,8 +126,8 @@ class Manager(AbstractAgent):
                         self.agent.agents[name] = MicroAgent()
 
                         self.agent.agents[name].jid = name
-                        self.agent.agents[name].type = type_
-                        self.agent.agents[name].team = team
+                        self.agent.agents[name].type = int(type_)
+                        self.agent.agents[name].team = int(team)
 
                         logger.success("Manager: [" + name + "] is Ready!")
                         self.agent.number_of_agents += 1
@@ -216,14 +216,16 @@ class Manager(AbstractAgent):
                             msg += str(agent.locate.heading.y) + ", "
                             msg += str(agent.locate.heading.z) + ") "
 
-                        msg += str(len(self.agent.din_objects)) + " "
+                        num_din_objects = sum([not din.is_taken for din in self.agent.din_objects.values()])
+                        msg += str(num_din_objects) + " "
 
                         for din_object in self.agent.din_objects.values():
-                            msg += str(din_object.jid) + " "
-                            msg += str(din_object.type) + " "
-                            msg += " (" + str(din_object.position.x) + ", "
-                            msg += str(din_object.position.y) + ", "
-                            msg += str(din_object.position.z) + ") "
+                            if not din_object.is_taken:
+                                msg += str(din_object.jid) + " "
+                                msg += str(din_object.type) + " "
+                                msg += " (" + str(din_object.position.x) + ", "
+                                msg += str(din_object.position.y) + ", "
+                                msg += str(din_object.position.z) + ") "
 
                         for task in self.agent.render_server.get_connections():
                             self.agent.render_server.send_msg_to_render_engine(task, TCP_AGL, msg)
@@ -236,30 +238,26 @@ class Manager(AbstractAgent):
     # Behaviour to listen to data (position, health?, an so on) from troop agents
     def launch_data_from_troop_listener_behaviour(self):
         class DataFromTroopBehaviour(CyclicBehaviour):
-            async def on_start(self):
-                self.counter = 0
-
             async def run(self):
-                self.counter += 1
                 # logger.error("INIT BEHAV [{}]".format(self.counter))
-                # buffer = {}
-                # for _ in range(self.agent.max_total_agents + 1):
-                #   msg = await self.receive(timeout=0)
-                #   if msg:
-                #       buffer[msg.sender] = msg
-                #   else:
-                #       break
+                #buffer = {}
+                #for _ in range(self.agent.max_total_agents + 1):
+                #    msg = await self.receive(timeout=LONG_RECEIVE_WAIT)
+                #    if msg:
+                #        buffer[msg.sender] = msg
+                #    else:
+                #        break
                 msg = await self.receive(timeout=LONG_RECEIVE_WAIT)
                 # logger.error("POST RECEIVE [{}]".format(self.counter))
                 if self.mailbox_size() > self.agent.max_total_agents + 1:
                     logger.error("TOO MUCH PENDING MSG: {}".format(self.mailbox_size()))
-                # for msg in buffer.values():
+                #for msg in buffer.values():
                 if msg:
                     content = json.loads(msg.body)
                     id_agent = content[NAME]
-                    self.agent.agents[id_agent].locate.position.x = float(content[X])
-                    self.agent.agents[id_agent].locate.position.y = float(content[Y])
-                    self.agent.agents[id_agent].locate.position.z = float(content[Z])
+                    self.agent.agents[id_agent].locate.position.x = int(content[X])
+                    self.agent.agents[id_agent].locate.position.y = int(content[Y])
+                    self.agent.agents[id_agent].locate.position.z = int(content[Z])
 
                     self.agent.agents[id_agent].locate.velocity.x = float(content[VEL_X])
                     self.agent.agents[id_agent].locate.velocity.y = float(content[VEL_Y])
@@ -282,7 +280,7 @@ class Manager(AbstractAgent):
 
                     # logger.error("POST CHECK OBJECTS [{}] {}".format(self.counter, msg.sender))
                     if self.agent.check_game_finished(id_agent):
-                        self.agent.inform_game_finished("ALLIED", self)
+                        await self.agent.inform_game_finished("ALLIED", self)
                         logger.success("\n\nManager:  GAME FINISHED!! Winner Team: ALLIED! (Target Returned)\n")
 
                 # logger.info("[{}] BEHAV FINISHED".format(datetime.datetime.now()))
@@ -384,13 +382,12 @@ class Manager(AbstractAgent):
             async def run(self):
                 msg = await self.receive(LONG_RECEIVE_WAIT)
                 if msg:
-                    content = msg.body
-                    tokens = content.split()
+                    content = json.loads(msg.body)
 
-                    id_ = tokens[1]
-                    action = tokens[2]
+                    id_ = content[NAME]
+                    action = content[ACTION]
 
-                    if action.upper() == "DESTROY":
+                    if action == DESTROY:
                         self.agent.game_statistic.pack_destroyed(self.agent.din_objects[id_])
 
                         try:
@@ -400,17 +397,13 @@ class Manager(AbstractAgent):
                             logger.info("Pack {} cannot be erased".format(id_))
                         return
 
-                    if action.upper() == "CREATE":
+                    if action == CREATE:
+                        type_ = int(content[TYPE])
+                        team = int(content[TEAM])
 
-                        index = tokens.index("TYPE:")  # // Get "TYPE:"
-                        type_ = int(tokens[index + 1])
-
-                        index = tokens.index("TEAM:")  # // Get "TEAM:"
-                        team = int(tokens[index + 1])
-
-                        x = float(tokens[index + 3])  # skip "("
-                        y = float(tokens[index + 5])  # skip ","
-                        z = float(tokens[index + 7])  # skip ","
+                        x = float(content[X])
+                        y = float(content[Y])
+                        z = float(content[Z])
 
                         din_object = DinObject()
                         din_object.jid = msg.sender
@@ -423,15 +416,10 @@ class Manager(AbstractAgent):
                         self.agent.din_objects[din_object.jid] = din_object
                         logger.info("Added DinObject {}".format(din_object))
 
-                        # reply = msg.make_reply()
-                        # reply.body = "ID: " + str(din_object.jid) + " "
-                        # await self.send(reply)
-                        # logger.info("CREATE sending: {}".format(reply))
-
                         self.agent.game_statistic.pack_created(din_object, team)
 
                     else:
-                        logger.warning("Action not identified: " + str(action))
+                        logger.warning("Action not identified: {}".format(action))
                         return
 
         template = Template()
@@ -468,11 +456,10 @@ class Manager(AbstractAgent):
                 continue
             if din_object.type == PACK_AMMOPACK and self.agents[id_agent].ammo >= 100:
                 continue
-            if din_object.type == PACK_OBJPACK and din_object.is_taken and din_object.owner > 0:
+            if din_object.type == PACK_OBJPACK and din_object.is_taken and din_object.owner != 0:
                 continue
 
             if xmin <= din_object.position.x <= xmax and zmin <= din_object.position.z <= zmax:
-
                 # Agent has stepped on pack
                 id_ = din_object.jid
                 type_ = din_object.type
@@ -502,14 +489,13 @@ class Manager(AbstractAgent):
                         logger.error("Could not delete the din object {}".format(id_))
 
                 elif din_object.type == PACK_OBJPACK:
-
                     if team == TEAM_ALLIED:
-                        logger.info(self.agents[id_agent].jid + ": got the objective pack " + str(din_object.jid))
+                        logger.info("{}: got the objective pack ".format(self.agents[id_agent].jid))
                         din_object.is_taken = True
                         din_object.owner = id_agent
                         din_object.position.x, din_object.position.y, din_object.position.z = 0.0, 0.0, 0.0
                         self.agents[id_agent].is_carrying_objective = True
-                        content = {TYPE: type_, QTY: 0, TEAM: "ALLIED"}
+                        content = {TYPE: type_, QTY: 0, TEAM: TEAM_ALLIED}
 
                     elif team == TEAM_AXIS:
                         if din_object.is_taken:
@@ -519,7 +505,7 @@ class Manager(AbstractAgent):
                             din_object.position.x = self.map.get_target_x()
                             din_object.position.y = self.map.get_target_y()
                             din_object.position.z = self.map.get_target_z()
-                            content = {TYPE: type_, QTY: 0, TEAM: "AXIS"}
+                            content = {TYPE: type_, QTY: 0, TEAM: TEAM_AXIS}
 
                 # else:
                 #    content = {TYPE: PACK_NONE, QTY: 0}
@@ -532,10 +518,11 @@ class Manager(AbstractAgent):
                     msg.body = content
                     await behaviour.send(msg)
 
-                    # msg = Message(to=self.agents[id_agent].jid)
-                    # msg.set_metadata(PERFORMATIVE, PERFORMATIVE_PACK_TAKEN)
-                    # msg.body = content
-                    # await behaviour.send(msg)
+                    msg_to_agent = Message(to=self.agents[id_agent].jid)
+                    msg_to_agent.set_metadata(PERFORMATIVE, PERFORMATIVE_PACK_TAKEN)
+                    msg_to_agent.body = content
+                    await behaviour.send(msg_to_agent)
+
                     packs.append(content)
         return packs
 
@@ -635,7 +622,7 @@ class Manager(AbstractAgent):
                         if angle <= dot_angle:
                             s = Sight()
                             s.distance = distance
-                            s.m_id = int(din_object.jid)
+                            s.m_id = din_object.jid
                             s.position = din_object.position
                             s.team = din_object.team
                             s.type = din_object.type
@@ -707,6 +694,10 @@ class Manager(AbstractAgent):
         """
 
         try:
+
+            if vector.length() == 0:
+                return 0.0
+
             step = Vector3D(v=vector)
             step.normalize()
             inc = 0
@@ -751,21 +742,20 @@ class Manager(AbstractAgent):
                     e += abs(step.x)
                     point.z += step.z
 
-                if not self.map.can_walk(int(math.floor(point.x / 8)), int(math.floor(point.z / 8))):
+                if not self.map.can_walk(int(math.floor(point.x)), int(math.floor(point.z))):
                     return error.length()
 
                 if point.x < 0 or point.y < 0 or point.z < 0:
                     break
-                if point.x >= (self.map.get_size_x() * 8) or point.z >= (self.map.get_size_z() * 8):
+                if point.x >= (self.map.get_size_x()) or point.z >= (self.map.get_size_z()):
                     break
                 error.add(step)
-        except:
-            logger.error("INTERSECT FAILED", origin, vector)
+        except Exception as e:
+            logger.error("INTERSECT FAILED: (origin: {}) (vector: {}): {}".format(origin, vector, e))
 
         return 0.0
 
     def check_game_finished(self, id_agent):
-
         if self.agents[id_agent].team == TEAM_AXIS:
             return False
         if not self.agents[id_agent].is_carrying_objective:
@@ -778,10 +768,11 @@ class Manager(AbstractAgent):
 
     async def create_objectives(self):
 
-        self.objective_agent = ObjectivePack(name="objectivepack@" + self.domain, passwd="secret",
+        jid = "objectivepack@" + self.domain
+        self.objective_agent = ObjectivePack(name=jid, passwd="secret",
                                              manager_jid=str(self.jid),
-                                             x=self.map.get_target_x() / 8,
-                                             z=self.map.get_target_z() / 8, team=TEAM_NONE)
+                                             x=self.map.get_target_x(),
+                                             z=self.map.get_target_z(), team=TEAM_NONE)
         await self.objective_agent.start()
 
     async def inform_objectives(self, behaviour):
@@ -802,7 +793,7 @@ class Manager(AbstractAgent):
         msg.set_metadata(PERFORMATIVE, PERFORMATIVE_GAME)
         msg.body = "GAME FINISHED!! Winner Team: " + str(winner_team)
         for agent in self.agents.values():
-            msg.to = agent.name
+            msg.to = agent.jid
             await behaviour.send(msg)
         for st in self.render_server.get_connections():
             try:

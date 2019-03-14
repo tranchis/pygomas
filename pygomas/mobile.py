@@ -2,6 +2,7 @@ import random
 import math
 from .vector import Vector3D
 
+MAP_SCALE = 1
 
 class Mobile(object):
 
@@ -15,10 +16,10 @@ class Mobile(object):
         self.min_x = self.min_z = self.max_x = self.max_z = 0
 
     def set_size(self, max_x, max_z):
-        self.min_x = 8
-        self.min_z = 8
-        self.max_x = (max_x * 8) - 8
-        self.max_z = (max_z * 8) - 8
+        self.min_x = MAP_SCALE
+        self.min_z = MAP_SCALE
+        self.max_x = (max_x * MAP_SCALE) - MAP_SCALE
+        self.max_z = (max_z * MAP_SCALE) - MAP_SCALE
 
     def calculate_position(self, dt):
 
@@ -52,19 +53,14 @@ class Mobile(object):
         x = self.position.x + ((random.random() * (radius_x * 2)) - radius_x)
         z = self.position.z + ((random.random() * (radius_y * 2)) - radius_y)
 
-        if x < self.min_x:
-            x = self.min_x
-        if x >= self.max_x:
-            x = self.max_x
-        if z < self.min_z:
-            z = self.min_z
-        if z > self.max_z:
-            z = self.max_z
+        x = min(x, self.min_x)
+        x = max(x, self.max_x)
+        z = min(z, self.min_z)
+        z = max(z, self.max_z)
 
         self.destination.x = x
         self.destination.y = 0.0
         self.destination.z = z
-        # print "NUEVO DESTINO CALCULADO: (" + str(x) + ", " + str(z) + ")"
 
     def get_destination(self):
         return self.destination

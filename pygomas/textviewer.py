@@ -1,18 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: UTF8 -*-
 import curses
-import time
 import socket
 import sys
 import copy
-import os
 
-objective_x = -1
-objective_y = -1
 allied_base = None
 axis_base = None
 graph = {}
-stdscr = None
 pad = None
 f = None
 agents = {}
@@ -20,12 +15,17 @@ dins = {}
 factor = 2
 
 
+def chunks(l, n):
+    """Yield successive n-sized chunks from l."""
+    for i in range(0, len(l), n):
+        yield l[i:i + n]
+
+
 def agl_parse(data):
     global allied_base
     global axis_base
-    global objective_x
-    global objective_y
     global agents
+    global dins
 
     f.write("\nAGL_PARSE\n")
     agl = data.split()
@@ -35,22 +35,27 @@ def agl_parse(data):
     f.write("NAGENTS = %s\n" % (str(nagents)))
     agent_data = agl[:separator]
     din_data = agl[separator:]
-    f.write("AGENT_DATA:" + str(agent_data))
+    f.write("AGENT_DATA: {}\n".format(agent_data))
     for i in range(nagents):
         agents[agent_data[0]] = {"type": agent_data[1], "team": agent_data[2], "health": agent_data[3],
-                                 "ammo": agent_data[4], "carrying": agent_data[5], "posx": agent_data[6].strip("(,)"),
-                                 "posy": agent_data[7].strip("(,)"), "posz": agent_data[8].strip("(,)")}
-        f.write("AGENT " + str(agents[agent_data[0]]))
+                                 "ammo": agent_data[4], "carrying": agent_data[5],
+                                 "posx": int(float(agent_data[6].strip("(,)"))),
+                                 "posy": int(float(agent_data[7].strip("(,)"))),
+                                 "posz": int(float(agent_data[8].strip("(,)")))}
+        f.write("AGENT {}\n".format(agents[agent_data[0]]))
         agent_data = agent_data[15:]
 
-    f.write("DIN_DATA:" + str(din_data))
+    f.write("DIN_DATA: {}\n".format(din_data))
     ndin = int(din_data[0]) if din_data else 0
     f.write("NDIN = %s\n" % (str(ndin)))
     din_data = din_data[1:]
+    dins = {}
     for din in range(ndin):
-        dins[din_data[0]] = {"type": din_data[1], "posx": din_data[2].strip("(,)"), "posy": din_data[3].strip("(,)"),
-                             "posz": din_data[4].strip("(,)")}
-        f.write("DIN " + str(dins[din_data[0]]))
+        dins[din_data[0]] = {"type": din_data[1],
+                             "posx": int(float(din_data[2].strip("(,)"))),
+                             "posy": int(float(din_data[3].strip("(,)"))),
+                             "posz": int(float(din_data[4].strip("(,)")))}
+        f.write("DIN {}\n".format(dins[din_data[0]]))
         din_data = din_data[5:]
 
 
@@ -58,36 +63,36 @@ def draw():
     global agents
     global factor
 
-    f.write("DRAW")
+    f.write("DRAW\n")
     # Draw Map
     for k, v in list(graph.items()):
-        f.write("DRAW " + str(k))
+        f.write("DRAW {}\n".format(k))
         try:
             newline = ""
-            for char in v: newline += char * factor
+            for char in v:
+                newline += char * factor
             stdscr.addstr(k, 0, str(newline))
         except:
             pass
 
-    # Draw bases and objective
+    # Draw bases
     try:
-        # print "ALLIED BASE: ",str(allied_base)
+        # ALLIED BASE
         curses.init_pair(4, curses.COLOR_WHITE, curses.COLOR_RED)  # ALLIED BASE
         for y in range(int(allied_base[1]), int(allied_base[3])):
             for x in range(int(allied_base[0]) * factor, int(allied_base[2]) * factor):
-                f.write("BASE " + str(y) + " " + str(x))
-                stdscr.addch(y, x, " ", curses.color_pair(4))
+                f.write("BASE " + str(y) + " " + str(x) + '; \n')
+                stdscr.addstr(y, x, " ", curses.color_pair(4))
         curses.init_pair(3, curses.COLOR_RED, curses.COLOR_BLUE)  # AXIS BASE
 
+        # AXIS BASE
         for y in range(int(axis_base[1]), int(axis_base[3])):
             for x in range(int(axis_base[0]) * factor, int(axis_base[2]) * factor):
-                f.write("BASE " + str(y) + " " + str(x))
-                stdscr.addch(y, x, " ", curses.color_pair(3))
+                f.write("BASE " + str(y) + " " + str(x) + '; \n')
+                stdscr.addstr(y, x, " ", curses.color_pair(3))
 
-
-        curses.init_pair(2, curses.COLOR_BLACK, curses.COLOR_YELLOW)  # DINOBJECTS
-        # stdscr.addch(objective_y, objective_x*factor, "F", curses.color_pair(2))
-        # f.write("OBJECTIVE "+str(objective_y)+" "+str(objective_x))
+        curses.init_pair(2, curses.COLOR_BLACK, curses.COLOR_YELLOW)
+        # PACKS
         for k, v in list(dins.items()):
             #  Type
             if v["type"] == "1001":
@@ -100,13 +105,15 @@ def draw():
                 c = "X"
             y = int(float(v["posz"]) / 8)
             x = int(float(v["posx"]) / (8 / factor))
-            stdscr.addch(y, x, c, curses.color_pair(2))
+            stdscr.addstr(y, x, c, curses.color_pair(2))
 
         curses.init_pair(5, curses.COLOR_BLACK, curses.COLOR_RED)  # ALLIED
         curses.init_pair(6, curses.COLOR_WHITE, curses.COLOR_BLUE)  # AXIS
         curses.init_pair(7, curses.COLOR_BLACK, curses.COLOR_WHITE)  #  OTHER / DEAD
-        stats_allied = ""
-        stats_axis = ""
+
+        # AGENTS
+        stats_allied = []  # ""
+        stats_axis = []  # ""
         for k, v in list(agents.items()):
             # Type
             if v["type"] == "0":
@@ -134,28 +141,38 @@ def draw():
             y = int(float(v["posz"]) / 8)
             x = int(float(v["posx"]) / (8 / factor))
             if int(v["health"]) > 0:
-                stdscr.addch(y, x, c, curses.color_pair(t))  #  Alive
+                stdscr.addstr(y, x, c, curses.color_pair(t))  #  Alive
             else:
-                stdscr.addch(y, x, "D", curses.color_pair(7))  #  Dead
+                stdscr.addstr(y, x, "D", curses.color_pair(7))  #  Dead
             # Write stats
-            if int(v["health"]):
-                if v["team"] == "100":
-                    if int(v["health"]) > 0:
-                        stats_allied += " | %s %s %03d %03d " % (c, k, int(v["health"]), int(v["ammo"]))
-                    else:
-                        stats_allied += " | %s %s --- --- " % (c, k)
-                elif v["team"] == "200":
-                    if int(v["health"]) > 0:
-                        stats_axis += " | %s %s %03d %03d " % (c, k, int(v["health"]), int(v["ammo"]))
-                    else:
-                        stats_axis += " | %s %s --- --- " % (c, k)
-        blank = "                                                                                 "
-        stdscr.addstr(33, 1, blank)
-        stdscr.addstr(33, 1, str(stats_allied), curses.color_pair(5))
-        stdscr.addstr(34, 1, blank)
-        stdscr.addstr(34, 1, str(stats_axis), curses.color_pair(6))
-    except Exception as e:
-        f.write("\nEXCEPTION IN DRAW: " + str(e) + "\n")
+            if v["team"] == "100":
+                if int(v["health"]) > 0:
+                    # stats_allied += " | %s %s %03d %03d " % (c, k, int(v["health"]), int(v["ammo"]))
+                    stats_allied.append(" | %s %s %03d %03d " % (c, k.ljust(4), int(v["health"]), int(v["ammo"])))
+                else:
+                    # stats_allied += " | %s %s --- --- " % (c, k)
+                    stats_allied.append(" | %s %s --- --- " % (c, k.ljust(4)))
+            elif v["team"] == "200":
+                if int(v["health"]) > 0:
+                    # stats_axis += " | %s %s %03d %03d " % (c, k, int(v["health"]), int(v["ammo"]))
+                    stats_axis.append(" | %s %s %03d %03d " % (c, k.ljust(4), int(v["health"]), int(v["ammo"])))
+                else:
+                    # stats_axis += " | %s %s --- --- " % (c, k)
+                    stats_axis.append(" | %s %s --- --- " % (c, k.ljust(4)))
+        blank = " " * 81
+        # stdscr.addstr(33, 1, blank)
+        row = 33
+        for _agents in chunks(stats_allied, 4):
+            line = "".join(_agents)
+            stdscr.addstr(row, 1, str(line), curses.color_pair(5))
+            row += 1
+        # stdscr.addstr(34, 1, blank)
+        for _agents in chunks(stats_axis, 4):
+            line = "".join(_agents)
+            stdscr.addstr(row, 1, str(line), curses.color_pair(6))
+            row += 1
+    except Exception as exc:
+        f.write("\nEXCEPTION IN DRAW: " + str(exc) + "\n")
 
     # Refresh screen
     try:
@@ -164,32 +181,26 @@ def draw():
         pass
 
 
-def loadMap(mapname):
+def load_map(map_name):
     global allied_base
     global axis_base
-    global objective_x
-    global objective_y
 
-    mapf = open("./maps/" + mapname + "/" + mapname + ".txt", "r")
+    mapf = open("./maps/" + map_name + "/" + map_name + ".txt", "r")
     for line in mapf.readlines():
-        if "JADE_OBJECTIVE" in line:
-            l = line.split()
-            objective_x = copy.copy(int(l[1]))
-            objective_y = copy.copy(int(l[2]))
-            f.write("OBJECTIVE:" + str(objective_x) + " " + str(objective_y))
-        elif "JADE_SPAWN_ALLIED" in line:
-            l = line.split()
-            l.pop(0)
-            allied_base = copy.copy(l)
-            f.write("ALLIED_BASE:" + str(l))
+        if "JADE_SPAWN_ALLIED" in line:
+            line = line.split()
+            line.pop(0)
+            allied_base = copy.copy(line)
+            f.write("\n ALLIED_BASE: {}\n".format(line))
         elif "JADE_SPAWN_AXIS" in line:
-            l = line.split()
-            l.pop(0)
-            axis_base = copy.copy(l)
+            line = line.split()
+            line.pop(0)
+            axis_base = copy.copy(line)
+            f.write("\n AXIS_BASE: {}\n".format(line))
     mapf.close()
     f.write("MAPF LOADED\n")
 
-    cost = open("./maps/" + mapname + "/" + mapname + "_cost.txt", "r")
+    cost = open("./maps/" + map_name + "/" + map_name + "_cost.txt", "r")
     y = 0
     for line in cost.readlines():
         graph[y] = line.strip("\r\n")
@@ -204,7 +215,6 @@ f = open("/tmp/tv.log", "w")
 f.write("LOG\n")
 
 # Init curses
-curses_up = False
 stdscr = curses.initscr()
 curses.start_color()
 curses.noecho()
@@ -220,55 +230,35 @@ try:
     # Init socket
     if len(sys.argv) < 2:
         ADDRESS = "localhost"
-        PORT = 8072
-    #	stdscr.addstr("ADDRESS: %s\n"%(ADDRESS))
-    #	stdscr.addstr("PORT: %s\n"%(str(PORT)))
-    #	stdscr.refresh()
+        PORT = 8001 #8072
     f.write("ADDRESS: %s\n" % (ADDRESS))
     f.write("PORT: %s\n" % (str(PORT)))
-    s = None
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     if s:
-        # time.sleep(1)
         s.connect((ADDRESS, PORT))
         rfile = s.makefile('rb', -1)
         wfile = s.makefile('wb', 0)
-        #		stdscr.addstr("SOCKET OPEN %s\n"%(str(s)))
-        #		stdscr.refresh()
         f.write("SOCKET OPEN %s\n" % (str(s)))
         data = rfile.readline()
         f.write("Server sent: %s\n" % (data))
-        #		stdscr.addstr("Server sent: %s\n"%(data))
-        #		stdscr.refresh()
-        wfile.write("READY\n")
-        bLoop = True
-        while bLoop:
+        wfile.write(bytes("READY\n", encoding="UTF-8"))
+        loop = True
+        while loop:
             data = ""
             data = rfile.readline()
             data = str(data)
-            # char = ""
-            #			while char != "\n":
-            #				data += char
-            #				char = s.recv(1)
             f.write("Server sent: %s\n" % (data))
-            #			stdscr.addstr("Server sent: %s\n"%(data))
-            #			stdscr.refresh()
             if "COM" in data[0:5]:
                 if "Accepted" in data:
                     pass
                 elif "Closed" in data:
-                    bLoop = False
+                    loop = False
             elif "MAP" in data[0:5]:
-                #				print "MAP MESSAGE:",str(data)
                 f.write("MAP MESSAGE: %s\n" % (data))
-                #				stdscr.addstr("MAP MESSAGE: %s\n"%(data))
-                #				stdscr.refresh()
                 p = data.split()
                 mapname = p[2]
                 f.write("MAPNAME: %s\n" % (mapname))
-                loadMap(mapname)
-            #				stdscr.addstr("MAPNAME: %s\n"%(mapname))
-            #				stdscr.refresh()
+                load_map(mapname)
             elif "AGL" in data[0:5]:
                 f.write("\nAGL\n")
                 agl_parse(data)
@@ -284,37 +274,32 @@ try:
         # Close socket
         del rfile
         del wfile
-        s.send("QUIT\n")
+        s.send(bytes("QUIT\n", encoding="UTF-8"))
         s.close()
 
-    # Write things to screen
-    """
-    stdscr.addstr("HOLA MUNDO")
-    stdscr.refresh()
-    time.sleep(5)
-    """
 
 except Exception as e:
     # Terminate
     if s:
-        s.send("QUIT\n")
+        s.send(bytes("QUIT\n", encoding="UTF-8"))
         s.close()
+
+    f.write("Exception: {}\n".format(e))
+    quit()
+
+
+def quit():
+    global curses_up
     if curses_up:
-        curses.nocbreak();
-        stdscr.keypad(0);
+        # Terminate curses
+        curses.nocbreak()
+        stdscr.keypad(False)
         curses.echo()
         curses.endwin()
         curses_up = False
 
-    print("Exception", str(e))
-if curses_up:
-    # Terminate curses
-    curses.nocbreak();
-    stdscr.keypad(0);
-    curses.echo()
-    curses.endwin()
-    curses_up = False
+
+quit()
 
 f.close()
-#os.system("reset")
 sys.exit(0)

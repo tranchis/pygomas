@@ -1,48 +1,70 @@
 import sys
 import time
-from pygomas.CTroop import CTroop
-from pygomas.CSoldier import CSoldier
-from pygomas.CMedic import CMedic
-from pygomas.CFieldOps import CFieldOps
-from pygomas.CManager import CManager
 
+from pygomas.ontology import TEAM_AXIS, TEAM_ALLIED
+from pygomas.soldier import Soldier
+from pygomas.medic import Medic
+from pygomas.fieldops import FieldOps
+from pygomas.manager import Manager
 
+import logging
+
+# logging.basicConfig(level=logging.DEBUG)
+# logging.getLogger("spade.Agent").setLevel(logging.WARN)
+
+host = "localhost"
 host = "gtirouter.dsic.upv.es"
+
+manager_jid = "cmanager@" + host
+service_jid = "cservice@" + host
 
 axis = list()
 allied = list()
 
-manager = CManager(players=2)
-manager.start()
+# soldiers, fieldops, medics
+num_axis = 1, 0, 0
+num_allied = 1, 0, 0
 
-axis.append( CSoldier("x0@"+host, "secret", team=CTroop.TEAM_AXIS) )
-#axis.append( CSoldier("x1@"+host, "secret", team=Troop.TEAM_AXIS) )
-#axis.append( CSoldier("x2@"+host, "secret", team=Troop.TEAM_AXIS) )
-#axis.append( CFieldOps("x3@"+host, "secret", team=Troop.TEAM_AXIS) )
-#axis.append( CFieldOps("x4@"+host, "secret", team=Troop.TEAM_AXIS) )
-#axis.append( CMedic("x5@"+host, "secret", team=Troop.TEAM_AXIS) )
-#axis.append( CMedic("x6@"+host, "secret", team=Troop.TEAM_AXIS) )
-#axis.append( CMedic("x7@"+host, "secret", team=Troop.TEAM_AXIS) )
+print("Creating manager")
+manager = Manager(players=sum(num_allied) + sum(num_axis), name=manager_jid, service_jid=service_jid, map_name="map_01")
+future = manager.start()
+future.result()
 
-allied.append( CSoldier("a0@"+host, "secret", team=CTroop.TEAM_ALLIED) )
-#allied.append( CSoldier("a1@"+host, "secret", team=Troop.TEAM_ALLIED) )
-#allied.append( CSoldier("a2@"+host, "secret", team=Troop.TEAM_ALLIED) )
-#allied.append( CFieldOps("a3@"+host, "secret", team=Troop.TEAM_ALLIED) )
-#allied.append( CFieldOps("a4@"+host, "secret", team=Troop.TEAM_ALLIED) )
-#allied.append( CMedic("a5@"+host, "secret", team=Troop.TEAM_ALLIED) )
-#allied.append( CMedic("a6@"+host, "secret", team=Troop.TEAM_ALLIED) )
-#allied.append( CMedic("a7@"+host, "secret", team=Troop.TEAM_ALLIED) )
+# manager.container.loop.slow_callback_duration = 0.02
+'''
+print("Creating soldiers")
+for i in range(int(num_axis[0])):
+    axis.append(Soldier("axis_soldier{}@{}".format(i, host), "secret", team=TEAM_AXIS, manager_jid=manager_jid,
+                        service_jid=service_jid))
+for i in range(int(num_axis[1])):
+    axis.append(FieldOps("axis_fieldops{}@{}".format(i, host), "secret", team=TEAM_AXIS, manager_jid=manager_jid,
+                         service_jid=service_jid))
+for i in range(int(num_axis[2])):
+    axis.append(Medic("axis_medic{}@{}".format(i, host), "secret", team=TEAM_AXIS, manager_jid=manager_jid,
+                      service_jid=service_jid))
 
-for a in axis + allied: a.start()
+for i in range(int(num_allied[0])):
+    allied.append(Soldier("allied_soldier{}@{}".format(i, host), "secret", team=TEAM_ALLIED, manager_jid=manager_jid,
+                          service_jid=service_jid))
+for i in range(int(num_allied[1])):
+    allied.append(FieldOps("allied_fieldops{}@{}".format(i, host), "secret", team=TEAM_ALLIED, manager_jid=manager_jid,
+                           service_jid=service_jid))
+for i in range(int(num_allied[2])):
+    allied.append(Medic("allied_medic{}@{}".format(i, host), "secret", team=TEAM_ALLIED, manager_jid=manager_jid,
+                        service_jid=service_jid))
+'''
+port = 2000
+for a in axis + allied:
+    a.start()
+    # a.web.start(hostname="localhost", port=port)
+    # port += 1
 while True:
     try:
         time.sleep(1)
-    except:
-        print ("Stopping agents . . .")
-        for a in axis + allied: a.stop()
-        print ("done")
+    except KeyboardInterrupt:
         break
-manager.stop()
+print("Exiting . . .")
+from spade import quit_spade
 
-print ("Exiting . . .")
+quit_spade()
 sys.exit(0)

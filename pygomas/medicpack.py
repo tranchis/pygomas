@@ -31,4 +31,4 @@ class MedicPack(Pack):
             msg.body = json.dumps(content)
             await self.send(msg)
             await asyncio.sleep(1)
-            self.agent.stop()
+            await self.agent.stop()

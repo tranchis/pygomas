@@ -4,13 +4,13 @@ from spade.behaviour import CyclicBehaviour
 from spade.template import Template
 
 from .agent import LONG_RECEIVE_WAIT
-from .troop import Troop, CLASS_SOLDIER
+from .bditroop import BDITroop, CLASS_SOLDIER
 from .ontology import BACKUP_SERVICE, PERFORMATIVE, PERFORMATIVE_CFB
 from .task import TASK_NONE, TASK_GIVE_MEDICPAKS, TASK_GIVE_AMMOPACKS, TASK_GIVE_BACKUP, TASK_GET_OBJECTIVE, \
     TASK_ATTACK, TASK_RUN_AWAY, TASK_GOTO_POSITION, TASK_PATROLLING, TASK_WALKING_PATH, TASK_RETURN_TO_BASE
 
 
-class Soldier(Troop):
+class Soldier(BDITroop):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -46,7 +46,8 @@ class Soldier(Troop):
                     content = json.loads(msg.body)
 
                     if self.agent.check_backup_action(content):
-                        self.agent.task_manager.add_task(TASK_GIVE_BACKUP, owner, content)
+                        self.agent.task_manager.add_task(
+                            TASK_GIVE_BACKUP, owner, content)
 
         # Behaviour to handle a Call For Backup request
 

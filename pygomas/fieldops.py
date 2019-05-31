@@ -8,13 +8,13 @@ from spade.behaviour import CyclicBehaviour
 from . import POWER_UNIT
 from .agent import LONG_RECEIVE_WAIT
 from .ammopack import AmmoPack
-from .troop import Troop, CLASS_FIELDOPS
+from .bditroop import BDITroop, CLASS_FIELDOPS
 from pygomas.ontology import AMMO_SERVICE, PERFORMATIVE, PERFORMATIVE_CFA
 from .task import TASK_WALKING_PATH, TASK_PATROLLING, TASK_GOTO_POSITION, TASK_RUN_AWAY, TASK_ATTACK, \
     TASK_GET_OBJECTIVE, TASK_GIVE_BACKUP, TASK_GIVE_AMMOPACKS, TASK_GIVE_MEDICPAKS, TASK_NONE
 
 
-class FieldOps(Troop):
+class FieldOps(BDITroop):
     packs_delivered = 0
 
     def __init__(self, *args, **kwargs):
@@ -50,7 +50,8 @@ class FieldOps(Troop):
                     content = json.loads(msg.body)
 
                     if self.agent.check_ammo_action(content):
-                        self.agent.task_manager.add_task(TASK_GIVE_AMMOPACKS, owner, content)
+                        self.agent.task_manager.add_task(
+                            TASK_GIVE_AMMOPACKS, owner, content)
 
         # Behaviour to handle a Call For Backup request
         template = Template()
@@ -94,7 +95,8 @@ class FieldOps(Troop):
         elif current_task.type == TASK_GIVE_AMMOPACKS:
             packs_delivered = self.create_ammo_pack()
             # current_task.packs_delivered += packs_delivered
-            logger.error("{} delivered {} ammo packs.".format(self.name, packs_delivered))
+            logger.error("{} delivered {} ammo packs.".format(
+                self.name, packs_delivered))
 
         else:
             super().perform_target_reached(current_task)
@@ -112,16 +114,19 @@ class FieldOps(Troop):
         logger.info("{} Creating ammo packs.".format(self.name))
         while self.perform_ammo_action():
             FieldOps.packs_delivered += 1
-            name = "ammopack{}@{}".format(FieldOps.packs_delivered, self.jid.domain)
+            name = "ammopack{}@{}".format(
+                FieldOps.packs_delivered, self.jid.domain)
             x = self.movement.position.x
             z = self.movement.position.z
             team = self.team
 
             try:
-                pack = AmmoPack(name=name, passwd="secret", x=x, z=z, team=team, manager_jid=self.manager)
+                pack = AmmoPack(name=name, passwd="secret", x=x,
+                                z=z, team=team, manager_jid=self.manager)
                 pack.start()
             except Exception as e:
-                logger.warning("FieldOps {} could not create AmmoPack: {}".format(self.name, e))
+                logger.warning(
+                    "FieldOps {} could not create AmmoPack: {}".format(self.name, e))
 
             packs_delivered += 1
             logger.info("AmmoPack {} created.".format(name))

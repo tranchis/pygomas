@@ -1,4 +1,5 @@
 import json
+from spade_bdi.bdi import BDIAgent
 
 from loguru import logger
 
@@ -27,13 +28,14 @@ class AbstractAgent(Agent):
         future = super().start(auto_register=auto_register)
         if self.services:
             for service in self.services:
-                logger.info("{} registering service {}".format(self.name, service))
+                logger.info("{} registering service {}".format(
+                    self.name, service))
                 self.register_service(service)
         return future
 
-    async def die(self, timeout=5):
+    async def die(self):
         await self.deregister_agent()
-        self.stop(timeout=timeout)
+        await self.stop()
         logger.info("Agent {} was stopped.".format(self.name))
 
     def register_service(self, service_name):
@@ -41,7 +43,8 @@ class AbstractAgent(Agent):
             async def run(self):
                 msg = Message(to=self.agent.service_jid)
                 msg.set_metadata(PERFORMATIVE, PERFORMATIVE_REGISTER_SERVICE)
-                msg.body = json.dumps({NAME: service_name, TEAM: self.agent.team})
+                msg.body = json.dumps(
+                    {NAME: service_name, TEAM: self.agent.team})
                 await self.send(msg)
 
         self.add_behaviour(RegisterBehaviour())
@@ -51,7 +54,8 @@ class AbstractAgent(Agent):
             async def run(self):
                 msg = Message(to=self.agent.service_jid)
                 msg.set_metadata(PERFORMATIVE, PERFORMATIVE_DEREGISTER_SERVICE)
-                msg.body = json.dumps({NAME: service_name, TEAM: self.agent.team})
+                msg.body = json.dumps(
+                    {NAME: service_name, TEAM: self.agent.team})
                 await self.send(msg)
 
         self.add_behaviour(DeregisterBehaviour())

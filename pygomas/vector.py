@@ -43,8 +43,20 @@ class Vector3D(object):
         u.z = self.x * v.y - self.y * v.x
         return u
 
+    def __eq__(self, other):
+        if self.x == other.x and self.y == other.y and self.z == other.z:
+            return True
+        else:
+            return False
+
+    def __ne__(self, other):
+        if self.x == other.x and self.y == other.y and self.z == other.z:
+            return False
+        else:
+            return True
+
     def __str__(self):
-        return "<" + str(self.x) + "," + str(self.y) + "," + str(self.z)+">"
+        return "<" + str(self.x) + "," + str(self.y) + "," + str(self.z) + ">"
 
     def __init__(self, v=None, x=None, y=None, z=None):
         if v is None and not x and not y and not z:

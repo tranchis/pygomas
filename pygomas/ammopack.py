@@ -1,6 +1,5 @@
 import asyncio
 import json
-
 from spade.behaviour import TimeoutBehaviour
 
 from .ontology import PERFORMATIVE, PERFORMATIVE_INFORM, NAME, ACTION, DESTROY
@@ -15,14 +14,12 @@ class AmmoPack(Pack):
 
     async def start(self, auto_register=True):
         self.type = PACK_AMMOPACK
-
-        await super().start(auto_register)
-
         timeout = now() + timedelta(seconds=PACK_AUTODESTROY_TIMEOUT)
         self.add_behaviour(self.AutoDestroyBehaviour(start_at=timeout))
+        await super().start(auto_register)
 
-    def perform_pack_taken(self, content):
-        self.stop()
+    async def perform_pack_taken(self, content):
+        await self.stop()
 
     class AutoDestroyBehaviour(TimeoutBehaviour):
         async def run(self):
@@ -35,4 +32,4 @@ class AmmoPack(Pack):
             msg.body = json.dumps(content)
             await self.send(msg)
             await asyncio.sleep(1)
-            self.agent.stop()
+            await self.agent.stop()

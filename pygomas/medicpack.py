@@ -18,8 +18,8 @@ class MedicPack(Pack):
         self.add_behaviour(self.AutoDestroyBehaviour(start_at=timeout))
         await super().setup()
 
-    def perform_pack_taken(self, content):
-        self.stop()
+    async def perform_pack_taken(self, content):
+        await self.stop()
 
     class AutoDestroyBehaviour(TimeoutBehaviour):
         async def run(self):

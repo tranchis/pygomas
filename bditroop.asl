@@ -13,12 +13,12 @@
 +flag (X,Y,Z): team(100) 
   <-
   .print("In ASL,TEAM_ALLIED goto moving to: ",X,Y,Z); 
-  .goto(X,Y,Z).
+  //.goto(X,Y,Z).
+  .goto(16,0,38).
 
 +flag (X,Y,Z): team(200) 
   <-
   .print("In ASL,TEAM_AXIS patrolling around: ",X,Y,Z); 
-  .wait(19000);
   //.create_control_points(X,Y,Z,4,5).
   //.stop;
   .goto(X,Y,Z).
@@ -82,8 +82,10 @@
 //+health(H): threshold_health(T) & H <= T & first_call(on) &team(100)
   <- 
   .print("Injured. My health",H);
-  ?my_medics(All_medics);
+  .get_medics;
+  ?myMedics(All_medics);
   .nth(0,All_medics,M);
+  .print(M);
   ?position(X,Y,Z);
   .send(M, tell,cure(X,Y,Z));
   -first_call(on);
@@ -91,16 +93,18 @@
   -health(H). 
 
 +health(H): threshold_health(T) & H <= T & first_call(on) &team(200)
-  <- 
+  <-
+  .get_medics;
   .print("Injured. My health",H);
-  ?my_medics(All_medics);
-  .nth(0,All_medics,M);
   ?flag(X,Y,Z);
+  ?myMedics(All_medics);
   //?base(X,Y,Z);
   //.print("Going back to base at" ,X,Y,Z);
   //?position(X,Y,Z);
-  .goto(X,Y,Z);
+  .nth(0,All_medics,M);
+  .print(M);
   .send(M, tell,cure(X,Y,Z));
+  .goto(X,Y,Z);
   -first_call(on);
   +first_call(off);
   -health(H).  

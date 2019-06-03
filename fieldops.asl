@@ -6,24 +6,13 @@
 
 +flag (X,Y,Z): team(200) 
   <-
-  .print("In ASL,TEAM_AXIS patrolling around: ",X,Y,Z); 
-  //.create_control_points(X,Y,Z,4,5).
-  //.stop;
   .goto(X,Y,Z).
-
-+cure(X,Y,Z) 
-  <- 
-  .print("Going to cure friend at: ",X,Y,Z);
-  //?flag(A,B,C);
-  //.goto(A,B,C).
-  .goto(X,Y,Z).
-  
 
 +target_reached(X,Y,Z)
 //+target_reached(X,Y,Z): cure(X1,Y2,Z2) & X==X1 & Z==Z1
   <- 
-  .cure;
-  .print("In ASL, Medic cured at :",X,Y,Z);
+  .reload;
+  .print("In ASL, Fieldop reloaded at :",X,Y,Z);
   -target_reached(X,Y,Z).
 
 +enemies_in_fov(ID,Type,Angle,Distance,Health,X,Y,Z) 

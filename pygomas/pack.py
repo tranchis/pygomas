@@ -68,6 +68,7 @@ class Pack(AbstractAgent):
                 Y: self.agent.position.y,
                 Z: self.agent.position.z
             })
+            print("SENDING PACK MESSAGE")
             await self.send(msg)
             logger.info("CreatePack msg sent: {}".format(msg))
 

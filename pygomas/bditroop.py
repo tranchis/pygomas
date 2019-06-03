@@ -301,6 +301,7 @@ class BDITroop(AbstractAgent, BDIAgent):
 							self.agent.name, self.agent.medics_count, result))
 						self.agent.bdi.set_belief(MY_MEDICS,tuple(result))
 					else:
+						self.agent.bdi.set_belief(MY_MEDICS,tuple("None"))
 						self.agent.medics_count = 0
 
 			b = GetMedicBehaviour()

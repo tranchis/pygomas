@@ -13,10 +13,10 @@ now = datetime.now
 
 class AmmoPack(Pack):
 
-    def start(self, auto_register=True):
+    async def start(self, auto_register=True):
         self.type = PACK_AMMOPACK
 
-        super().start(auto_register)
+        await super().start(auto_register)
 
         timeout = now() + timedelta(seconds=PACK_AUTODESTROY_TIMEOUT)
         self.add_behaviour(self.AutoDestroyBehaviour(start_at=timeout))

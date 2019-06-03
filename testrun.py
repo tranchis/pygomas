@@ -4,7 +4,7 @@ import time
 from pygomas.ontology import TEAM_AXIS, TEAM_ALLIED
 from pygomas.soldier import Soldier
 from pygomas.bdimedic import Medic
-from pygomas.fieldops import FieldOps
+from pygomas.bdifieldops import FieldOps
 from pygomas.manager import Manager
 
 import logging
@@ -27,8 +27,8 @@ axis_fieldops = list()
 allied_fieldops = list()
 
 # soldiers, fieldops, medics
-num_axis = 3, 0, 3
-num_allied = 2, 0, 2
+num_axis = 2, 2, 2
+num_allied = 2, 2, 2
 
 print("Creating manager")
 manager = Manager(players=sum(num_allied) + sum(num_axis),
@@ -78,6 +78,9 @@ for a in axis_soldiers + allied_soldiers:
 
 for a in axis_medics + allied_medics:
   a.set_asl('medic.asl')
+
+for a in axis_fieldops + allied_fieldops:
+  a.set_asl('fieldops.asl')
 
 while True:
   try:

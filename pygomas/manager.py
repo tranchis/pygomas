@@ -323,7 +323,6 @@ class Manager(AbstractAgent):
                 msg = await self.receive(timeout=LONG_RECEIVE_WAIT)
                 if msg:
                     content = json.loads(msg.body)
-
                     shooter_id = content[NAME]
                     aim = int(content[AIM])
                     shots = int(content[SHOTS])
@@ -359,8 +358,6 @@ class Manager(AbstractAgent):
                                 if din_object.type == PACK_OBJPACK:
                                     # is this necessary?: din_object.taken = False;
                                     din_object.owner = 0
-                                    print("TYPE OF DIN OBJECT JID",
-                                          type(din_object.jid))
                                     msg_pack = Message(to=str(din_object.jid))
                                     msg_pack.set_metadata(
                                         PERFORMATIVE, PERFORMATIVE_PACK_LOST)
@@ -376,13 +373,10 @@ class Manager(AbstractAgent):
                                     # Statistics
                                     self.agent.game_statistic.objective_lost(
                                         victim.team)
-                                    print("DIN OBJECT JID")
-
                                     break
 
                     msg_shot = Message(to=victim.jid)
                     msg_shot.set_metadata(PERFORMATIVE, PERFORMATIVE_SHOOT)
-
                     msg_shot.body = json.dumps({DEC_HEALTH: damage})
                     await self.send(msg_shot)
 

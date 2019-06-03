@@ -16,6 +16,7 @@ class MedicPack(Pack):
         self.type = PACK_MEDICPACK
         timeout = now() + timedelta(seconds=PACK_AUTODESTROY_TIMEOUT)
         self.add_behaviour(self.AutoDestroyBehaviour(start_at=timeout))
+        await super().setup()
 
     def perform_pack_taken(self, content):
         self.stop()

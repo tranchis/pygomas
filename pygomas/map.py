@@ -32,25 +32,16 @@ class Base:
         return self.end.z
 
 
-class Terrain:
-    def __init__(self):
-        self.height = 0.0
-        self.can_walk = False
-        self.cost = 0
-
-    def __str__(self):
-        if self.can_walk:
-            return "_"
-        else:
-            return "*"
-
-    def __repr__(self):
-        return self.__str__()
-
-
 class TerrainMap:
+    """
+    The terrain map is an array of locations. 
+    Each location is in turn an array, as follows:
+    location[0] = height,
+    location[1] = walkable,
+    location[2] = cost,
+    """
+
     def __init__(self):
-        self.terrain = np.full((0, 0), 0)
         self.allied_base = Base()
         self.axis_base = Base()
         self.target = Vector3D()
@@ -75,17 +66,18 @@ class TerrainMap:
 
     def can_walk(self, x, z):
         if x < 0 or z < 0 or x >= self.size_x or z >= self.size_z or len(self.terrain) == 0:
-            logger.info("Can't walk outside the map! {}:{} <> {}:{}".format(x, z, self.size_x, self.size_z))
+            logger.info("Can't walk outside the map! {}:{} <> {}:{}".format(
+                x, z, self.size_x, self.size_z))
             return False
 
         # logger.info("self.terrain[{}][{}]: {}".format(x, z, self.terrain[x][z].can_walk))
-        return self.terrain[x][z].can_walk
+        return self.terrain[x][z][1]
 
     def get_cost(self, x, z):
         if x < 0 or z < 0 or x >= self.size_x or z >= self.size_z or len(self.terrain) == 0:
             return 2 * 10000
 
-        return self.terrain[x][z].cost
+        return self.terrain[x][z][2]
 
     def load_map(self, main_file, config):
 
@@ -126,7 +118,8 @@ class TerrainMap:
         self.size_x = int(tokens[1]) * MAP_SCALE
         self.size_z = int(tokens[2]) * MAP_SCALE
         cost_map_name = tokens[3]
-        logger.info(f" COST MAP: ({self.size_x} x {self.size_z}) {cost_map_name}")
+        logger.info(
+            f" COST MAP: ({self.size_x} x {self.size_z}) {cost_map_name}")
 
         file.close()
 
@@ -134,11 +127,7 @@ class TerrainMap:
             logger.info("Invalid Cost Map")
             return
 
-        self.terrain = []
-        for i in range(self.size_x):
-            self.terrain.append([])
-            for _ in range(self.size_z):
-                self.terrain[i].append(Terrain())
+        self.terrain = np.zeros(shape=(self.size_x, self.size_z, 3))
 
         file = open(config.data_path + main_file + os.sep + cost_map_name)
 
@@ -148,20 +137,19 @@ class TerrainMap:
                 while c == '\n' or c == "\r":
                     c = file.read(1)  # read next char
                 if c == '*':
-                    for kx in range(MAP_SCALE):
-                        for kz in range(MAP_SCALE):
-                            self.terrain[x * MAP_SCALE + kx][z * MAP_SCALE + kz].can_walk = False
-                            self.terrain[x * MAP_SCALE + kx][z * MAP_SCALE + kz].cost = 10000
-                            self.terrain[x * MAP_SCALE + kx][z * MAP_SCALE + kz].height = 0.0
+                    self.terrain[x * MAP_SCALE:x * MAP_SCALE + MAP_SCALE,
+                                 z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 0] = 0.0
+                    self.terrain[x * MAP_SCALE:x * MAP_SCALE + MAP_SCALE,
+                                 z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 1] = 0
+                    self.terrain[x * MAP_SCALE:x * MAP_SCALE + MAP_SCALE,
+                                 z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 2] = 10000
                 elif c == ' ':
-                    for kx in range(MAP_SCALE):
-                        for kz in range(MAP_SCALE):
-                            self.terrain[x * MAP_SCALE + kx][z * MAP_SCALE + kz].can_walk = True
-                            self.terrain[x * MAP_SCALE + kx][z * MAP_SCALE + kz].cost = 1
-                            self.terrain[x * MAP_SCALE + kx][z * MAP_SCALE + kz].height = 0.0
-                    #self.terrain[x][z].can_walk = True
-                    #self.terrain[x][z].cost = 1
-                #self.terrain[x][z].height = 0.0
+                    self.terrain[x * MAP_SCALE:x * MAP_SCALE + MAP_SCALE,
+                                 z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 0] = 0.0
+                    self.terrain[x * MAP_SCALE:x * MAP_SCALE + MAP_SCALE,
+                                 z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 1] = 1
+                    self.terrain[x * MAP_SCALE:x * MAP_SCALE + MAP_SCALE,
+                                 z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 2] = 1
         file.close()
 
     def __str__(self):

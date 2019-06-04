@@ -178,6 +178,7 @@ class BDITroop(AbstractAgent, BDIAgent):
 				self.bdi.set_belief(VELOCITY, self.movement.velocity.x,self.movement.velocity.y,self.movement.velocity.z)
 				self.bdi.set_belief(HEADING, self.movement.heading.x,self.movement.heading.y,self.movement.heading.z)
 			else:
+				self.destinations = deque()
 				self.movement.destination.x = self.movement.position.x
 				self.movement.destination.y = self.movement.position.y
 				self.movement.destination.z = self.movement.position.z
@@ -320,8 +321,6 @@ class BDITroop(AbstractAgent, BDIAgent):
 							self.agent.name, self.agent.fieldops_count, result))
 						# self.agent.bdi.set_belief(MY_FIELDOPS,result[0])
 						self.agent.bdi.set_belief(MY_FIELDOPS,tuple(result))
-						print("YES FIELDOPS")
-						print (tuple(result))
 					else:
 						self.agent.bdi.set_belief(MY_FIELDOPS,0)
 						self.agent.fieldops_count = 0
@@ -335,6 +334,7 @@ class BDITroop(AbstractAgent, BDIAgent):
 		@self.bdi_actions.add(".stop", 0)
 		def _stop(agent, term, intention):
 			"""Stops the PyGomas agent. """
+			self.destinations = deque()
 			self.movement.destination.x = self.movement.position.x
 			self.movement.destination.y = self.movement.position.y
 			self.movement.destination.z = self.movement.position.z
@@ -784,87 +784,6 @@ class BDITroop(AbstractAgent, BDIAgent):
 
 	# Methods to overload
 
-	async def call_for_medic(self, behaviour):
-		"""
-		Request for medicine.
-
-		This method sends a FIPA REQUEST message to all agents who offers the Medic service.
-
-		The content of message is: {X: x ,Y:  y , Z: z, HEALTH: health}.
-
-		Variable medics_count is updated.
-		It's very useful to overload this method.
-		"""
-		msg = Message()
-		msg.set_metadata(PERFORMATIVE, PERFORMATIVE_GET)
-		msg.to = self.service_jid
-		msg.body = json.dumps({NAME: MEDIC_SERVICE, TEAM: self.team})
-		await behaviour.send(msg)
-		result = await behaviour.receive(timeout=LONG_RECEIVE_WAIT)
-
-		if result:
-			result = json.loads(result.body)
-			self.medics_count = len(result)
-
-			logger.info("{} got {} medics: {}".format(
-				self.name, self.medics_count, result))
-
-			# Fill the REQUEST message
-			msg = Message()
-			msg.set_metadata(PERFORMATIVE, PERFORMATIVE_CFM)
-			msg.body = json.dumps({X: self.movement.position.x,
-								   Y: self.movement.position.y,
-								   Z: self.movement.position.z,
-								   HEALTH: self.health})
-
-			for medic in result:
-				msg.to = medic
-				await behaviour.send(msg)
-
-				logger.info("{}: Need a Medic! {}".format(self.name, msg))
-
-		else:
-			self.medics_count = 0
-
-	async def call_for_ammo(self, behaviour):
-		"""
-		Request for ammunition.
-
-		This method sends a FIPA REQUEST message to all agents who offers the ammo_service service.
-
-		The content of message is: {X: x ,Y:  y , Z: z, HEALTH: health}.
-
-		Variable fieldOps_count is updated.
-
-		It's very useful to overload this method.
-		"""
-		msg = Message()
-		msg.set_metadata(PERFORMATIVE, PERFORMATIVE_GET)
-		msg.to = self.service_jid
-		msg.body = json.dumps({NAME: AMMO_SERVICE, TEAM: self.team})
-		await behaviour.send(msg)
-		result = await behaviour.receive(timeout=LONG_RECEIVE_WAIT)
-
-		if result:
-			result = json.loads(result.body)
-			self.fieldops_count = len(result)
-
-			# Fill the REQUEST message
-			msg = Message()
-			msg.set_metadata(PERFORMATIVE, PERFORMATIVE_CFA)
-			msg.body = json.dumps({X: self.movement.position.x,
-								   Y: self.movement.position.y,
-								   Z: self.movement.position.z,
-								   HEALTH: self.health})
-
-			for ammo in result:
-				msg.to = ammo
-				await behaviour.send(msg)
-
-				logger.info(self.name + ": Need a Ammo!")
-
-		else:
-			self.fieldops_count = 0
 
 	async def call_for_backup(self, behaviour):
 		"""

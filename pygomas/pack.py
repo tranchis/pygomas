@@ -68,7 +68,6 @@ class Pack(AbstractAgent):
                 Y: self.agent.position.y,
                 Z: self.agent.position.z
             })
-            print("SENDING PACK MESSAGE")
             await self.send(msg)
             logger.info("CreatePack msg sent: {}".format(msg))
 
@@ -76,8 +75,8 @@ class Pack(AbstractAgent):
         async def run(self):
             msg = await self.receive(timeout=LONG_RECEIVE_WAIT)
             if msg is not None:
-                self.agent.perform_pack_taken(msg.body)
+                await self.agent.perform_pack_taken(msg.body)
 
     # virtual function for overloading
-    def perform_pack_taken(self, content):
+    async def perform_pack_taken(self, content):
         pass

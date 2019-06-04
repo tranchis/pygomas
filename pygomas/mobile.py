@@ -29,10 +29,10 @@ class Mobile(object):
         position.z = self.position.z + (self.velocity.z * dt)
         return position
 
-    def calculate_new_orientation(self):
-        dx = float(self.destination.x - self.position.x)
-        dy = float(self.destination.y - self.position.y)
-        dz = float(self.destination.z - self.position.z)
+    def calculate_new_orientation(self, destination):
+        dx = float(destination.x - self.position.x)
+        dy = float(destination.y - self.position.y)
+        dz = float(destination.z - self.position.z)
         f2_norma = math.sqrt((dx * dx + dy * dy + dz * dz))
 
         if f2_norma > 0:

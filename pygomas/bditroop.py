@@ -31,6 +31,7 @@ from .vector import Vector3D
 from .sight import Sight
 from .pack import PACK_MEDICPACK, PACK_AMMOPACK, PACK_OBJPACK, PACK_NONE
 from .config import Config
+from .a_star import a_star
 
 DEFAULT_RADIUS = 20
 ESCAPE_RADIUS = 50
@@ -45,20 +46,6 @@ CLASS_SOLDIER = 1
 CLASS_MEDIC = 2
 CLASS_ENGINEER = 3
 CLASS_FIELDOPS = 4
-
-# State names
-STATE_STANDING = "STATE_STANDING"
-STATE_TARGET_REACHED = "STATE_TARGET_REACHED"
-STATE_FIGHTING = "STATE_FIGHTING"
-STATE_QUIT = "STATE_QUIT"
-STATE_GOTO_TARGET = "STATE_GOTO_TARGET"  # This one was missing
-
-TRANSITION_DEFAULT = 0
-TRANSITION_TO_STANDING = 1  # STANDING
-TRANSITION_TO_GOTO_TARGET = 2  # GOTO TARGET
-TRANSITION_TO_TARGET_REACHED = 3  # TARGET REACHED
-TRANSITION_TO_FIGHTING = 4  # FIGHTING
-TRANSITION_TO_QUIT = 5  # BYE
 
 MV_OK = 0
 MV_CANNOT_GET_POSITION = 1
@@ -171,10 +158,6 @@ class BDITroop(AbstractAgent, BDIAgent):
 		# self.agent.Launch_BarsAddOn_InnerBehaviour()
 		self.add_behaviour(self.RestoreBehaviour(period=1))
 
-		# Behaviour to call for medics or fieldops
-		# t = Template()
-		# t.set_metadata(PERFORMATIVE, PERFORMATIVE_GET)
-		# self.add_behaviour(self.MedicAmmoRequestBehaviour(period=1), t)
 
 		t = Template()
 		t.set_metadata(PERFORMATIVE, PERFORMATIVE_BDI)
@@ -183,13 +166,16 @@ class BDITroop(AbstractAgent, BDIAgent):
 		@self.bdi_actions.add(".goto", 3)
 		def _goto(agent, term, intention):
 			"""Sets the PyGomas destination. Expects args to be x,y,z"""
-			self.destinations = deque()
 			args = pyson.grounded(term.args, intention.scope)
 			self.movement.destination.x = args[0]
 			self.movement.destination.y = args[1]
 			self.movement.destination.z = args[2]
-			self.destinations.append(self.movement.destination)
-			self.movement.calculate_new_orientation()
+			start = (self.movement.position.x,self.movement.position.z)
+			end = (self.movement.destination.x,self.movement.destination.z)
+			path = self.path_finder.get_path(start,end)
+			self.destinations = deque(path)
+			x,z = path[0]
+			self.movement.calculate_new_orientation(Vector3D(x=x,y=0,z=z))
 			self.bdi.set_belief(DESTINATION,args[0],args[1],args[2])
 			self.bdi.set_belief(VELOCITY, self.movement.velocity.x,self.movement.velocity.y,self.movement.velocity.z)
 			self.bdi.set_belief(HEADING, self.movement.heading.x,self.movement.heading.y,self.movement.heading.z)
@@ -340,37 +326,36 @@ class BDITroop(AbstractAgent, BDIAgent):
 			dt = current_time - self.agent.last_time_move_attempt
 			self.agent.last_time_move_attempt = current_time
 
-			absx = abs(self.agent.movement.destination.x -
-					   self.agent.movement.position.x)
-			absz = abs(self.agent.movement.destination.z -
-					   self.agent.movement.position.z)
-			if (absx < PRECISION_X) and (absz < PRECISION_Z):
-				if self.agent.movement.position != self.agent.movement.destination:
-					print("\n\nARRIVED\n\n")
-					self.agent.movement.position = Vector3D(
-						self.agent.movement.destination)
-					self.agent.bdi.set_belief(
-							PERFORMATIVE_TARGET_REACHED,self.agent.movement.destination.x,self.agent.movement.destination.y,self.agent.movement.destination.z)
-					for i in range(2):
-						if self.agent.destinations:
-							self.agent.movement.destination = self.agent.destinations.popleft()
-
+			if len(self.agent.destinations)>0:
+				absx = abs(self.agent.destinations[0][0] -
+						   self.agent.movement.position.x)
+				absz = abs(self.agent.destinations[0][1] -
+						   self.agent.movement.position.z)
+				if (absx < PRECISION_X) and (absz < PRECISION_Z):
+					x,z = self.agent.destinations.popleft()
+					self.agent.movement.position = Vector3D(x=x,y=0,z=z)
+					self.agent.bdi.set_belief(POSITION,self.agent.movement.position.x,self.agent.movement.position.y,self.agent.movement.position.z)
+					
+					if len(self.agent.destinations) == 0: 
+						print("\n\nARRIVED\n\n")
+						self.agent.bdi.set_belief(
+								PERFORMATIVE_TARGET_REACHED,self.agent.movement.destination.x,self.agent.movement.destination.y,self.agent.movement.destination.z)
+					else:
+						x,z = self.agent.destinations[0]
+					
 					last_velocity = Vector3D(self.agent.movement.velocity)
 					last_heading = Vector3D(self.agent.movement.heading)
-					self.agent.movement.calculate_new_orientation()
-
+					self.agent.movement.calculate_new_orientation(Vector3D(x=x,y=0,z=z))
 					if last_velocity != self.agent.movement.velocity:
 						self.agent.bdi.set_belief(VELOCITY,self.agent.movement.velocity.x,self.agent.movement.velocity.y,self.agent.movement.velocity.z)
 					if last_heading != self.agent.movement.heading:
 						self.agent.bdi.set_belief(HEADING,self.agent.movement.heading.x,self.agent.movement.heading.y,self.agent.movement.heading.z)
-			else:
-				move_result = self.agent.move(dt)
-				if move_result == MV_OK:
-					self.agent.bdi.set_belief(POSITION,self.agent.movement.position.x,self.agent.movement.position.y,self.agent.movement.position.z)
-				elif move_result == MV_CANNOT_GET_POSITION:
-					self.agent.generate_intermediate_point()
-				elif move_result == MV_ALREADY_IN_DEST:
-					pass
+
+
+				else:
+					move_result = self.agent.move(dt)
+					if move_result == MV_CANNOT_GET_POSITION:
+						self.agent.escape_barrier(dt)
 
 	class InitResponderBehaviour(CyclicBehaviour):
 		async def run(self):
@@ -381,12 +366,12 @@ class BDITroop(AbstractAgent, BDIAgent):
 				self.agent.map = TerrainMap()
 				config = Config()
 				self.agent.map.load_map(map_name, config)
+				self.agent.path_finder = a_star(self.agent.map.terrain[:,:,1])
 				self.agent.movement = Mobile()
 				self.agent.movement.set_size(
 					self.agent.map.get_size_x(), self.agent.map.get_size_z())
 
 				self.agent.generate_spawn_position()
-				self.agent.setup_priorities()
 
 				t = Template()
 				t.set_metadata(PERFORMATIVE, PERFORMATIVE_MOVE)
@@ -544,55 +529,6 @@ class BDITroop(AbstractAgent, BDIAgent):
 				if self.agent.health < MAX_HEALTH:
 					self.agent.health = self.agent.health + 1
 
-
-	# Behaviour to launch the FSM
-	def launch_fsm_behaviour(self):
-
-		# FSM Declaration
-		self.fsm_behaviour = FSMBehaviour()
-
-		# Register state STATE_STANDING (first state)
-		self.fsm_behaviour.add_state(
-			STATE_STANDING, self.StandingState(), initial=True)
-
-		# Register state STATE_GOTO_TARGET
-		self.fsm_behaviour.add_state(STATE_GOTO_TARGET, self.GoToTargetState())
-
-		# Register state STATE_TARGET_REACHED
-		self.fsm_behaviour.add_state(
-			STATE_TARGET_REACHED, self.TargetReachedState())
-
-		# Register state STATE_FIGHTING
-		self.fsm_behaviour.add_state(STATE_FIGHTING, self.FightingState())
-
-		# Register state STATE_QUIT (final state)
-		self.fsm_behaviour.add_state(STATE_QUIT, self.QuitState())
-
-		# Register the transitions
-		# m_FSM.registerDefaultTransition(STATE_STANDING, STATE_QUIT);
-		# self.m_FSM.registerDefaultTransition(self.STATE_STANDING, self.STATE_STANDING) ## OJO
-		self.fsm_behaviour.add_transition(STATE_STANDING, STATE_STANDING)
-		self.fsm_behaviour.add_transition(STATE_STANDING, STATE_GOTO_TARGET)
-		self.fsm_behaviour.add_transition(STATE_STANDING, STATE_QUIT)
-
-		# self.m_FSM.registerDefaultTransition(self.STATE_GOTO_TARGET, self.STATE_GOTO_TARGET)
-		self.fsm_behaviour.add_transition(STATE_GOTO_TARGET, STATE_GOTO_TARGET)
-		self.fsm_behaviour.add_transition(STATE_GOTO_TARGET, STATE_STANDING)
-		self.fsm_behaviour.add_transition(
-			STATE_GOTO_TARGET, STATE_TARGET_REACHED)
-		self.fsm_behaviour.add_transition(STATE_GOTO_TARGET, STATE_FIGHTING)
-
-		# self.m_FSM.registerDefaultTransition(self.STATE_TARGET_REACHED, self.STATE_STANDING)
-		self.fsm_behaviour.add_transition(STATE_TARGET_REACHED, STATE_STANDING)
-		self.fsm_behaviour.add_transition(STATE_TARGET_REACHED, STATE_STANDING)
-
-		# self.m_FSM.registerDefaultTransition(self.STATE_FIGHTING, self.STATE_FIGHTING)
-		self.fsm_behaviour.add_transition(STATE_FIGHTING, STATE_FIGHTING)
-		self.fsm_behaviour.add_transition(STATE_FIGHTING, STATE_STANDING)
-
-		# launching the FSM
-		self.add_behaviour(self.fsm_behaviour)
-
 	def generate_spawn_position(self):
 
 		if self.team == TEAM_ALLIED:
@@ -627,77 +563,9 @@ class BDITroop(AbstractAgent, BDIAgent):
 			return MV_ALREADY_IN_DEST
 		else:
 			self.movement.position = Vector3D(new_position)
+			self.bdi.set_belief(POSITION,self.movement.position.x,self.movement.position.y,self.movement.position.z)
 			return MV_OK
 
-	# Behaviours to handle our FSM
-	class StandingState(State):
-		async def run(self):
-			num_tasks = len(self.agent.task_manager)
-			if num_tasks <= 0:
-				self.set_next_state(STATE_STANDING)
-				logger.info(self.agent.name +
-							": Behaviour ............ NO TASKS!!!")
-				await asyncio.sleep(1.0)
-				return
-
-			if self.agent.health <= 0:
-				self.agent.task_manager.clear()
-				# if we have nothing to do, go to QUIT state
-				self.set_next_state(STATE_QUIT)
-
-				return
-
-			self.agent.update_targets()
-
-			self.agent.task_manager.select_highest_priority_task()
-			logger.info(self.agent.name + ": select task with priority {}".
-						format(self.agent.task_manager.get_current_task()))
-
-			self.agent.movement.destination.x = self.agent.task_manager.get_current_task().position.x
-			self.agent.movement.destination.y = self.agent.task_manager.get_current_task().position.y
-			self.agent.movement.destination.z = self.agent.task_manager.get_current_task().position.z
-
-			self.agent.movement.calculate_new_orientation()
-			self.set_next_state(STATE_GOTO_TARGET)
-
-			return
-
-	class QuitState(State):
-		async def run(self):
-			logger.info(self.agent.name + ": Behaviour ............ [QUIT]")
-			await self.agent.die()
-			return
-
-	class TargetReachedState(State):
-
-		async def run(self):
-			logger.success(self.agent.name +
-						   ": Behaviour ............ [TARGET REACHED]")
-			logger.trace("position: {} destination: {}"
-						 .format(self.agent.movement.position, self.agent.movement.destination))
-
-			task = self.agent.task_manager.get_current_task()
-
-			# if self.agent.task_manager.get_current_task().is_erasable:
-			logger.info("Deleting task: {}".format(task))
-			self.agent.task_manager.delete(task)
-
-			self.agent.perform_target_reached(task)
-
-			self.set_next_state(STATE_STANDING)
-
-			return
-
-	class FightingState(State):
-
-		async def run(self):
-			logger.info(self.agent.name +
-						": Behaviour ............ [FIGHTING]")
-			self.set_next_state(STATE_FIGHTING)
-			await asyncio.sleep(0.5)
-			return
-
-	# Non-overloadable Methods, interesting for user
 
 	def pack_taken(self, pack_type, quantity):
 		print("GOT PACK")
@@ -859,7 +727,7 @@ class BDITroop(AbstractAgent, BDIAgent):
 		self.movement.destination.x = self.aimed_agent.position.x
 		self.movement.destination.y = self.aimed_agent.position.y
 		self.movement.destination.z = self.aimed_agent.position.z
-		self.movement.calculate_new_orientation()
+		self.movement.calculate_new_orientation(self.movement.destination)
 
 	def have_agent_to_shot(self):
 		"""
@@ -1001,101 +869,6 @@ class BDITroop(AbstractAgent, BDIAgent):
 		else:
 			self.soldiers_count = 0
 
-	def update_targets(self):
-		"""
-		Update priority of all 'prepared (to execute)' tasks.
-
-		This method is invoked in the state STANDING, and it's used to re-calculate the priority of all tasks (targets) int the task list
-		of the agent. The reason is because pyGOMAS kernel always execute the highest priority task.
-
-		It's very useful to overload this method.
-		"""
-		pass
-
-	def should_update_targets(self):
-		"""
-		Should we update now all 'prepared (to execute)' tasks?
-
-		This method is a decision function invoked in the state GOTO_TARGET. A value of True break out the inner loop,
-		making possible to pyGOMAS kernel extract the highest priority task, or update some attributes of the current task.
-		By default, the return value is False, so we execute the current task until it finalizes.
-
-		It's very useful to overload this method.
-
-		:returns False
-		:rtype: bool
-		"""
-		return False
-
-	def objective_pack_taken(self):
-		"""
-		The agent has got the objective pack.
-
-		This method is called when this agent walks on the objective pack, getting it.
-
-		It's very useful to overload this method.
-		"""
-		pass  # Should we do anything when we take the objective pack?
-
-	def setup_priorities(self):
-		"""
-		Definition of priorities for each kind of task.
-
-		This method can be implemented in basic Troop's derived classes to define the task's priorities in agreement to
-		the role of the new class. Priorities must be defined in the array task_priority.
-
-		It's very useful to overload this method.
-		"""
-		pass
-
-	def perform_no_ammo_action(self):
-		"""
-		Action to do if this agent cannot shoot.
-
-		This method is called when the agent try to shoot, but has no ammo. The agent will spit enemies out. :-)
-
-		It's very useful to overload this method.
-		"""
-		pass
-
-	def perform_target_reached(self, current_task):
-		"""
-		Action to do when this agent reaches the target of current task.
-
-		This method is called when the agent goes to state TARGET_REACHED. In agreement to current task, agent must realize some actions
-		(for example, to get next point to walk from patrolling path). The actions in common to all roles are implemented at this level of hierarchy:
-		TASK_PATROLLING, TASK_WALKING_PATH, TASK_RUN_AWAY.
-
-		It's very useful to overload this method.
-
-		:param current_task
-		"""
-
-		if current_task.type == TASK_PATROLLING:
-			self.control_points_index += 1
-			if self.control_points_index >= len(self.control_points):
-				self.control_points_index = 0
-			new_position = {X: self.control_points[self.control_points_index].x,
-							Y: self.control_points[self.control_points_index].y,
-							Z: self.control_points[self.control_points_index].z}
-			self.task_manager.add_task(
-				TASK_PATROLLING, self.name, new_position)
-
-		elif current_task.type == TASK_WALKING_PATH:
-			self.a_star_path_index += 1
-			if self.a_star_path_index >= len(self.a_star_path):
-				self.a_star_path_index = 0
-				current_task.is_erasable = True
-			else:
-				new_position = {X: self.a_star_path[self.a_star_path_index].x,
-								Y: self.a_star_path[self.a_star_path_index].y,
-								Z: self.a_star_path[self.a_star_path_index].z}
-				self.task_manager.add_task(
-					TASK_WALKING_PATH, self.name, new_position)
-
-		elif current_task.type == TASK_RUN_AWAY:
-			self.is_escaping = False
-
 	def generate_escape_position(self):
 		"""
 		Calculates a new destiny position to escape.
@@ -1109,27 +882,24 @@ class BDITroop(AbstractAgent, BDIAgent):
 			self.movement.calculate_new_destination(
 				radius_x=ESCAPE_RADIUS, radius_y=ESCAPE_RADIUS)
 			if self.check_static_position(self.movement.destination.x, self.movement.destination.z):
-				self.movement.calculate_new_orientation()
+				self.movement.calculate_new_orientation(self.movement.destination)
 				return
 
-	def generate_intermediate_point(self):
+	def escape_barrier(self,dt):
 		"""
-		Calculates an intermediate point to go to between actual position and destination.
-
-		This method is called when the agent generates a position which is not valid in the map.
+		Escape a barrier. Sets the agent's velocity vector 
+		highest component to zero, forcing it to move only 
+		along the other component, at maximum speed.
 		"""
-		logger.info(
-			f"{self.name} Current Position: {self.movement.position.x}, {self.movement.position.z}")
-		new_destination = Vector3D(self.movement.calculate_new_destination(
-			radius_x=DEFAULT_RADIUS, radius_y=DEFAULT_RADIUS))
-		logger.info(
-			f"{self.name} New Position: {new_destination.x}, {new_destination.z}")
-		if self.check_static_position(new_destination.x, new_destination.z):
-			self.destinations.appendleft(new_destination)
-			self.movement.destination = new_destination
-			return True
+		if abs(self.movement.velocity.x) > abs(self.movement.velocity.z):
+			self.movement.velocity.x = 0 
+			self.movement.velocity.z = 1 
 		else:
-			return False
+			self.movement.velocity.z = 0 
+			self.movement.velocity.x = 1 
+		move_result = self.move(dt)
+		if move_result == MV_OK:
+			self.movement.calculate_new_orientation(self.movement.destination)
 
 	def perform_escape_action(self):
 		"""

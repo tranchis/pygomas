@@ -1,15 +1,13 @@
 +flag (X,Y,Z): team(100) 
   <-
-  .print("In ASL,TEAM_ALLIED goto moving to: ",X,Y,Z); 
-  //.goto(X,Y,Z).
   .goto(16,0,38).
 
 +flag (X,Y,Z): team(200) 
   <-
-  .print("In ASL,TEAM_AXIS patrolling around: ",X,Y,Z); 
+  .print("In ASL,TEAM_AXIS patrolling around: ",X,Y,Z). 
   //.create_control_points(X,Y,Z,4,5).
   //.stop;
-  .goto(X,Y,Z).
+  //.goto(X,Y,Z).
 
 +cure(X,Y,Z) 
   <- 
@@ -28,7 +26,7 @@
 
 +enemies_in_fov(ID,Type,Angle,Distance,Health,X,Y,Z) 
 <- 
-.shoot(5,X,Y,Z);
+//.shoot(5,X,Y,Z);
 -enemies_in_fov(ID,Type,Angle,Distance,Health,X,Y,Z).
 
 +health(H): threshold_health(T) & H <= T 

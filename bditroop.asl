@@ -8,6 +8,7 @@
 +team (X)  
   <-
   .get_medics;
+  .get_fieldops;
   .print ("In ASL, my team is: ",X).
 
 +flag (X,Y,Z): team(100) 
@@ -78,8 +79,8 @@
   //.print("In ASL,setting name to:",X);
   -name(X).
 
-+health(H): threshold_health(T) & H <= T & team(100)
-//+health(H): threshold_health(T) & H <= T & first_call(on) &team(100)
+//+health(H): threshold_health(T) & H <= T & team(100)
++health(H): threshold_health(T) & H <= T & first_call(on) &team(100)
   <- 
   .print("Injured. My health",H);
   .get_medics;
@@ -92,27 +93,37 @@
   +first_call(off);
   -health(H). 
 
-+health(H): threshold_health(T) & H <= T & first_call(on) &team(200)
-  <-
-  .get_medics;
-  .print("Injured. My health",H);
-  ?flag(X,Y,Z);
-  ?myMedics(All_medics);
-  //?base(X,Y,Z);
-  //.print("Going back to base at" ,X,Y,Z);
-  //?position(X,Y,Z);
-  .nth(0,All_medics,M);
-  .print(M);
-  .send(M, tell,cure(X,Y,Z));
-  .goto(X,Y,Z);
+//+health(H): threshold_health(T) & H <= T & first_call(on) &team(200)
+  //<-
+  //.get_medics;
+  //.print("Injured. My health",H);
+  //?flag(X,Y,Z);
+  //?myMedics(All_medics);
+  ////?base(X,Y,Z);
+  ////.print("Going back to base at" ,X,Y,Z);
+  ////?position(X,Y,Z);
+  //.nth(0,All_medics,M);
+  //.print(M);
+  //.send(M, tell,cure(X,Y,Z));
+  //.goto(X,Y,Z);
+  //-first_call(on);
+  //+first_call(off);
+  //-health(H).  
+
++ammo(A): threshold_ammo(T) & A <= T & team(200) & first_call(on)
+  <- 
+  //.get_fieldops;
+  .stop;
+  .print("Out of Ammo at",X,Y,Z, A);
+  ?position(X,Y,Z);
+  ?myFieldops(All_fieldops);
+  .nth(0,All_fieldops,F);
+  .send(F, tell,need_ammo(X,Y,Z));
+  //.goto(X,Y,Z);
+  .print("CALLING FIELDOP",F);
   -first_call(on);
   +first_call(off);
-  -health(H).  
-
-+ammo(X) 
-  <- 
-  //.print("In ASL,setting ammo to:",X);
-  -ammo(X).
+  -ammo(A).  
 
 +pack_taken(Pack,Quantity): Pack == ammo 
   <-
@@ -126,7 +137,7 @@
   .print("Increase health by: ",Quantity);
   -pack_taken(Pack,Quantity).
 
-+enemies_in_fov(ID,Type,Angle,Distance,Health,X,Y,Z) 
++enemies_in_fov(ID,Type,Angle,Distance,Health,X,Y,Z): team(200) 
   <- 
   //.print("In ASL,setting enemies_in_fov with ID:",ID);
   //.print("with params :");

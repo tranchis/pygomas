@@ -14,6 +14,10 @@ class a_star():
         return ((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2)**0.5
 
     def get_path(self, start, goal):
+        start = np.round(start)
+        goal = np.round(goal)
+        start = (int(start[0]), int(start[1]))
+        goal = (int(goal[0]), int(goal[1]))
 
         neighbors = [(0, 1), (0, -1), (1, 0), (-1, 0),
                      (1, 1), (1, -1), (-1, 1), (-1, -1)]

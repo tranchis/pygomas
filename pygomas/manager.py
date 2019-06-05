@@ -1,6 +1,4 @@
 from spade_bdi.bdi import BDIAgent
-
-
 import datetime
 import json
 import time
@@ -377,7 +375,8 @@ class Manager(AbstractAgent):
 
                     msg_shot = Message(to=victim.jid)
                     msg_shot.set_metadata(PERFORMATIVE, PERFORMATIVE_SHOOT)
-                    msg_shot.body = json.dumps({DEC_HEALTH: damage})
+                    msg_shot.body = json.dumps(
+                        {DEC_HEALTH: damage})
                     await self.send(msg_shot)
 
         template = Template()
@@ -706,7 +705,7 @@ class Manager(AbstractAgent):
             a = Mobile()
             a.position = agent.locate.position
             a.destination = victim.locate.position
-            a.calculate_new_orientation()
+            a.calculate_new_orientation(a.destination)
             distance_terrain = self.intersect(
                 a.position, a.heading, min_distance)
             # logger.info("distanceTerrain: " + str(distance_terrain))

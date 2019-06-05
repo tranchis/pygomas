@@ -275,23 +275,17 @@ class Manager(AbstractAgent):
 
                         self.agent.agents[id_agent].locate.velocity.x = float(
                             content[VEL_X])
-                        self.agent.agents[id_agent].locate.velocity.y = float(
-                            content[VEL_Y])
-                        self.agent.agents[id_agent].locate.velocity.z = float(
-                            content[VEL_Z])
+                        self.agent.agents[id_agent].locate.velocity.y = float(content[VEL_Y])
+                        self.agent.agents[id_agent].locate.velocity.z = float(content[VEL_Z])
 
-                        self.agent.agents[id_agent].locate.heading.x = float(
-                            content[HEAD_X])
-                        self.agent.agents[id_agent].locate.heading.y = float(
-                            content[HEAD_Y])
-                        self.agent.agents[id_agent].locate.heading.z = float(
-                            content[HEAD_Z])
+                        self.agent.agents[id_agent].locate.heading.x = float(content[HEAD_X])
+                        self.agent.agents[id_agent].locate.heading.y = float(content[HEAD_Y])
+                        self.agent.agents[id_agent].locate.heading.z = float(content[HEAD_Z])
 
-                        self.agent.agents[id_agent].health = int(
-                            content[HEALTH])
+                        self.agent.agents[id_agent].health = int(content[HEALTH])
                         self.agent.agents[id_agent].ammo = int(content[AMMO])
-                        # logger.error("PRE CHECK OBJECTS [{}] {}".format(self.counter, msg.sender))
-                        packs = await self.agent.check_objects_at_step(id_agent, self)
+                        packs = await self.agent.check_objects_at_step(id_agent, behaviour=self)
+                        #logger.error("CHECK OBJECTS [{}] {}".format(msg.sender, packs))
                         fov_objects = self.agent.look(id_agent)
                         content = {PACKS: packs, FOV: fov_objects}
                         msg = Message(to=id_agent)
@@ -305,9 +299,8 @@ class Manager(AbstractAgent):
                             await self.agent.inform_game_finished("ALLIED", self)
                             logger.success(
                                 "\n\nManager:  GAME FINISHED!! Winner Team: ALLIED! (Target Returned)\n")
-                except:
-                    pass
-                # logger.info("[{}] BEHAV FINISHED".format(datetime.datetime.now()))
+                except Exception as e:
+                    logger.warning("Exception at DataFromTroopBehaviour: {}".format(e))
 
         template = Template()
         template.set_metadata(PERFORMATIVE, PERFORMATIVE_DATA)
@@ -482,7 +475,11 @@ class Manager(AbstractAgent):
 
         packs = []
 
-        for din_object in self.din_objects.values():
+        keys = list(self.din_objects.keys())
+        for key in keys:
+            if key not in self.din_objects:
+                continue
+            din_object = self.din_objects[key]
             if din_object.type == PACK_MEDICPACK and self.agents[id_agent].health >= 100:
                 continue
             if din_object.type == PACK_AMMOPACK and self.agents[id_agent].ammo >= 100:
@@ -504,13 +501,11 @@ class Manager(AbstractAgent):
                     quantity = DEFAULT_PACK_QTY
                     try:
                         del self.din_objects[id_]
-                        logger.info(
-                            self.agents[id_agent].jid + ": got a medic pack " + str(din_object.jid))
+                        logger.info(self.agents[id_agent].jid + ": got a medic pack " + str(din_object.jid))
                         content = {TYPE: type_, QTY: quantity}
 
                     except KeyError:
-                        logger.error(
-                            "Could not delete the din object {}".format(id_))
+                        logger.error("Could not delete the din object {}".format(id_))
 
                 elif din_object.type == PACK_AMMOPACK:
                     quantity = DEFAULT_PACK_QTY
@@ -520,13 +515,11 @@ class Manager(AbstractAgent):
                             self.agents[id_agent].jid + ": got an ammo pack " + str(din_object.jid))
                         content = {TYPE: type_, QTY: quantity}
                     except KeyError:
-                        logger.error(
-                            "Could not delete the din object {}".format(id_))
+                        logger.error("Could not delete the din object {}".format(id_))
 
                 elif din_object.type == PACK_OBJPACK:
                     if team == TEAM_ALLIED:
-                        logger.info("{}: got the objective pack ".format(
-                            self.agents[id_agent].jid))
+                        logger.info("{}: got the objective pack ".format(self.agents[id_agent].jid))
                         din_object.is_taken = True
                         din_object.owner = id_agent
                         din_object.position.x, din_object.position.y, din_object.position.z = 0.0, 0.0, 0.0

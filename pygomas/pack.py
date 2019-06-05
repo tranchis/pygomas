@@ -45,7 +45,7 @@ class Pack(AbstractAgent):
 
     async def setup(self):
         if self.type != PACK_OBJPACK:
-            offset = 10.0  # WARN
+            offset = 0.0  # WARN
             self.position.x += random.random() * offset
             self.position.z += random.random() * offset
 

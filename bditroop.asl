@@ -114,8 +114,8 @@
   <- 
   //.get_fieldops;
   .stop;
-  .print("Out of Ammo at",X,Y,Z, A);
   ?position(X,Y,Z);
+  .print("Out of Ammo at",X,Y,Z, A);
   ?myFieldops(All_fieldops);
   .nth(0,All_fieldops,F);
   .send(F, tell,need_ammo(X,Y,Z));

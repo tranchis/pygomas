@@ -34,10 +34,10 @@
   <- 
   .get_medics;
   ?position(X,Y,Z);
-  ?myMedics(A);
-  .nth(0,A,M);
-  .print(M);
-  .send(M, tell,cure(X,Y,Z));
+  //?myMedics(A);
+  //.nth(0,A,M);
+  //.print(M);
+  //.send(M, tell,cure(X,Y,Z));
   -first_call(on);
   +first_call(off);
   -health(H).

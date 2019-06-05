@@ -230,7 +230,7 @@ try:
     # Init socket
     if len(sys.argv) < 2:
         ADDRESS = "localhost"
-        PORT = 8001 #8072
+        PORT = 8072 #8001 #8072
     f.write("ADDRESS: %s\n" % (ADDRESS))
     f.write("PORT: %s\n" % (str(PORT)))
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

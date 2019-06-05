@@ -50,14 +50,17 @@ class Service(Agent):
                     logger.success(
                         "Service {} of team {} deregistered for {}".format(name, team, jid))
 
-    def get_service(self, service_descriptor):
+    def get_service(self, service_descriptor, questioner):
         logger.info("get service: {}".format(service_descriptor))
         name = service_descriptor[NAME]
         team = service_descriptor[TEAM]
 
         if name in self.services.keys():
             logger.info("I got service")
-            return self.services[name][team]
+            request = self.services[name][team][:]
+            if questioner in request:
+                request.remove(questioner)
+            return request
         else:
             logger.info("No service")
             return []
@@ -114,7 +117,7 @@ class GetServiceBehaviour(CyclicBehaviour):
         if msg:
             logger.info("Requesting service {}".format(msg.body))
             body = json.loads(msg.body)
-            names = self.agent.get_service(body)
+            names = self.agent.get_service(body, str(msg.sender))
             reply = msg.make_reply()
             reply.body = json.dumps(names)
             if body[NAME] == AMMO_SERVICE:

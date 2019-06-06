@@ -7,19 +7,20 @@
 
 +flag(X,Y,Z): team(200) 
   <-
-  .print("AXIS FIELDOP").
+  .wait(10000);
+  .goto(16,0,38).
   //.goto(X,Y,Z).
 
 +target_reached(X,Y,Z)
 //+target_reached(X,Y,Z): cure(X1,Y2,Z2) & X==X1 & Z==Z1
   <- 
   .reload;
-  .print("In ASL, Fieldop reloaded at :",X,Y,Z);
+  //.print("In ASL, Fieldop reloaded at :",X,Y,Z);
   -target_reached(X,Y,Z).
 
 +enemies_in_fov(ID,Type,Angle,Distance,Health,X,Y,Z) 
 <- 
-//.shoot(5,X,Y,Z);
+.shoot(5,X,Y,Z);
 -enemies_in_fov(ID,Type,Angle,Distance,Health,X,Y,Z).
 
 +need_ammo(X,Y,Z) 

@@ -1,6 +1,5 @@
 from spade_bdi.bdi import BDIAgent
 import pyson
-import datetime
 from collections import deque
 
 import asyncio
@@ -11,10 +10,9 @@ import time
 from loguru import logger
 
 from spade.message import Message
-from spade.behaviour import OneShotBehaviour, PeriodicBehaviour, State, CyclicBehaviour
+from spade.behaviour import OneShotBehaviour, PeriodicBehaviour, CyclicBehaviour
 from spade.template import Template
 
-from pygomas.ontology import TEAM_NONE, TEAM_ALLIED, TEAM_AXIS
 from . import MIN_POWER, POWER_UNIT, MIN_STAMINA, STAMINA_UNIT, MIN_AMMO, MAX_AMMO, MAX_STAMINA, MAX_POWER, \
     MAX_HEALTH, MIN_HEALTH
 from .ontology import*
@@ -22,8 +20,6 @@ from .agent import AbstractAgent, LONG_RECEIVE_WAIT
 from .threshold import Threshold
 from .map import TerrainMap
 from .mobile import Mobile
-from .task import TASK_GET_OBJECTIVE, TASK_PATROLLING, TASK_WALKING_PATH, TASK_RUN_AWAY, TASK_GOTO_POSITION, \
-    TaskManager, TASK_RETURN_TO_BASE
 from .vector import Vector3D
 from .sight import Sight
 from .pack import PACK_MEDICPACK, PACK_AMMOPACK, PACK_OBJPACK, PACK_NONE
@@ -52,8 +48,6 @@ MV_ALREADY_IN_DEST = 2
 class BDITroop(AbstractAgent, BDIAgent):
 
     def __init__(self, jid, passwd, asl=None, team=TEAM_NONE, manager_jid="cmanager@localhost", service_jid="cservice@localhost"):
-
-        self.task_manager = TaskManager()
 
         self.service_types = []
 
@@ -477,6 +471,7 @@ class BDITroop(AbstractAgent, BDIAgent):
                         z = ((self.agent.map.axis_base.get_end_z() -
                               self.agent.map.axis_base.get_init_z()) / 2) + \
                             self.agent.map.axis_base.get_init_z()
+                    self.agent.bdi.set_belief(NAME, self.agent.name)
                     self.agent.bdi.set_belief(TEAM, self.agent.team)
                     self.agent.bdi.set_belief(BASE, x, y, z)
                     self.agent.bdi.set_belief(POSITION, self.agent.movement.position.x,
@@ -519,9 +514,12 @@ class BDITroop(AbstractAgent, BDIAgent):
 
                 if self.agent.health <= 0:
                     logger.info(self.agent.name + ": DEAD!!")
-                    self.agent.task_manager.clear()
                     if self.agent.is_objective_carried:
+                        self.agent.bdi.remove_belief(PERFORMATIVE_FLAG_TAKEN)
                         self.agent.is_objective_carried = False
+                        print("LOST THE FLAG")
+                        logger.info("Agent {} loses the objective."
+                                    .format(self.agent.name))
                     await self.agent.die()
 
                 self.agent.perform_injury_action()
@@ -557,7 +555,6 @@ class BDITroop(AbstractAgent, BDIAgent):
 
                 packs = info[PACKS] if info[PACKS] is not None else []
                 for pack in packs:
-                    print("Stepped on pack")
                     pack = json.loads(pack)
                     quantity = pack[QTY]
                     type_ = pack[TYPE]
@@ -646,7 +643,6 @@ class BDITroop(AbstractAgent, BDIAgent):
             return MV_OK
 
     def pack_taken(self, pack_type, quantity):
-        print("GOT PACK")
         if pack_type == PACK_MEDICPACK:
             self.bdi.set_belief(PERFORMATIVE_PACK_TAKEN,
                                 MEDIC_SERVICE, quantity)
@@ -656,7 +652,7 @@ class BDITroop(AbstractAgent, BDIAgent):
                                 AMMO_SERVICE, quantity)
             self.increase_ammo(quantity)
         elif pack_type == PACK_OBJPACK:
-            self.objective_pack_taken()
+            self.is_objective_carried = True
             self.bdi.set_belief(PERFORMATIVE_FLAG_TAKEN)
 
     def get_health(self):

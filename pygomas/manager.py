@@ -348,7 +348,7 @@ class Manager(AbstractAgent):
                                     din_object.position.x = victim.locate.position.x
                                     din_object.position.y = victim.locate.position.y
                                     din_object.position.z = victim.locate.position.z
-                                    msg_pack.body = str({
+                                    msg_pack.body = json.dumps({
                                         X: victim.locate.position.x,
                                         Y: victim.locate.position.y,
                                         Z: victim.locate.position.z})
@@ -844,7 +844,7 @@ class Manager(AbstractAgent):
             allied_alive_players, axis_alive_players, allied_health, axis_health)
 
         try:
-            fw = open("JGOMAS_Statistics.txt", 'w+')
+            fw = open("PGOMAS_Statistics.txt", 'w+')
 
             fw.write(self.game_statistic.__str__(winner_team))
 

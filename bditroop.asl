@@ -7,41 +7,58 @@
 
 +team (X)  
   <-
-  .get_medics;
-  .get_fieldops;
+  //.get_medics;
+  //.get_fieldops;
   .print ("In ASL, my team is: ",X).
 
-+flag (X,Y,Z): team(100) 
++flag (X,Y,Z): team(100) & first_call(on)
   <-
   .print("In ASL,TEAM_ALLIED goto moving to: ",X,Y,Z); 
-  //.goto(X,Y,Z).
-  .goto(16,0,38).
+  -first_call(on);
+  +first_call(off);
+  .goto(X,Y,Z).
+  //.goto(16,0,38).
 
 +flag (X,Y,Z): team(200) 
   <-
-  .print("In ASL,TEAM_AXIS patrolling around: ",X,Y,Z); 
-  //.create_control_points(X,Y,Z,4,5).
+  .wait(10000);
+  .create_control_points(X,Y,Z,4,5);
   //.stop;
-  .goto(X,Y,Z).
+  //.goto(X,Y,Z);
+  .print("In ASL,TEAM_AXIS patrolling around: ",X,Y,Z). 
 
 +flag_taken: team(100) 
   <-
   .print("In ASL, TEAM_ALLIED flag_taken");
-  //?base(X,Y,Z);
+  ?base(X,Y,Z);
   //.print("going to base at position: ",X,Y,Z);
-  //.goto(X,Y,Z);
-  .stop;
-  -flag_taken.
+  .goto(81,0,68).
+  //.goto(X,Y,Z).
+  //.stop.
 
 +flag_taken: team(200) 
   <-
   .print("In ASL, TEAM_AXIS flag_taken");
-  -flag_taken(Team).
+  ?base(X,Y,Z);
+  .print("going to base at position: ",X,Y,Z);
+  .goto(X,Y,Z).
+
+-flag_taken
+ <-
+ .print("Lost flag").
+
++target_reached(X,Y,Z): X=81 & Z=68
+  <- 
+  ?flag(A,B,C);
+  .print ("THE flag is at ",A,B,C);
+  .print("In ASL, reached with flag, target at :",X,Y,Z);
+  .goto(16,0,38).
+
 
 +target_reached(X,Y,Z): patrolling(off)
   <- 
-  .print("In ASL, reached target at :",X,Y,Z);
-  -target_reached(X,Y,Z).
+  .print("In ASL, reached target at :",X,Y,Z).
+  //-target_reached(X,Y,Z).
 
 +target_reached(X,Y,Z): patrolling(on)  
   <- 
@@ -137,7 +154,8 @@
   .print("Increase health by: ",Quantity);
   -pack_taken(Pack,Quantity).
 
-+enemies_in_fov(ID,Type,Angle,Distance,Health,X,Y,Z): team(200) & Type<1000
++enemies_in_fov(ID,Type,Angle,Distance,Health,X,Y,Z): Type<1000
+//+enemies_in_fov(ID,Type,Angle,Distance,Health,X,Y,Z): team(200) & Type<1000
   <- 
   //.print("In ASL,setting enemies_in_fov with ID:",ID);
   //.print("with params :");
@@ -148,7 +166,7 @@
   //.print("X :",X);
   //.print("Y :",Y);
   //.print("Z :",Z);
-  .shoot(25,X,Y,Z);
+  .shoot(2,X,Y,Z);
   //.print("shooting here");
   -enemies_in_fov(ID,Type,Angle,Distance,Health,X,Y,Z).
 

@@ -69,4 +69,6 @@ class Pack(AbstractAgent):
         async def run(self):
             msg = await self.receive(timeout=LONG_RECEIVE_WAIT)
             if msg is not None:
-                await self.agent.stop()
+                content = msg.body
+                await self.agent.perform_pack_taken(content)
+                # await self.agent.stop()

@@ -108,7 +108,10 @@ class Manager(AbstractAgent):
 
     async def stop(self, timeout=5):
         await self.objective_agent.stop()
+        await self.service_agent.stop()
         await super().stop()
+        del self.render_server
+        self.render_server = None
 
     async def setup(self):
         class InitBehaviour(OneShotBehaviour):
@@ -801,23 +804,22 @@ class Manager(AbstractAgent):
 
     async def inform_game_finished(self, winner_team, behaviour):
 
-        msg = Message()
-        msg.set_metadata(PERFORMATIVE, PERFORMATIVE_GAME)
-        msg.body = "GAME FINISHED!! Winner Team: " + str(winner_team)
         for agent in self.agents.values():
+            msg = Message()
+            msg.set_metadata(PERFORMATIVE, PERFORMATIVE_GAME)
+            msg.body = "GAME FINISHED!! Winner Team: " + str(winner_team)
             msg.to = agent.jid
             await behaviour.send(msg)
         for st in self.render_server.get_connections():
             try:
                 st.send_msg_to_render_engine(
                     TCP_COM, "FINISH " + " GAME FINISHED!! Winner Team: " + str(winner_team))
-            except:
-                pass
+            except Exception as e:
+                logger.error(
+                    "Manager inform_game_finished Exception: {}".format(e))
 
         self.print_statistics(winner_team)
 
-        del self.render_server
-        self.render_server = None
         await self.stop()
 
     def print_statistics(self, winner_team):

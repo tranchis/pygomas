@@ -69,7 +69,7 @@ class AbstractAgent(Agent):
 
         behav = DeregisterAgentBehaviour()
         self.add_behaviour(behav)
-        await behav.join(timeout=5)
+        # await behav.join(timeout=5)
 
     @property
     def name(self):

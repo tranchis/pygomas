@@ -498,8 +498,8 @@ class BDITroop(AbstractAgent, BDIAgent):
             msg = await self.receive(timeout=LONG_RECEIVE_WAIT)
             if msg:
                 logger.info("[" + self.agent.name + "]: Bye!")
-                self.kill()
                 await self.agent.die()
+                self.kill()
 
     # Behaviour to handle Shot messages
     class ShootResponderBehaviour(PeriodicBehaviour):

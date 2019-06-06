@@ -2,7 +2,7 @@ import sys
 import time
 
 from pygomas.ontology import TEAM_AXIS, TEAM_ALLIED
-from pygomas.soldier import Soldier
+from pygomas.bdisoldier import Soldier
 from pygomas.bdimedic import Medic
 from pygomas.bdifieldops import FieldOps
 from pygomas.manager import Manager
@@ -34,7 +34,7 @@ print("Creating manager")
 manager = Manager(players=sum(num_allied) + sum(num_axis),
                   # name=manager_jid, service_jid=service_jid, map_name="mine")
                   name=manager_jid, service_jid=service_jid, map_name="mine_medium")
-                  #name=manager_jid, service_jid=service_jid, map_name="map_01")
+# name=manager_jid, service_jid=service_jid, map_name="map_01")
 future = manager.start()
 future.result()
 

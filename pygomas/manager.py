@@ -86,8 +86,6 @@ class Manager(AbstractAgent):
                  map_name="map_01",
                  service_jid="cservice@localhost"):
 
-        self.manager_bdi = BDIAgent(name, passwd, 'manager.asl')
-        self.manager_bdi.start()
         super().__init__(name, passwd, service_jid=service_jid)
 
         self.game_statistic = GameStatistic()
@@ -249,20 +247,10 @@ class Manager(AbstractAgent):
         class DataFromTroopBehaviour(CyclicBehaviour):
             async def run(self):
                 try:
-                    # logger.error("INIT BEHAV [{}]".format(self.counter))
-                    #buffer = {}
-                    # for _ in range(self.agent.max_total_agents + 1):
-                    #    msg = await self.receive(timeout=LONG_RECEIVE_WAIT)
-                    #    if msg:
-                    #        buffer[msg.sender] = msg
-                    #    else:
-                    #        break
                     msg = await self.receive(timeout=LONG_RECEIVE_WAIT)
-                    # logger.error("POST RECEIVE [{}]".format(self.counter))
                     if self.mailbox_size() > self.agent.max_total_agents + 1:
                         logger.error("TOO MUCH PENDING MSG: {}".format(
                             self.mailbox_size()))
-                    # for msg in buffer.values():
                     if msg:
                         content = json.loads(msg.body)
                         id_agent = content[NAME]
@@ -275,17 +263,22 @@ class Manager(AbstractAgent):
 
                         self.agent.agents[id_agent].locate.velocity.x = float(
                             content[VEL_X])
-                        self.agent.agents[id_agent].locate.velocity.y = float(content[VEL_Y])
-                        self.agent.agents[id_agent].locate.velocity.z = float(content[VEL_Z])
+                        self.agent.agents[id_agent].locate.velocity.y = float(
+                            content[VEL_Y])
+                        self.agent.agents[id_agent].locate.velocity.z = float(
+                            content[VEL_Z])
 
-                        self.agent.agents[id_agent].locate.heading.x = float(content[HEAD_X])
-                        self.agent.agents[id_agent].locate.heading.y = float(content[HEAD_Y])
-                        self.agent.agents[id_agent].locate.heading.z = float(content[HEAD_Z])
+                        self.agent.agents[id_agent].locate.heading.x = float(
+                            content[HEAD_X])
+                        self.agent.agents[id_agent].locate.heading.y = float(
+                            content[HEAD_Y])
+                        self.agent.agents[id_agent].locate.heading.z = float(
+                            content[HEAD_Z])
 
-                        self.agent.agents[id_agent].health = int(content[HEALTH])
+                        self.agent.agents[id_agent].health = int(
+                            content[HEALTH])
                         self.agent.agents[id_agent].ammo = int(content[AMMO])
                         packs = await self.agent.check_objects_at_step(id_agent, behaviour=self)
-                        #logger.error("CHECK OBJECTS [{}] {}".format(msg.sender, packs))
                         fov_objects = self.agent.look(id_agent)
                         content = {PACKS: packs, FOV: fov_objects}
                         msg = Message(to=id_agent)
@@ -294,13 +287,13 @@ class Manager(AbstractAgent):
 
                         await self.send(msg)
 
-                        # logger.error("POST CHECK OBJECTS [{}] {}".format(self.counter, msg.sender))
                         if self.agent.check_game_finished(id_agent):
                             await self.agent.inform_game_finished("ALLIED", self)
                             logger.success(
                                 "\n\nManager:  GAME FINISHED!! Winner Team: ALLIED! (Target Returned)\n")
                 except Exception as e:
-                    logger.warning("Exception at DataFromTroopBehaviour: {}".format(e))
+                    logger.warning(
+                        "Exception at DataFromTroopBehaviour: {}".format(e))
 
         template = Template()
         template.set_metadata(PERFORMATIVE, PERFORMATIVE_DATA)
@@ -501,11 +494,13 @@ class Manager(AbstractAgent):
                     quantity = DEFAULT_PACK_QTY
                     try:
                         del self.din_objects[id_]
-                        logger.info(self.agents[id_agent].jid + ": got a medic pack " + str(din_object.jid))
+                        logger.info(
+                            self.agents[id_agent].jid + ": got a medic pack " + str(din_object.jid))
                         content = {TYPE: type_, QTY: quantity}
 
                     except KeyError:
-                        logger.error("Could not delete the din object {}".format(id_))
+                        logger.error(
+                            "Could not delete the din object {}".format(id_))
 
                 elif din_object.type == PACK_AMMOPACK:
                     quantity = DEFAULT_PACK_QTY
@@ -515,11 +510,13 @@ class Manager(AbstractAgent):
                             self.agents[id_agent].jid + ": got an ammo pack " + str(din_object.jid))
                         content = {TYPE: type_, QTY: quantity}
                     except KeyError:
-                        logger.error("Could not delete the din object {}".format(id_))
+                        logger.error(
+                            "Could not delete the din object {}".format(id_))
 
                 elif din_object.type == PACK_OBJPACK:
                     if team == TEAM_ALLIED:
-                        logger.info("{}: got the objective pack ".format(self.agents[id_agent].jid))
+                        logger.info("{}: got the objective pack ".format(
+                            self.agents[id_agent].jid))
                         din_object.is_taken = True
                         din_object.owner = id_agent
                         din_object.position.x, din_object.position.y, din_object.position.z = 0.0, 0.0, 0.0
@@ -537,9 +534,6 @@ class Manager(AbstractAgent):
                             din_object.position.z = self.map.get_target_z()
                             content = {TYPE: type_, QTY: 0, TEAM: TEAM_AXIS}
 
-                # else:
-                #    content = {TYPE: PACK_NONE, QTY: 0}
-
                 # // Send a destroy/taken msg to pack and an inform msg to agent
                 if content:
                     content = json.dumps(content)
@@ -547,13 +541,6 @@ class Manager(AbstractAgent):
                     msg.set_metadata(PERFORMATIVE, PERFORMATIVE_PACK_TAKEN)
                     msg.body = content
                     await behaviour.send(msg)
-
-                    # msg_to_agent = Message(to=self.agents[id_agent].jid)
-                    # msg_to_agent.set_metadata(
-                    #     PERFORMATIVE, PERFORMATIVE_PACK_TAKEN)
-                    # msg_to_agent.body = content
-                    # await behaviour.send(msg_to_agent)
-
                     packs.append(content)
         return packs
 

@@ -1,21 +1,15 @@
-import json
-
 from loguru import logger
-
-from spade.template import Template
-from spade.behaviour import CyclicBehaviour, OneShotBehaviour
-
+from spade.behaviour import OneShotBehaviour
 from . import POWER_UNIT
-from .agent import LONG_RECEIVE_WAIT
 from .ammopack import AmmoPack
 from .bditroop import BDITroop, CLASS_FIELDOPS
-from pygomas.ontology import AMMO_SERVICE, PERFORMATIVE, PERFORMATIVE_CFA
-from .task import TASK_WALKING_PATH, TASK_PATROLLING, TASK_GOTO_POSITION, TASK_RUN_AWAY, TASK_ATTACK, \
-    TASK_GET_OBJECTIVE, TASK_GIVE_BACKUP, TASK_GIVE_AMMOPACKS, TASK_GIVE_MEDICPAKS, TASK_NONE
+from .ontology import AMMO_SERVICE
+import random
 
 
 class FieldOps(BDITroop):
     packs_delivered = 0
+    ammo_pack_offset = 5
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -23,7 +17,6 @@ class FieldOps(BDITroop):
         self.eclass = CLASS_FIELDOPS
 
     async def setup(self):
-        # self.launch_cfa_responder_behaviour()
         @self.bdi_actions.add(".reload", 0)
         def _cure(agent, term, intention):
             class CreateAmmoPackBehaviour(OneShotBehaviour):
@@ -45,19 +38,22 @@ class FieldOps(BDITroop):
         """
         Creates ammo packs if possible.
 
-        This method allows to create medic packs if there is enough power in the agent's power bar.
+        This method allows to create ammo packs if there is enough power in the agent's power bar.
 
         :returns number of ammo packs created
         """
 
-        packs_delivered = 0
         logger.info("{} Creating ammo packs.".format(self.name))
         while self.perform_ammo_action():
             FieldOps.packs_delivered += 1
             name = "ammopack{}@{}".format(
                 FieldOps.packs_delivered, self.jid.domain)
-            x = self.movement.position.x
-            z = self.movement.position.z
+            x = self.movement.position.x + random.random() * FieldOps.ammo_pack_offset
+            z = self.movement.position.z + random.random() * FieldOps.ammo_pack_offset
+
+            while not self.check_static_position(x, z):
+                x = self.movement.position.x + random.random() * FieldOps.ammo_pack_offset
+                z = self.movement.position.z + random.random() * FieldOps.ammo_pack_offset
             team = self.team
 
             try:
@@ -68,7 +64,4 @@ class FieldOps(BDITroop):
                 logger.warning(
                     "FieldOps {} could not create AmmoPack: {}".format(self.name, e))
 
-            packs_delivered += 1
             logger.info("AmmoPack {} created.".format(name))
-
-        return packs_delivered

@@ -1,21 +1,15 @@
-import json
-
 from loguru import logger
-
-from spade.template import Template
-from spade.behaviour import CyclicBehaviour, OneShotBehaviour
-
+from spade.behaviour import OneShotBehaviour
 from . import POWER_UNIT
-from .agent import LONG_RECEIVE_WAIT
-from .bditroop import BDITroop, CLASS_MEDIC
-from .ontology import MEDIC_SERVICE, PERFORMATIVE, PERFORMATIVE_CFM
-from .task import TASK_NONE, TASK_GIVE_MEDICPAKS, TASK_GIVE_AMMOPACKS, TASK_GIVE_BACKUP, TASK_GET_OBJECTIVE, \
-    TASK_ATTACK, TASK_RUN_AWAY, TASK_GOTO_POSITION, TASK_PATROLLING, TASK_WALKING_PATH
 from .medicpack import MedicPack
+from .bditroop import BDITroop, CLASS_MEDIC
+from .ontology import MEDIC_SERVICE
+import random
 
 
 class Medic(BDITroop):
     packs_delivered = 0
+    medic_pack_offset = 5
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -49,15 +43,17 @@ class Medic(BDITroop):
 
         :returns number of medic packs created
         """
-        packs_delivered = 0
         logger.info("{} Creating medic packs.".format(self.name))
         while self.perform_medic_action():
             Medic.packs_delivered += 1
             name = "medicpack{}@{}".format(
                 Medic.packs_delivered, self.jid.domain)
+            x = self.movement.position.x + random.random() * Medic.medic_pack_offset
+            z = self.movement.position.z + random.random() * Medic.medic_pack_offset
 
-            x = self.movement.position.x
-            z = self.movement.position.z
+            while not self.check_static_position(x, z):
+                x = self.movement.position.x + random.random() * Medic.medic_pack_offset
+                z = self.movement.position.z + random.random() * Medic.medic_pack_offset
             team = self.team
 
             try:
@@ -67,7 +63,3 @@ class Medic(BDITroop):
             except Exception as e:
                 logger.warning(
                     "Medic {} could not create MedicPack: {}".format(self.name, e))
-
-            packs_delivered += 1
-
-        return packs_delivered

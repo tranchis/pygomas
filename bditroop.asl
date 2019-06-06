@@ -137,11 +137,10 @@
   .print("Increase health by: ",Quantity);
   -pack_taken(Pack,Quantity).
 
-+enemies_in_fov(ID,Type,Angle,Distance,Health,X,Y,Z): team(200) 
++enemies_in_fov(ID,Type,Angle,Distance,Health,X,Y,Z): team(200) & Type<1000
   <- 
   //.print("In ASL,setting enemies_in_fov with ID:",ID);
   //.print("with params :");
-  //.print("Team :",Team);
   //.print("Type :",Type);
   //.print("Angle :",Angle);
   //.print("Distance :",Distance);
@@ -149,14 +148,14 @@
   //.print("X :",X);
   //.print("Y :",Y);
   //.print("Z :",Z);
-  .shoot(5,X,Y,Z);
+  .shoot(25,X,Y,Z);
+  //.print("shooting here");
   -enemies_in_fov(ID,Type,Angle,Distance,Health,X,Y,Z).
 
 +friends_in_fov(ID,Type,Angle,Distance,Health,X,Y,Z) 
   <- 
 //.print("In ASL,setting friends_in_fov with ID:",ID);
 //.print("with params :");
-//.print("Team :",Team);
 //.print("Type :",Type);
 //.print("Angle :",Angle);
 //.print("Distance :",Distance);
@@ -170,7 +169,6 @@
   //<- 
   //.print("In ASL,setting packs_in_fov with ID:",ID);
   //.print("with params :");
-  //.print("Team :",Team);
   //.print("Type :",Type);
   //.print("Angle :",Angle);
   //.print("Distance :",Distance);

@@ -11,7 +11,7 @@ import time
 from loguru import logger
 
 from spade.message import Message
-from spade.behaviour import OneShotBehaviour, PeriodicBehaviour, FSMBehaviour, State, CyclicBehaviour
+from spade.behaviour import OneShotBehaviour, PeriodicBehaviour, State, CyclicBehaviour
 from spade.template import Template
 
 from pygomas.ontology import TEAM_NONE, TEAM_ALLIED, TEAM_AXIS
@@ -103,8 +103,6 @@ class BDITroop(AbstractAgent, BDIAgent):
 
         # Current Map
         self.map = None  # TerrainMap
-
-        self.fsm_behaviour = None  # FSMBehaviour
 
         # Destination Queue
         self.destinations = deque()
@@ -269,7 +267,7 @@ class BDITroop(AbstractAgent, BDIAgent):
         @self.bdi_actions.add(".get_medics", 0)
         def _get_medics(agent, term, intention):
             """Request for medic agents. This action sends a FIPA REQUEST
-               message to the service agent asking for those who offer the 
+               message to the service agent asking for those who offer the
                Medic service.
                """
             class GetMedicBehaviour(OneShotBehaviour):
@@ -300,7 +298,7 @@ class BDITroop(AbstractAgent, BDIAgent):
         @self.bdi_actions.add(".get_fieldops", 0)
         def _get_fieldops(agent, term, intention):
             """Request for fieldop agents. This action sends a FIPA REQUEST
-               message to the service agent asking for those who offer the 
+               message to the service agent asking for those who offer the
                Ammo service.
                """
             class GetFieldopsBehaviour(OneShotBehaviour):
@@ -332,7 +330,7 @@ class BDITroop(AbstractAgent, BDIAgent):
         @self.bdi_actions.add(".get_backups", 0)
         def _get_backups(agent, term, intention):
             """Request for backup agents. This action sends a FIPA REQUEST
-               message to the service agent asking for those who offer the 
+               message to the service agent asking for those who offer the
                Backup service.
                """
             class GetBackupBehaviour(OneShotBehaviour):
@@ -650,7 +648,6 @@ class BDITroop(AbstractAgent, BDIAgent):
     def pack_taken(self, pack_type, quantity):
         print("GOT PACK")
         if pack_type == PACK_MEDICPACK:
-            print("Increasing health")
             self.bdi.set_belief(PERFORMATIVE_PACK_TAKEN,
                                 MEDIC_SERVICE, quantity)
             self.increase_health(quantity)

@@ -1,5 +1,4 @@
 import json
-import random
 from loguru import logger
 
 from .ontology import PERFORMATIVE, PERFORMATIVE_PACK, PERFORMATIVE_PACK_TAKEN, TEAM, X, Y, Z, NAME, ACTION, CREATE, \
@@ -44,11 +43,6 @@ class Pack(AbstractAgent):
         self.team = team
 
     async def setup(self):
-        if self.type != PACK_OBJPACK:
-            offset = 0.0  # WARN
-            self.position.x += random.random() * offset
-            self.position.z += random.random() * offset
-
         self.add_behaviour(self.CreatePackBehaviour())
 
         t = Template()
@@ -75,8 +69,4 @@ class Pack(AbstractAgent):
         async def run(self):
             msg = await self.receive(timeout=LONG_RECEIVE_WAIT)
             if msg is not None:
-                await self.agent.perform_pack_taken(msg.body)
-
-    # virtual function for overloading
-    async def perform_pack_taken(self, content):
-        pass
+                await self.agent.stop()

@@ -115,5 +115,5 @@ class Server(object):
 
         try:
             writer.write(msg_to_send.encode("ASCII"))
-        except:
-            logger.error("EXCEPTION IN SENDMSGTORE")
+        except Exception as e:
+            logger.error("EXCEPTION IN SENDMSGTORE: {}".format(e))

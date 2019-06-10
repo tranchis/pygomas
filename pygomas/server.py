@@ -40,7 +40,7 @@ class Server(object):
     def accept_client(self, client_reader, client_writer):
         logger.info("New Connection")
         task = asyncio.Task(self.handle_client(client_reader, client_writer))
-        self.clients[task] = (client_reader, client_writer)
+        self.clients[task] = (client_reader, client_writer, False)
 
         def client_done(task_):
             del self.clients[task_]
@@ -49,19 +49,24 @@ class Server(object):
 
         task.add_done_callback(client_done)
 
+    def is_ready(self, task):
+        return self.clients[task][2]
+
     async def handle_client(self, reader, writer):
         task = None
         for k, v in self.clients.items():
-            if v == (reader, writer):
+            if v[0] == reader and v[1] == writer:
                 task = k
                 break
         # + ":" + str(self.request)
         logger.info("Preparing Connection to " + str(task))
 
         try:
-            writer.write("JGOMAS Render Engine Server v. 0.1.0, {}\n".format(
-                time.asctime()).encode())
-            logger.info("JGOMAS Render Engine Server v. 0.1.0")
+            welcome_message = "JGOMAS Render Engine Server v. 0.1.0, {}\n".format(
+                time.asctime()).encode("ASCII")
+            writer.write(welcome_message)
+            logger.info("JGOMAS Render Engine Server v. 0.1.0 (len={})".format(
+                len(welcome_message)))
             # self.wfile.flush()
         except Exception as e:
             logger.info(str(e))
@@ -81,13 +86,16 @@ class Server(object):
                 self.send_msg_to_render_engine(
                     task, TCP_COM, "Server: Connection Accepted ")
                 logger.info("Sending: NAME: " + self.map_name)
+
                 self.send_msg_to_render_engine(
                     task, TCP_MAP, "NAME: " + self.map_name + "  ")
+                self.clients[task] = (reader, writer, True)
 
             elif "MAPNAME" in data:
                 logger.info("Server: Client requested mapname")
                 self.send_msg_to_render_engine(
                     task, TCP_MAP, "NAME: " + self.map_name + "  ")
+                self.clients[task] = (reader, writer, True)
 
             elif "QUIT" in data:
                 logger.info("Server: Client quitted")
@@ -116,6 +124,6 @@ class Server(object):
         msg_to_send = "{} {}\n".format(msg_type, msg)
 
         try:
-            writer.write(msg_to_send.encode())
-        except:
-            logger.error("EXCEPTION IN SENDMSGTORE")
+            writer.write(msg_to_send.encode("ASCII"))
+        except Exception as e:
+            logger.error("EXCEPTION IN SENDMSGTORE: {}".format(e))

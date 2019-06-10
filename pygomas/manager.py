@@ -237,8 +237,9 @@ class Manager(AbstractAgent):
                                 msg += str(din_object.position.z) + ") "
 
                         for task in self.agent.render_server.get_connections():
-                            self.agent.render_server.send_msg_to_render_engine(
-                                task, TCP_AGL, msg)
+                            if self.agent.render_server.is_ready(task):
+                                self.agent.render_server.send_msg_to_render_engine(
+                                    task, TCP_AGL, msg)
                         # logger.info("msg to render engine: {}".format(msg))
                 except Exception:
                     pass
@@ -659,6 +660,7 @@ class Manager(AbstractAgent):
         """
         Agent with id id_agent shoots
         :param id_agent: agent who shoots
+        :param victim_position: the coordinates of the victim to be shot
         :return: agent shot or None
         """
         victim = None
@@ -701,6 +703,7 @@ class Manager(AbstractAgent):
         """
         :param origin:
         :param vector:
+        :param distance:
         :return: 0.0 if it does not intersect
         """
 
@@ -814,9 +817,8 @@ class Manager(AbstractAgent):
             try:
                 st.send_msg_to_render_engine(
                     TCP_COM, "FINISH " + " GAME FINISHED!! Winner Team: " + str(winner_team))
-            except Exception as e:
-                logger.error(
-                    "Manager inform_game_finished Exception: {}".format(e))
+            except:
+                pass
 
         self.print_statistics(winner_team)
 
@@ -852,5 +854,5 @@ class Manager(AbstractAgent):
 
             fw.close()
 
-        except:
-            logger.error("COULD NOT WRITE STATISTICS TO FILE")
+        except Exception as e:
+            logger.error("COULD NOT WRITE STATISTICS TO FILE: {}".format(e))

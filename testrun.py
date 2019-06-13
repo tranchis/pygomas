@@ -7,12 +7,6 @@ from pygomas.bdimedic import Medic
 from pygomas.bdifieldops import FieldOps
 from pygomas.manager import Manager
 
-import logging
-
-import pyson
-# logging.basicConfig(level=logging.DEBUG)
-# logging.getLogger("spade.Agent").setLevel(logging.WARN)
-
 # host = "localhost"
 host = "gtirouter.dsic.upv.es"
 
@@ -33,7 +27,7 @@ num_allied = 1, 1, 1
 print("Creating manager")
 manager = Manager(players=sum(num_allied) + sum(num_axis),
                   # name=manager_jid, service_jid=service_jid, map_name="mine")
-                  #name=manager_jid, service_jid=service_jid, map_name="mine_medium")
+                  # name=manager_jid, service_jid=service_jid, map_name="mine_medium")
                   name=manager_jid, service_jid=service_jid, map_name="map_01")
 future = manager.start()
 future.result()
@@ -74,13 +68,13 @@ for a in axis_soldiers + allied_soldiers + axis_medics + allied_medics + axis_fi
   # port += 1
 
 for a in axis_soldiers + allied_soldiers:
-  a.set_asl('bditroop.asl')
+  a.set_asl('pygomas/ASL/bditroop.asl')
 
 for a in axis_medics + allied_medics:
-  a.set_asl('medic.asl')
+  a.set_asl('pygomas/ASL/medic.asl')
 
 for a in axis_fieldops + allied_fieldops:
-  a.set_asl('fieldops.asl')
+  a.set_asl('pygomas/ASL/fieldops.asl')
 
 while True:
   try:

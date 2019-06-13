@@ -1,5 +1,3 @@
-from spade_bdi.bdi import BDIAgent
-import pyson
 from collections import deque
 
 import asyncio
@@ -12,6 +10,8 @@ from loguru import logger
 from spade.message import Message
 from spade.behaviour import OneShotBehaviour, PeriodicBehaviour, CyclicBehaviour
 from spade.template import Template
+from spade_bdi.bdi import BDIAgent
+import agentspeak as asp
 
 from . import MIN_POWER, POWER_UNIT, MIN_STAMINA, STAMINA_UNIT, MIN_AMMO, MAX_AMMO, MAX_STAMINA, MAX_POWER, \
     MAX_HEALTH, MIN_HEALTH
@@ -148,7 +148,7 @@ class BDITroop(AbstractAgent, BDIAgent):
         @self.bdi_actions.add(".goto", 3)
         def _goto(agent, term, intention):
             """Sets the PyGomas destination. Expects args to be x,y,z"""
-            args = pyson.grounded(term.args, intention.scope)
+            args = asp.grounded(term.args, intention.scope)
             self.movement.destination.x = args[0]
             self.movement.destination.y = args[1]
             self.movement.destination.z = args[2]
@@ -178,10 +178,8 @@ class BDITroop(AbstractAgent, BDIAgent):
             Calculates an array of positions for patrolling.
             When this action is called, it creates an array of n random positions.
             Expects args to be x,y,z,radius and number of points
-
-            It's very useful to overload this action.
             """
-            args = pyson.grounded(term.args, intention.scope)
+            args = asp.grounded(term.args, intention.scope)
 
             center_x = args[0]
             center_y = args[1]
@@ -227,7 +225,7 @@ class BDITroop(AbstractAgent, BDIAgent):
              :returns True (shot done) | False (cannot shoot, has no ammo)
              :rtype bool
              """
-            args = pyson.grounded(term.args, intention.scope)
+            args = asp.grounded(term.args, intention.scope)
 
             shot_num = args[0]
             victim_x = args[1]
@@ -309,7 +307,6 @@ class BDITroop(AbstractAgent, BDIAgent):
                         self.agent.fieldops_count = len(result)
                         logger.info("{} got {} fieldops: {}".format(
                             self.agent.name, self.agent.fieldops_count, result))
-                        # self.agent.bdi.set_belief(MY_FIELDOPS,result[0])
                         self.agent.bdi.set_belief(MY_FIELDOPS, tuple(result))
                     else:
                         self.agent.bdi.set_belief(MY_FIELDOPS, 0)

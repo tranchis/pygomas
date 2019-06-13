@@ -5,7 +5,7 @@ from loguru import logger
 
 from spade.container import Container
 
-SERVER_PORT = 8072  # 8001 #8072  # our server's own port
+SERVER_PORT = 8001  # 8072  # our server's own port
 
 TCP_COM = 0  # COMMUNICATION (ACCEPTED, CLOSED, REFUSED)
 TCP_AGL = 1  # AGENT LIST
@@ -65,10 +65,11 @@ class Server(object):
             welcome_message = "JGOMAS Render Engine Server v. 0.1.0, {}\n".format(
                 time.asctime()).encode("ASCII")
             writer.write(welcome_message)
+            # await writer.drain()
             logger.info("JGOMAS Render Engine Server v. 0.1.0 (len={})".format(
                 len(welcome_message)))
-            # self.wfile.flush()
         except Exception as e:
+            logger.info("EXCEPTION IN WELCOME MESSAGE")
             logger.info(str(e))
 
         while True:
@@ -76,25 +77,27 @@ class Server(object):
             data = await reader.readline()
             if data is None:
                 logger.info("Received no data")
+                print("Received no data")
                 # exit echo loop and disconnect
                 return
             # self.synchronizer.release()
             data = data.decode().rstrip()
+            print("DATA", data)
             logger.info("Client says:" + data)
             if "READY" in data:
                 logger.info("Server: Connection Accepted")
                 self.send_msg_to_render_engine(
-                    task, TCP_COM, "Server: Connection Accepted ")
+                    task, TCP_COM, "Server: Connection Accepted")
+                self.send_msg_to_render_engine(
+                    task, TCP_MAP, "NAME: " + self.map_name + " ")
                 logger.info("Sending: NAME: " + self.map_name)
 
-                self.send_msg_to_render_engine(
-                    task, TCP_MAP, "NAME: " + self.map_name + "  ")
                 self.clients[task] = (reader, writer, True)
 
             elif "MAPNAME" in data:
                 logger.info("Server: Client requested mapname")
                 self.send_msg_to_render_engine(
-                    task, TCP_MAP, "NAME: " + self.map_name + "  ")
+                    task, TCP_MAP, "NAME: " + self.map_name + " ")
                 self.clients[task] = (reader, writer, True)
 
             elif "QUIT" in data:
@@ -121,7 +124,7 @@ class Server(object):
 
         msg_type = type_dict[msg_type] if msg_type in type_dict else "ERR"
 
-        msg_to_send = "{} {}\n".format(msg_type, msg)
+        msg_to_send = "{} {}".format(msg_type, msg)
 
         try:
             writer.write(msg_to_send.encode("ASCII"))

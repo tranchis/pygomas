@@ -1,4 +1,3 @@
-from spade_bdi.bdi import BDIAgent
 import datetime
 import json
 import time
@@ -9,13 +8,10 @@ from loguru import logger
 from spade.behaviour import OneShotBehaviour, PeriodicBehaviour, CyclicBehaviour, TimeoutBehaviour
 from spade.message import Message
 from spade.template import Template
+from spade_bdi.bdi import BDIAgent
 
 from . import MIN_HEALTH
-from .ontology import PRECISION_Z, PRECISION_X, PERFORMATIVE_GAME, PERFORMATIVE_PACK_TAKEN, PERFORMATIVE_PACK, PERFORMATIVE_SERVICES, \
-    PERFORMATIVE_INFORM, PERFORMATIVE_PACK_LOST, PERFORMATIVE_SHOOT, PERFORMATIVE_DATA, \
-    MANAGEMENT_SERVICE, PERFORMATIVE_INIT, PERFORMATIVE, NAME, TYPE, TEAM, MAP, X, Y, Z, QTY, ANGLE, DISTANCE, HEALTH, \
-    AIM, SHOTS, DEC_HEALTH, VEL_X, VEL_Y, VEL_Z, HEAD_X, HEAD_Y, HEAD_Z, AMMO, PERFORMATIVE_OBJECTIVE, PACKS, FOV, \
-    ACTION, DESTROY, CREATE
+from .ontology import *
 from .stats import GameStatistic
 from .mobile import Mobile
 from .vector import Vector3D
@@ -25,7 +21,6 @@ from .config import Config
 from .service import Service
 from .server import Server, TCP_AGL, TCP_COM
 from .bditroop import CLASS_SOLDIER
-from pygomas.ontology import TEAM_NONE, TEAM_ALLIED, TEAM_AXIS
 from .objpack import ObjectivePack
 from .map import TerrainMap
 from .sight import Sight
@@ -230,7 +225,7 @@ class Manager(AbstractAgent):
 
                         for din_object in self.agent.din_objects.values():
                             if not din_object.is_taken:
-                                msg += str(din_object.jid) + " "
+                                msg += str(din_object.render_id) + " "
                                 msg += str(din_object.type) + " "
                                 msg += " (" + str(din_object.position.x) + ", "
                                 msg += str(din_object.position.y) + ", "
@@ -240,7 +235,7 @@ class Manager(AbstractAgent):
                             if self.agent.render_server.is_ready(task):
                                 self.agent.render_server.send_msg_to_render_engine(
                                     task, TCP_AGL, msg)
-                        # logger.info("msg to render engine: {}".format(msg))
+                            # logger.info("msg to render engine: {}".format(msg))
                 except Exception:
                     pass
 
@@ -426,6 +421,11 @@ class Manager(AbstractAgent):
                         din_object = DinObject()
                         din_object.jid = msg.sender
                         din_object.type = type_
+                        if din_object.type == PACK_OBJPACK:
+                            din_object.render_id = 1
+                        else:
+                            din_object.render_id = abs(
+                                hash(din_object.jid)) % 1024
                         din_object.team = team
                         din_object.position.x = x
                         din_object.position.y = y

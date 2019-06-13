@@ -124,7 +124,7 @@ class Server(object):
 
         msg_type = type_dict[msg_type] if msg_type in type_dict else "ERR"
 
-        msg_to_send = "{} {}".format(msg_type, msg)
+        msg_to_send = "{} {}\n".format(msg_type, msg)
 
         try:
             writer.write(msg_to_send.encode("ASCII"))

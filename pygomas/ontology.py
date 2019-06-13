@@ -1,4 +1,4 @@
-#Ontologies
+# Ontologies
 ACTION: str = "ACTION"
 AIM: str = "aim"
 ANGLE: str = "angle"
@@ -46,7 +46,7 @@ PERFORMATIVE_SERVICES: str = "services"
 PERFORMATIVE_SIGHT: str = "sight"
 PERFORMATIVE_SHOOT: str = "shot"
 
-#Precisions
+# Precisions
 PRECISION_Z = 0.5
 PRECISION_X = 0.5
 
@@ -56,7 +56,7 @@ BACKUP_SERVICE: str = "backup"
 MANAGEMENT_SERVICE: str = "management"
 MEDIC_SERVICE: str = "medic"
 
-#Teams
+# Teams
 TEAM_NONE: int = 0
 TEAM_ALLIED: int = 100
 TEAM_AXIS: int = 200

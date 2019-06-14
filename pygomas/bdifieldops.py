@@ -49,8 +49,7 @@ class FieldOps(BDITroop):
         logger.info("{} Creating ammo packs.".format(self.name))
         while self.perform_ammo_action():
             FieldOps.packs_delivered += 1
-            name = "ammopack{}@{}".format(
-                FieldOps.packs_delivered, self.jid.domain)
+            name = "ammopack{}@{}".format(FieldOps.packs_delivered, self.jid.domain)
             x = self.movement.position.x + random.random() * FieldOps.ammo_pack_offset
             z = self.movement.position.z + random.random() * FieldOps.ammo_pack_offset
 
@@ -60,11 +59,9 @@ class FieldOps(BDITroop):
             team = self.team
 
             try:
-                pack = AmmoPack(name=name, passwd="secret", x=x,
-                                z=z, team=team, manager_jid=self.manager)
+                pack = AmmoPack(name=name, passwd="secret", x=x, z=z, team=team, manager_jid=self.manager)
                 await pack.start()
             except Exception as e:
-                logger.warning(
-                    "FieldOps {} could not create AmmoPack: {}".format(self.name, e))
+                logger.warning("FieldOps {} could not create AmmoPack: {}".format(self.name, e))
 
             logger.info("AmmoPack {} created.".format(name))

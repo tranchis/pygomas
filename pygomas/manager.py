@@ -113,8 +113,7 @@ class Manager(AbstractAgent, Agent):
     async def setup(self):
         class InitBehaviour(OneShotBehaviour):
             async def run(self):
-                logger.success("Manager (Expected Agents): {}".format(
-                    self.agent.max_total_agents))
+                logger.success("Manager (Expected Agents): {}".format(self.agent.max_total_agents))
 
                 # for i in range(1, self.agent.max_total_agents + 1):
                 while self.agent.number_of_agents < self.agent.max_total_agents:
@@ -135,16 +134,14 @@ class Manager(AbstractAgent, Agent):
                         logger.success("Manager: [" + name + "] is Ready!")
                         self.agent.number_of_agents += 1
 
-                logger.success("Manager (Accepted Agents): " +
-                               str(self.agent.number_of_agents))
+                logger.success("Manager (Accepted Agents): " + str(self.agent.number_of_agents))
                 for agent in self.agent.agents.values():
                     msg = Message()
                     msg.set_metadata(PERFORMATIVE, PERFORMATIVE_INIT)
                     msg.to = agent.jid
                     msg.body = json.dumps({MAP: self.agent.map_name})
                     await self.send(msg)
-                    logger.success(
-                        "Manager: Sending notification to fight to: " + agent.jid)
+                    logger.success("Manager: Sending notification to fight to: " + agent.jid)
 
                 await self.agent.inform_objectives(self)
                 self.agent.match_init = time.time()
@@ -255,29 +252,19 @@ class Manager(AbstractAgent, Agent):
                     if msg:
                         content = json.loads(msg.body)
                         id_agent = content[NAME]
-                        self.agent.agents[id_agent].locate.position.x = int(
-                            content[X])
-                        self.agent.agents[id_agent].locate.position.y = int(
-                            content[Y])
-                        self.agent.agents[id_agent].locate.position.z = int(
-                            content[Z])
+                        self.agent.agents[id_agent].locate.position.x = int(content[X])
+                        self.agent.agents[id_agent].locate.position.y = int(content[Y])
+                        self.agent.agents[id_agent].locate.position.z = int(content[Z])
 
-                        self.agent.agents[id_agent].locate.velocity.x = float(
-                            content[VEL_X])
-                        self.agent.agents[id_agent].locate.velocity.y = float(
-                            content[VEL_Y])
-                        self.agent.agents[id_agent].locate.velocity.z = float(
-                            content[VEL_Z])
+                        self.agent.agents[id_agent].locate.velocity.x = float(content[VEL_X])
+                        self.agent.agents[id_agent].locate.velocity.y = float(content[VEL_Y])
+                        self.agent.agents[id_agent].locate.velocity.z = float(content[VEL_Z])
 
-                        self.agent.agents[id_agent].locate.heading.x = float(
-                            content[HEAD_X])
-                        self.agent.agents[id_agent].locate.heading.y = float(
-                            content[HEAD_Y])
-                        self.agent.agents[id_agent].locate.heading.z = float(
-                            content[HEAD_Z])
+                        self.agent.agents[id_agent].locate.heading.x = float(content[HEAD_X])
+                        self.agent.agents[id_agent].locate.heading.y = float(content[HEAD_Y])
+                        self.agent.agents[id_agent].locate.heading.z = float(content[HEAD_Z])
 
-                        self.agent.agents[id_agent].health = int(
-                            content[HEALTH])
+                        self.agent.agents[id_agent].health = int(content[HEALTH])
                         self.agent.agents[id_agent].ammo = int(content[AMMO])
                         packs = await self.agent.check_objects_at_step(id_agent, behaviour=self)
                         fov_objects = self.agent.look(id_agent)
@@ -290,11 +277,9 @@ class Manager(AbstractAgent, Agent):
 
                         if self.agent.check_game_finished(id_agent):
                             await self.agent.inform_game_finished("ALLIED", self)
-                            logger.success(
-                                "\n\nManager:  GAME FINISHED!! Winner Team: ALLIED! (Target Returned)\n")
+                            logger.success("\n\nManager:  GAME FINISHED!! Winner Team: ALLIED! (Target Returned)\n")
                 except Exception as e:
-                    logger.warning(
-                        "Exception at DataFromTroopBehaviour: {}".format(e))
+                    logger.warning("Exception at DataFromTroopBehaviour: {}".format(e))
 
         template = Template()
         template.set_metadata(PERFORMATIVE, PERFORMATIVE_DATA)
@@ -311,8 +296,7 @@ class Manager(AbstractAgent, Agent):
                     shooter_id = content[NAME]
                     aim = int(content[AIM])
                     shots = int(content[SHOTS])
-                    victim_pos = Vector3D(
-                        x=content[X], y=content[Y], z=content[Z])
+                    victim_pos = Vector3D(x=content[X], y=content[Y], z=content[Z])
                     try:
                         shooter = self.agent.agents[shooter_id]
                     except KeyError:
@@ -335,8 +319,7 @@ class Manager(AbstractAgent, Agent):
 
                         if victim.is_carrying_objective:
                             victim.is_carrying_objective = False
-                            logger.info(
-                                "Agent {} lost the ObjectivePack.".format(victim.jid))
+                            logger.info("Agent {} lost the ObjectivePack.".format(victim.jid))
 
                             for din_object in self.agent.din_objects.values():
 
@@ -344,8 +327,7 @@ class Manager(AbstractAgent, Agent):
                                     # is this necessary?: din_object.taken = False;
                                     din_object.owner = 0
                                     msg_pack = Message(to=str(din_object.jid))
-                                    msg_pack.set_metadata(
-                                        PERFORMATIVE, PERFORMATIVE_PACK_LOST)
+                                    msg_pack.set_metadata(PERFORMATIVE, PERFORMATIVE_PACK_LOST)
                                     din_object.position.x = victim.locate.position.x
                                     din_object.position.y = victim.locate.position.y
                                     din_object.position.z = victim.locate.position.z
@@ -362,8 +344,7 @@ class Manager(AbstractAgent, Agent):
 
                     msg_shot = Message(to=victim.jid)
                     msg_shot.set_metadata(PERFORMATIVE, PERFORMATIVE_SHOOT)
-                    msg_shot.body = json.dumps(
-                        {DEC_HEALTH: damage})
+                    msg_shot.body = json.dumps({DEC_HEALTH: damage})
                     await self.send(msg_shot)
 
         template = Template()
@@ -402,8 +383,7 @@ class Manager(AbstractAgent, Agent):
                     action = content[ACTION]
 
                     if action == DESTROY:
-                        self.agent.game_statistic.pack_destroyed(
-                            self.agent.din_objects[id_])
+                        self.agent.game_statistic.pack_destroyed(self.agent.din_objects[id_])
 
                         try:
                             del self.agent.din_objects[id_]
@@ -436,12 +416,10 @@ class Manager(AbstractAgent, Agent):
                         self.agent.din_objects[din_object.jid] = din_object
                         logger.info("Added DinObject {}".format(din_object))
 
-                        self.agent.game_statistic.pack_created(
-                            din_object, team)
+                        self.agent.game_statistic.pack_created(din_object, team)
 
                     else:
-                        logger.warning(
-                            "Action not identified: {}".format(action))
+                        logger.warning("Action not identified: {}".format(action))
                         return
 
         template = Template()
@@ -452,8 +430,7 @@ class Manager(AbstractAgent, Agent):
     def launch_game_timeout_inform_behaviour(self):
         class GameTimeoutInformBehaviour(TimeoutBehaviour):
             async def run(self):
-                logger.success(
-                    "\n\nManager:  GAME FINISHED!! Winner Team: AXIS! (Time Expired)\n")
+                logger.success("\n\nManager:  GAME FINISHED!! Winner Team: AXIS! (Time Expired)\n")
                 await self.agent.inform_game_finished("AXIS!", self)
 
         timeout = datetime.datetime.now() + datetime.timedelta(seconds=self.match_time)
@@ -500,29 +477,24 @@ class Manager(AbstractAgent, Agent):
                     quantity = DEFAULT_PACK_QTY
                     try:
                         del self.din_objects[id_]
-                        logger.info(
-                            self.agents[id_agent].jid + ": got a medic pack " + str(din_object.jid))
+                        logger.info(self.agents[id_agent].jid + ": got a medic pack " + str(din_object.jid))
                         content = {TYPE: type_, QTY: quantity}
 
                     except KeyError:
-                        logger.error(
-                            "Could not delete the din object {}".format(id_))
+                        logger.error("Could not delete the din object {}".format(id_))
 
                 elif din_object.type == PACK_AMMOPACK:
                     quantity = DEFAULT_PACK_QTY
                     try:
                         del self.din_objects[id_]
-                        logger.info(
-                            self.agents[id_agent].jid + ": got an ammo pack " + str(din_object.jid))
+                        logger.info(self.agents[id_agent].jid + ": got an ammo pack " + str(din_object.jid))
                         content = {TYPE: type_, QTY: quantity}
                     except KeyError:
-                        logger.error(
-                            "Could not delete the din object {}".format(id_))
+                        logger.error("Could not delete the din object {}".format(id_))
 
                 elif din_object.type == PACK_OBJPACK:
                     if team == TEAM_ALLIED:
-                        logger.info("{}: got the objective pack ".format(
-                            self.agents[id_agent].jid))
+                        logger.info("{}: got the objective pack ".format(self.agents[id_agent].jid))
                         din_object.is_taken = True
                         din_object.owner = id_agent
                         din_object.position.x, din_object.position.y, din_object.position.z = 0.0, 0.0, 0.0
@@ -531,8 +503,7 @@ class Manager(AbstractAgent, Agent):
 
                     elif team == TEAM_AXIS:
                         if din_object.is_taken:
-                            logger.info(
-                                f"{self.agents[id_agent].jid}: returned the objective pack {din_object.jid}")
+                            logger.info(f"{self.agents[id_agent].jid}: returned the objective pack {din_object.jid}")
                             din_object.is_taken = False
                             din_object.owner = 0
                             din_object.position.x = self.map.get_target_x()
@@ -596,8 +567,7 @@ class Manager(AbstractAgent, Agent):
 
             # check distance
             # get distance to the closest wall
-            distance_terrain = self.intersect(
-                agent.locate.position, v)  # a.locate.heading)
+            distance_terrain = self.intersect(agent.locate.position, v)  # a.locate.heading)
 
             # check distance
             if distance < agent.locate.view_radius and distance < distance_terrain:
@@ -635,8 +605,7 @@ class Manager(AbstractAgent, Agent):
 
                 # check distance
                 # get distance to the closest wall
-                distance_terrain = self.intersect(
-                    agent.locate.position, v)  # a.locate.heading)
+                distance_terrain = self.intersect(agent.locate.position, v)  # a.locate.heading)
 
                 if distance < agent.locate.view_radius and distance < distance_terrain:
 
@@ -677,10 +646,8 @@ class Manager(AbstractAgent, Agent):
                 continue
             if a.health <= 0:
                 continue
-            absx = abs(victim_position.x -
-                       a.locate.position.x)
-            absz = abs(victim_position.z -
-                       a.locate.position.z)
+            absx = abs(victim_position.x - a.locate.position.x)
+            absz = abs(victim_position.z - a.locate.position.z)
             if (absx < PRECISION_X) and (absz < PRECISION_Z):
                 victim = a
                 v = Vector3D(v=victim.locate.position)
@@ -693,8 +660,7 @@ class Manager(AbstractAgent, Agent):
             a.position = agent.locate.position
             a.destination = victim.locate.position
             a.calculate_new_orientation(a.destination)
-            distance_terrain = self.intersect(
-                a.position, a.heading, min_distance)
+            distance_terrain = self.intersect(a.position, a.heading, min_distance)
             # logger.info("distanceTerrain: " + str(distance_terrain))
             if distance_terrain != 0.0 and distance_terrain < min_distance:
                 victim = None
@@ -769,8 +735,7 @@ class Manager(AbstractAgent, Agent):
                 if error.length() > distance:
                     return error.length()
         except Exception as e:
-            logger.error(
-                "INTERSECT FAILED: (origin: {}) (vector: {}): {}".format(origin, vector, e))
+            logger.error("INTERSECT FAILED: (origin: {}) (vector: {}): {}".format(origin, vector, e))
 
         return 0.0
 
@@ -798,7 +763,8 @@ class Manager(AbstractAgent, Agent):
 
         msg = Message()
         msg.set_metadata(PERFORMATIVE, PERFORMATIVE_OBJECTIVE)
-        content = {X: self.map.get_target_x(), Y: self.map.get_target_y(),
+        content = {X: self.map.get_target_x(),
+                   Y: self.map.get_target_y(),
                    Z: self.map.get_target_z()}
         msg.body = json.dumps(content)
         for agent in self.agents.values():

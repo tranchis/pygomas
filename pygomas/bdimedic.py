@@ -49,8 +49,7 @@ class Medic(BDITroop):
         logger.info("{} Creating medic packs.".format(self.name))
         while self.perform_medic_action():
             Medic.packs_delivered += 1
-            name = "medicpack{}@{}".format(
-                Medic.packs_delivered, self.jid.domain)
+            name = "medicpack{}@{}".format(Medic.packs_delivered, self.jid.domain)
             x = self.movement.position.x + random.random() * Medic.medic_pack_offset
             z = self.movement.position.z + random.random() * Medic.medic_pack_offset
 
@@ -60,9 +59,7 @@ class Medic(BDITroop):
             team = self.team
 
             try:
-                pack = MedicPack(name=name, passwd="secret",
-                                 x=x, z=z, team=team, manager_jid=self.manager)
+                pack = MedicPack(name=name, passwd="secret", x=x, z=z, team=team, manager_jid=self.manager)
                 await pack.start()
             except Exception as e:
-                logger.warning(
-                    "Medic {} could not create MedicPack: {}".format(self.name, e))
+                logger.warning("Medic {} could not create MedicPack: {}".format(self.name, e))

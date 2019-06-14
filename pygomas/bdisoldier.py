@@ -6,8 +6,6 @@ from spade.template import Template
 from .agent import LONG_RECEIVE_WAIT
 from .bditroop import BDITroop, CLASS_SOLDIER
 from .ontology import BACKUP_SERVICE, PERFORMATIVE, PERFORMATIVE_CFB
-from .task import TASK_NONE, TASK_GIVE_MEDICPAKS, TASK_GIVE_AMMOPACKS, TASK_GIVE_BACKUP, TASK_GET_OBJECTIVE, \
-    TASK_ATTACK, TASK_RUN_AWAY, TASK_GOTO_POSITION, TASK_PATROLLING, TASK_WALKING_PATH, TASK_RETURN_TO_BASE
 
 from agentspeak import Actions
 from agentspeak.stdlib import actions as asp_action
@@ -31,13 +29,10 @@ class Soldier(BDITroop):
             if path:
                 self.destinations = deque(path)
                 x, z = path[0]
-                self.movement.calculate_new_orientation(
-                    Vector3D(x=x, y=0, z=z))
+                self.movement.calculate_new_orientation(Vector3D(x=x, y=0, z=z))
                 self.bdi.set_belief(DESTINATION, args[0], args[1], args[2])
-                self.bdi.set_belief(VELOCITY, self.movement.velocity.x,
-                                    self.movement.velocity.y, self.movement.velocity.z)
-                self.bdi.set_belief(HEADING, self.movement.heading.x,
-                                    self.movement.heading.y, self.movement.heading.z)
+                self.bdi.set_belief(VELOCITY, self.movement.velocity.x, self.movement.velocity.y, self.movement.velocity.z)
+                self.bdi.set_belief(HEADING, self.movement.heading.x, self.movement.heading.y, self.movement.heading.z)
             else:
                 self.destinations = deque()
                 self.movement.destination.x = self.movement.position.x

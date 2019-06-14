@@ -26,8 +26,7 @@ class AbstractAgent(object):
         future = Agent.start(self, auto_register=auto_register)
         if self.services:
             for service in self.services:
-                logger.info("{} registering service {}".format(
-                    self.name, service))
+                logger.info("{} registering service {}".format(self.name, service))
                 self.register_service(service)
         return future
 
@@ -41,8 +40,7 @@ class AbstractAgent(object):
             async def run(self):
                 msg = Message(to=self.agent.service_jid)
                 msg.set_metadata(PERFORMATIVE, PERFORMATIVE_REGISTER_SERVICE)
-                msg.body = json.dumps(
-                    {NAME: service_name, TEAM: self.agent.team})
+                msg.body = json.dumps({NAME: service_name, TEAM: self.agent.team})
                 await self.send(msg)
 
         self.add_behaviour(RegisterBehaviour())
@@ -52,8 +50,7 @@ class AbstractAgent(object):
             async def run(self):
                 msg = Message(to=self.agent.service_jid)
                 msg.set_metadata(PERFORMATIVE, PERFORMATIVE_DEREGISTER_SERVICE)
-                msg.body = json.dumps(
-                    {NAME: service_name, TEAM: self.agent.team})
+                msg.body = json.dumps({NAME: service_name, TEAM: self.agent.team})
                 await self.send(msg)
 
         self.add_behaviour(DeregisterBehaviour())

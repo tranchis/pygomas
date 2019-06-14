@@ -62,15 +62,6 @@ for a in axis_soldiers + allied_soldiers + axis_medics + allied_medics + axis_fi
   # a.web.start(hostname="localhost", port=port)
   # port += 1
 
-# for a in axis_soldiers + allied_soldiers:
-#   a.set_asl('pygomas/ASL/bditroop.asl')
-
-# for a in axis_medics + allied_medics:
-#   a.set_asl('pygomas/ASL/medic.asl')
-
-# for a in axis_fieldops + allied_fieldops:
-#   a.set_asl('pygomas/ASL/fieldops.asl')
-
 while True:
   try:
     time.sleep(0.1)

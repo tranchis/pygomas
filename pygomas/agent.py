@@ -13,19 +13,17 @@ from .ontology import PERFORMATIVE, PERFORMATIVE_REGISTER_SERVICE, PERFORMATIVE_
 LONG_RECEIVE_WAIT: int = 1000000
 
 
-class AbstractAgent(Agent):
-    def __init__(self, jid, passwd="secret", team=0, service_jid="cservice@localhost", verify_security=False):
+class AbstractAgent(object):
+    def __init__(self, jid, team=0, service_jid="cservice@localhost", verify_security=False, *args, **kwargs):
         self.services = list()
-        self._name = jid
         self.position_x = None
         self.position_z = None
+        self._name = jid
         self.team = team
         self.service_jid = service_jid
 
-        super().__init__(jid=jid, password=passwd, verify_security=verify_security)
-
     def start(self, auto_register=True):
-        future = super().start(auto_register=auto_register)
+        future = Agent.start(self, auto_register=auto_register)
         if self.services:
             for service in self.services:
                 logger.info("{} registering service {}".format(

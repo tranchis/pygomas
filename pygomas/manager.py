@@ -5,6 +5,7 @@ import math
 
 from loguru import logger
 
+from spade.agent import Agent
 from spade.behaviour import OneShotBehaviour, PeriodicBehaviour, CyclicBehaviour, TimeoutBehaviour
 from spade.message import Message
 from spade.template import Template
@@ -69,7 +70,7 @@ class DinObject:
         self.jid = None
 
 
-class Manager(AbstractAgent):
+class Manager(AbstractAgent, Agent):
 
     def __init__(self,
                  name="cmanager@localhost",
@@ -81,7 +82,8 @@ class Manager(AbstractAgent):
                  map_name="map_01",
                  service_jid="cservice@localhost"):
 
-        super().__init__(name, passwd, service_jid=service_jid)
+        AbstractAgent.__init__(self, name, service_jid=service_jid)
+        Agent.__init__(self, name, passwd)
 
         self.game_statistic = GameStatistic()
         self.max_total_agents = players

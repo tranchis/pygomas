@@ -24,8 +24,8 @@
   .wait(10000);
   .create_control_points(X,Y,Z,4,5);
   //.stop;
-  //.goto(X,Y,Z);
-  .print("In ASL,TEAM_AXIS patrolling around: ",X,Y,Z). 
+  .goto(X,Y,Z).
+  //.print("In ASL,TEAM_AXIS patrolling around: ",X,Y,Z). 
 
 +flag_taken: team(100) 
   <-

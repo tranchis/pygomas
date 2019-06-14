@@ -9,16 +9,16 @@ from .ontology import BACKUP_SERVICE, PERFORMATIVE, PERFORMATIVE_CFB
 from .task import TASK_NONE, TASK_GIVE_MEDICPAKS, TASK_GIVE_AMMOPACKS, TASK_GIVE_BACKUP, TASK_GET_OBJECTIVE, \
     TASK_ATTACK, TASK_RUN_AWAY, TASK_GOTO_POSITION, TASK_PATROLLING, TASK_WALKING_PATH, TASK_RETURN_TO_BASE
 
+from agentspeak import Actions
+from agentspeak.stdlib import actions as asp_action
+
 
 class Soldier(BDITroop):
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.services.append(BACKUP_SERVICE)
-        self.eclass = CLASS_SOLDIER
+        soldier_actions = Actions(asp_action)
 
-    async def setup(self):
-        @self.bdi_actions.add(".reinforce", 3)
+        @soldier_actions.add(".reinforce", 3)
         def _reinforce(agent, term, intention):
             """Same as a .goto"""
             args = pyson.grounded(term.args, intention.scope)
@@ -44,3 +44,7 @@ class Soldier(BDITroop):
                 self.movement.destination.y = self.movement.position.y
                 self.movement.destination.z = self.movement.position.z
             yield
+
+        super().__init__(actions=soldier_actions, *args, **kwargs)
+        self.services.append(BACKUP_SERVICE)
+        self.eclass = CLASS_SOLDIER

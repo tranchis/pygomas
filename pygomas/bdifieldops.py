@@ -5,6 +5,8 @@ from .ammopack import AmmoPack
 from .bditroop import BDITroop, CLASS_FIELDOPS
 from .ontology import AMMO_SERVICE
 import random
+from agentspeak import Actions
+from agentspeak.stdlib import actions as asp_action
 
 
 class FieldOps(BDITroop):
@@ -12,12 +14,9 @@ class FieldOps(BDITroop):
     ammo_pack_offset = 5
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.services.append(AMMO_SERVICE)
-        self.eclass = CLASS_FIELDOPS
+        fieldop_actions = Actions(asp_action)
 
-    async def setup(self):
-        @self.bdi_actions.add(".reload", 0)
+        @fieldop_actions.add(".reload", 0)
         def _cure(agent, term, intention):
             class CreateAmmoPackBehaviour(OneShotBehaviour):
                 async def run(self):
@@ -26,6 +25,10 @@ class FieldOps(BDITroop):
             b = CreateAmmoPackBehaviour()
             self.add_behaviour(b)
             yield
+
+        super().__init__(actions=fieldop_actions, *args, **kwargs)
+        self.services.append(AMMO_SERVICE)
+        self.eclass = CLASS_FIELDOPS
 
     def perform_ammo_action(self):
         # We can give ammo paks if we have power enough...

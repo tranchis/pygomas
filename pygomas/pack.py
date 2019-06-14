@@ -8,6 +8,7 @@ from .vector import Vector3D
 from spade.message import Message
 from spade.behaviour import OneShotBehaviour, CyclicBehaviour
 from spade.template import Template
+from spade.agent import Agent
 
 PACK_NONE: int = 1000
 PACK_MEDICPACK: int = 1001
@@ -24,14 +25,16 @@ PACK_NAME = {
 PACK_AUTODESTROY_TIMEOUT: int = 25
 
 
-class Pack(AbstractAgent):
+class Pack(AbstractAgent, Agent):
 
     def __str__(self):
         return "P(" + str(PACK_NAME[self.type]) + "," + str(self.position) + ")"
 
     def __init__(self, name, passwd="secret", manager_jid="cmanager@localhost", x=0, z=0, team=0):
 
-        super().__init__(name, passwd, team)
+        Agent.__init__(self, name, passwd)
+        AbstractAgent.__init__(self, name, team)
+
         self.type = PACK_NONE
         self.manager = manager_jid
 
@@ -39,8 +42,6 @@ class Pack(AbstractAgent):
         self.position.x = x
         self.position.y = 0
         self.position.z = z
-
-        self.team = team
 
     async def setup(self):
         self.add_behaviour(self.CreatePackBehaviour())
@@ -55,9 +56,9 @@ class Pack(AbstractAgent):
             msg.set_metadata(PERFORMATIVE, PERFORMATIVE_PACK)
             msg.body = json.dumps({
                 NAME: self.agent.name,
+                TEAM: self.agent.team,
                 ACTION: CREATE,
                 TYPE: self.agent.type,
-                TEAM: self.agent.team,
                 X: self.agent.position.x,
                 Y: self.agent.position.y,
                 Z: self.agent.position.z

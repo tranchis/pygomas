@@ -12,6 +12,7 @@ from spade.behaviour import OneShotBehaviour, PeriodicBehaviour, CyclicBehaviour
 from spade.template import Template
 from spade_bdi.bdi import BDIAgent
 import agentspeak as asp
+from agentspeak.stdlib import actions as asp_action
 
 from . import MIN_POWER, POWER_UNIT, MIN_STAMINA, STAMINA_UNIT, MIN_AMMO, MAX_AMMO, MAX_STAMINA, MAX_POWER, \
     MAX_HEALTH, MIN_HEALTH
@@ -47,7 +48,7 @@ MV_ALREADY_IN_DEST = 2
 
 class BDITroop(AbstractAgent, BDIAgent):
 
-    def __init__(self, jid, passwd, asl=None, team=TEAM_NONE, manager_jid="cmanager@localhost", service_jid="cservice@localhost"):
+    def __init__(self, jid, passwd, asl, actions=None, team=TEAM_NONE, manager_jid="cmanager@localhost", service_jid="cservice@localhost", *args, **kwargs):
 
         self.service_types = []
 
@@ -101,51 +102,12 @@ class BDITroop(AbstractAgent, BDIAgent):
         # Destination Queue
         self.destinations = deque()
 
-        super().__init__(jid, passwd, team=team, service_jid=service_jid)
+        if isinstance(actions, asp.Actions):
+            troop_actions = actions
+        else:
+            troop_actions = asp.Actions(asp_action)
 
-    def start(self, auto_register=True):
-        self.health = MAX_HEALTH
-        self.protection = 25
-        self.stamina = MAX_STAMINA
-        self.power = MAX_POWER
-        self.ammo = MAX_AMMO
-
-        # Send a welcome message, and wait for the beginning of match
-        self.add_behaviour(self.CreateBasicTroopBehaviour())
-
-        # Behaviour to get the objective of the game, to create the corresponding task
-        t = Template()
-        t.set_metadata(PERFORMATIVE, PERFORMATIVE_OBJECTIVE)
-        self.add_behaviour(self.ObjectiveBehaviour(), t)
-
-        t = Template()
-        t.set_metadata(PERFORMATIVE, PERFORMATIVE_INIT)
-        self.add_behaviour(self.InitResponderBehaviour(), t)
-
-        # Behaviour to listen to manager if game has finished
-        t = Template()
-        t.set_metadata(PERFORMATIVE, PERFORMATIVE_GAME)
-        self.add_behaviour(self.GameFinishedBehaviour(), t)
-
-        # Behaviour to handle Shot messages
-        t = Template()
-        t.set_metadata(PERFORMATIVE, PERFORMATIVE_SHOOT)
-        self.add_behaviour(self.ShootResponderBehaviour(period=0), t)
-
-        # Behaviour to inform manager our position, status, and so on
-        t = Template()
-        t.set_metadata(PERFORMATIVE, PERFORMATIVE_DATA)
-        self.add_behaviour(self.DataFromTroopBehaviour(period=0.3), t)
-
-        # Behaviour to increment inner variables (Power, Stamina and Health Bars)
-        # self.agent.Launch_BarsAddOn_InnerBehaviour()
-        self.add_behaviour(self.RestoreBehaviour(period=1))
-
-        t = Template()
-        t.set_metadata(PERFORMATIVE, PERFORMATIVE_BDI)
-        self.add_behaviour(self.BDIBehaviour(), t)
-
-        @self.bdi_actions.add(".goto", 3)
+        @troop_actions.add(".goto", 3)
         def _goto(agent, term, intention):
             """Sets the PyGomas destination. Expects args to be x,y,z"""
             args = asp.grounded(term.args, intention.scope)
@@ -172,7 +134,7 @@ class BDITroop(AbstractAgent, BDIAgent):
                 self.movement.destination.z = self.movement.position.z
             yield
 
-        @self.bdi_actions.add(".create_control_points", 5)
+        @troop_actions.add(".create_control_points", 5)
         def _create_control_points(agent, term, intention):
             """
             Calculates an array of positions for patrolling.
@@ -210,7 +172,7 @@ class BDITroop(AbstractAgent, BDIAgent):
             self.bdi.set_belief(CONTROL_POINTS, tuple(self.control_points))
             yield
 
-        @self.bdi_actions.add(".shoot", 4)
+        @troop_actions.add(".shoot", 4)
         def _shoot(agent, term, intention):
             """
              The agent shoots in the direction at which he is aiming.
@@ -256,7 +218,7 @@ class BDITroop(AbstractAgent, BDIAgent):
             self.add_behaviour(b)
             yield
 
-        @self.bdi_actions.add(".get_medics", 0)
+        @troop_actions.add(".get_medics", 0)
         def _get_medics(agent, term, intention):
             """Request for medic agents. This action sends a FIPA REQUEST
                message to the service agent asking for those who offer the
@@ -287,7 +249,7 @@ class BDITroop(AbstractAgent, BDIAgent):
             self.add_behaviour(b, t)
             yield
 
-        @self.bdi_actions.add(".get_fieldops", 0)
+        @troop_actions.add(".get_fieldops", 0)
         def _get_fieldops(agent, term, intention):
             """Request for fieldop agents. This action sends a FIPA REQUEST
                message to the service agent asking for those who offer the
@@ -318,7 +280,7 @@ class BDITroop(AbstractAgent, BDIAgent):
             self.add_behaviour(b, t)
             yield
 
-        @self.bdi_actions.add(".get_backups", 0)
+        @troop_actions.add(".get_backups", 0)
         def _get_backups(agent, term, intention):
             """Request for backup agents. This action sends a FIPA REQUEST
                message to the service agent asking for those who offer the
@@ -349,7 +311,7 @@ class BDITroop(AbstractAgent, BDIAgent):
             self.add_behaviour(b, t)
             yield
 
-        @self.bdi_actions.add(".stop", 0)
+        @troop_actions.add(".stop", 0)
         def _stop(agent, term, intention):
             """Stops the PyGomas agent. """
             self.destinations = deque()
@@ -357,6 +319,47 @@ class BDITroop(AbstractAgent, BDIAgent):
             self.movement.destination.y = self.movement.position.y
             self.movement.destination.z = self.movement.position.z
             yield
+
+        AbstractAgent.__init__(self, jid, team=team, service_jid=service_jid)
+        BDIAgent.__init__(self, jid, passwd, asl, troop_actions)
+
+    def start(self, auto_register=True):
+        self.health = MAX_HEALTH
+        self.protection = 25
+        self.stamina = MAX_STAMINA
+        self.power = MAX_POWER
+        self.ammo = MAX_AMMO
+
+        # Send a welcome message, and wait for the beginning of match
+        self.add_behaviour(self.CreateBasicTroopBehaviour())
+
+        # Behaviour to get the objective of the game, to create the corresponding task
+        t = Template()
+        t.set_metadata(PERFORMATIVE, PERFORMATIVE_OBJECTIVE)
+        self.add_behaviour(self.ObjectiveBehaviour(), t)
+
+        t = Template()
+        t.set_metadata(PERFORMATIVE, PERFORMATIVE_INIT)
+        self.add_behaviour(self.InitResponderBehaviour(), t)
+
+        # Behaviour to listen to manager if game has finished
+        t = Template()
+        t.set_metadata(PERFORMATIVE, PERFORMATIVE_GAME)
+        self.add_behaviour(self.GameFinishedBehaviour(), t)
+
+        # Behaviour to handle Shot messages
+        t = Template()
+        t.set_metadata(PERFORMATIVE, PERFORMATIVE_SHOOT)
+        self.add_behaviour(self.ShootResponderBehaviour(period=0), t)
+
+        # Behaviour to inform manager our position, status, and so on
+        t = Template()
+        t.set_metadata(PERFORMATIVE, PERFORMATIVE_DATA)
+        self.add_behaviour(self.DataFromTroopBehaviour(period=0.3), t)
+
+        # Behaviour to increment inner variables (Power, Stamina and Health Bars)
+        # self.agent.Launch_BarsAddOn_InnerBehaviour()
+        self.add_behaviour(self.RestoreBehaviour(period=1))
 
         future = super().start(auto_register)
         return future

@@ -5,6 +5,8 @@ from .medicpack import MedicPack
 from .bditroop import BDITroop, CLASS_MEDIC
 from .ontology import MEDIC_SERVICE
 import random
+from agentspeak import Actions
+from agentspeak.stdlib import actions as asp_action
 
 
 class Medic(BDITroop):
@@ -12,12 +14,9 @@ class Medic(BDITroop):
     medic_pack_offset = 5
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.services.append(MEDIC_SERVICE)
-        self.eclass = CLASS_MEDIC
+        medic_actions = Actions(asp_action)
 
-    async def setup(self):
-        @self.bdi_actions.add(".cure", 0)
+        @medic_actions.add(".cure", 0)
         def _cure(agent, term, intention):
             class CreateMedicPackBehaviour(OneShotBehaviour):
                 async def run(self):
@@ -26,6 +25,10 @@ class Medic(BDITroop):
             b = CreateMedicPackBehaviour()
             self.add_behaviour(b)
             yield
+
+        super().__init__(actions=medic_actions, *args, **kwargs)
+        self.services.append(MEDIC_SERVICE)
+        self.eclass = CLASS_MEDIC
 
     def perform_medic_action(self):
         # We can give medic paks if we have power enough...

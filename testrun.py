@@ -27,8 +27,9 @@ num_allied = 1, 1, 1
 print("Creating manager")
 manager = Manager(players=sum(num_allied) + sum(num_axis),
                   # name=manager_jid, service_jid=service_jid, map_name="mine")
-                  # name=manager_jid, service_jid=service_jid, map_name="mine_medium")
-                  name=manager_jid, service_jid=service_jid, map_name="map_01")
+                  name=manager_jid, service_jid=service_jid, map_name="mine_medium")
+# name=manager_jid, service_jid=service_jid, map_name="mine_large")
+# name=manager_jid, service_jid=service_jid, map_name="map_01")
 future = manager.start()
 future.result()
 
@@ -36,28 +37,22 @@ future.result()
 
 print("Creating soldiers")
 for i in range(int(num_axis[0])):
-  axis_soldiers.append(Soldier("axis_soldier{}@{}".format(i, host), "secret", team=TEAM_AXIS, manager_jid=manager_jid,
-                               service_jid=service_jid))
+  axis_soldiers.append(Soldier("axis_soldier{}@{}".format(i, host), "secret", 'pygomas/ASL/bditroop.asl', team=TEAM_AXIS, manager_jid=manager_jid, service_jid=service_jid))
 
 for i in range(int(num_axis[1])):
-  axis_fieldops.append(FieldOps("axis_fieldops{}@{}".format(i, host), "secret", team=TEAM_AXIS, manager_jid=manager_jid,
-                                service_jid=service_jid))
+  axis_fieldops.append(FieldOps("axis_fieldops{}@{}".format(i, host), "secret", 'pygomas/ASL/fieldops.asl', team=TEAM_AXIS, manager_jid=manager_jid, service_jid=service_jid))
 
 for i in range(int(num_axis[2])):
-  axis_medics.append(Medic("axis_medic{}@{}".format(i, host), "secret", team=TEAM_AXIS, manager_jid=manager_jid,
-                           service_jid=service_jid))
+  axis_medics.append(Medic("axis_medic{}@{}".format(i, host), "secret", 'pygomas/ASL/medic.asl', team=TEAM_AXIS, manager_jid=manager_jid, service_jid=service_jid))
 
 for i in range(int(num_allied[0])):
-  allied_soldiers.append(Soldier("allied_soldier{}@{}".format(i, host), "secret", team=TEAM_ALLIED, manager_jid=manager_jid,
-                                 service_jid=service_jid))
+  allied_soldiers.append(Soldier("allied_soldier{}@{}".format(i, host), "secret", asl='pygomas/ASL/bditroop.asl', team=TEAM_ALLIED, manager_jid=manager_jid, service_jid=service_jid))
 
 for i in range(int(num_allied[1])):
-  allied_fieldops.append(FieldOps("allied_fieldops{}@{}".format(i, host), "secret", team=TEAM_ALLIED, manager_jid=manager_jid,
-                                  service_jid=service_jid))
+  allied_fieldops.append(FieldOps("allied_fieldops{}@{}".format(i, host), "secret", 'pygomas/ASL/fieldops.asl', team=TEAM_ALLIED, manager_jid=manager_jid, service_jid=service_jid))
 
 for i in range(int(num_allied[2])):
-  allied_medics.append(Medic("allied_medic{}@{}".format(i, host), "secret", team=TEAM_ALLIED, manager_jid=manager_jid,
-                             service_jid=service_jid))
+  allied_medics.append(Medic("allied_medic{}@{}".format(i, host), "secret", 'pygomas/ASL/medic.asl', team=TEAM_ALLIED, manager_jid=manager_jid, service_jid=service_jid))
 
 port = 2000
 
@@ -67,14 +62,14 @@ for a in axis_soldiers + allied_soldiers + axis_medics + allied_medics + axis_fi
   # a.web.start(hostname="localhost", port=port)
   # port += 1
 
-for a in axis_soldiers + allied_soldiers:
-  a.set_asl('pygomas/ASL/bditroop.asl')
+# for a in axis_soldiers + allied_soldiers:
+#   a.set_asl('pygomas/ASL/bditroop.asl')
 
-for a in axis_medics + allied_medics:
-  a.set_asl('pygomas/ASL/medic.asl')
+# for a in axis_medics + allied_medics:
+#   a.set_asl('pygomas/ASL/medic.asl')
 
-for a in axis_fieldops + allied_fieldops:
-  a.set_asl('pygomas/ASL/fieldops.asl')
+# for a in axis_fieldops + allied_fieldops:
+#   a.set_asl('pygomas/ASL/fieldops.asl')
 
 while True:
   try:

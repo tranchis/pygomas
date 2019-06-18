@@ -1,6 +1,4 @@
 import json
-from spade_bdi.bdi import BDIAgent
-
 from loguru import logger
 
 from spade.agent import Agent

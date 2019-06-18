@@ -9,7 +9,7 @@ from agentspeak import Actions
 from agentspeak.stdlib import actions as asp_action
 
 
-class Medic(BDITroop):
+class BDIMedic(BDITroop):
     packs_delivered = 0
     medic_pack_offset = 5
 

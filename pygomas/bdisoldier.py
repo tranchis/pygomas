@@ -11,7 +11,7 @@ from agentspeak import Actions
 from agentspeak.stdlib import actions as asp_action
 
 
-class Soldier(BDITroop):
+class BDISoldier(BDITroop):
 
     def __init__(self, *args, **kwargs):
         soldier_actions = Actions(asp_action)

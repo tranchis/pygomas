@@ -1,6 +1,5 @@
 +flag (X,Y,Z): team(100) 
   <-
-  //.goto(16,0,38).
   .goto(X,Y,Z).
 
 +flag (X,Y,Z): team(200) 
@@ -8,7 +7,6 @@
   .wait(10000);
   //.print("In ASL,TEAM_AXIS patrolling around: ",X,Y,Z); 
   //.create_control_points(X,Y,Z,4,5).
-  //.goto(16,0,38).
   .goto(X,Y,Z).
 
 +cure(X,Y,Z) 

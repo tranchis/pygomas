@@ -9,7 +9,6 @@ from spade.agent import Agent
 from spade.behaviour import OneShotBehaviour, PeriodicBehaviour, CyclicBehaviour, TimeoutBehaviour
 from spade.message import Message
 from spade.template import Template
-from spade_bdi.bdi import BDIAgent
 
 from . import MIN_HEALTH
 from .ontology import *

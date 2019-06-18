@@ -9,7 +9,7 @@ from agentspeak import Actions
 from agentspeak.stdlib import actions as asp_action
 
 
-class FieldOps(BDITroop):
+class BDIFieldOp(BDITroop):
     packs_delivered = 0
     ammo_pack_offset = 5
 

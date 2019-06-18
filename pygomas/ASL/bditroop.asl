@@ -17,7 +17,6 @@
   -first_call(on);
   +first_call(off);
   .goto(X,Y,Z).
-  //.goto(16,0,38).
 
 +flag (X,Y,Z): team(200) 
   <-
@@ -32,8 +31,7 @@
   .print("In ASL, TEAM_ALLIED flag_taken");
   ?base(X,Y,Z);
   //.print("going to base at position: ",X,Y,Z);
-  .goto(81,0,68).
-  //.goto(X,Y,Z).
+  .goto(X,Y,Z).
   //.stop.
 
 +flag_taken: team(200) 
@@ -46,14 +44,6 @@
 -flag_taken
  <-
  .print("Lost flag").
-
-+target_reached(X,Y,Z): X=81 & Z=68
-  <- 
-  ?flag(A,B,C);
-  .print ("THE flag is at ",A,B,C);
-  .print("In ASL, reached with flag, target at :",X,Y,Z);
-  .goto(16,0,38).
-
 
 +target_reached(X,Y,Z): patrolling(off)
   <- 
@@ -105,7 +95,7 @@
   .nth(0,All_medics,M);
   .print(M);
   ?position(X,Y,Z);
-  .send(M, tell,cure(X,Y,Z));
+  //.send(M, tell,cure(X,Y,Z));
   -first_call(on);
   +first_call(off);
   -health(H). 
@@ -135,7 +125,7 @@
   .print("Out of Ammo at",X,Y,Z, A);
   ?myFieldops(All_fieldops);
   .nth(0,All_fieldops,F);
-  .send(F, tell,need_ammo(X,Y,Z));
+  //.send(F, tell,need_ammo(X,Y,Z));
   //.goto(X,Y,Z);
   .print("CALLING FIELDOP",F);
   -first_call(on);

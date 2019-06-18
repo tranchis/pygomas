@@ -5,16 +5,13 @@ import math
 
 from loguru import logger
 
+from spade.agent import Agent
 from spade.behaviour import OneShotBehaviour, PeriodicBehaviour, CyclicBehaviour, TimeoutBehaviour
 from spade.message import Message
 from spade.template import Template
 
 from . import MIN_HEALTH
-from .ontology import PERFORMATIVE_GAME, PERFORMATIVE_PACK_TAKEN, PERFORMATIVE_PACK, PERFORMATIVE_SERVICES, \
-    PERFORMATIVE_INFORM, PERFORMATIVE_PACK_LOST, PERFORMATIVE_SHOT, PERFORMATIVE_DATA, \
-    MANAGEMENT_SERVICE, PERFORMATIVE_INIT, PERFORMATIVE, NAME, TYPE, TEAM, MAP, X, Y, Z, QTY, ANGLE, DISTANCE, HEALTH, \
-    AIM, SHOTS, DEC_HEALTH, VEL_X, VEL_Y, VEL_Z, HEAD_X, HEAD_Y, HEAD_Z, AMMO, PERFORMATIVE_OBJECTIVE, PACKS, FOV, \
-    ACTION, DESTROY, CREATE
+from .ontology import *
 from .stats import GameStatistic
 from .mobile import Mobile
 from .vector import Vector3D
@@ -23,8 +20,7 @@ from .agent import AbstractAgent, LONG_RECEIVE_WAIT
 from .config import Config
 from .service import Service
 from .server import Server, TCP_AGL, TCP_COM
-from .troop import CLASS_SOLDIER
-from pygomas.ontology import TEAM_NONE, TEAM_ALLIED, TEAM_AXIS
+from .bditroop import CLASS_SOLDIER
 from .objpack import ObjectivePack
 from .map import TerrainMap
 from .sight import Sight
@@ -73,7 +69,7 @@ class DinObject:
         self.jid = None
 
 
-class Manager(AbstractAgent):
+class Manager(AbstractAgent, Agent):
 
     def __init__(self,
                  name="cmanager@localhost",
@@ -85,7 +81,9 @@ class Manager(AbstractAgent):
                  map_name="map_01",
                  service_jid="cservice@localhost"):
 
-        super().__init__(name, passwd, service_jid=service_jid)
+        AbstractAgent.__init__(self, name, service_jid=service_jid)
+        Agent.__init__(self, name, passwd)
+
         self.game_statistic = GameStatistic()
         self.max_total_agents = players
         self.fps = fps
@@ -104,9 +102,12 @@ class Manager(AbstractAgent):
         self.din_objects = dict()
         self.map = TerrainMap()
 
-    def stop(self, timeout=5):
-        self.objective_agent.stop()
-        super().stop(timeout=timeout)
+    async def stop(self, timeout=5):
+        await self.objective_agent.stop()
+        await self.service_agent.stop()
+        await super().stop()
+        del self.render_server
+        self.render_server = None
 
     async def setup(self):
         class InitBehaviour(OneShotBehaviour):
@@ -163,7 +164,7 @@ class Manager(AbstractAgent):
         self.launch_data_from_troop_listener_behaviour()
 
         # Behaviour to handle Shot messages
-        self.launch_shot_responder_behaviour()
+        self.launch_shoot_responder_behaviour()
 
         # Behaviour to attend the petitions for register services
         # self.launch_service_register_responder_behaviour()
@@ -216,20 +217,23 @@ class Manager(AbstractAgent):
                             msg += str(agent.locate.heading.y) + ", "
                             msg += str(agent.locate.heading.z) + ") "
 
-                        num_din_objects = sum([not din.is_taken for din in self.agent.din_objects.values()])
+                        num_din_objects = sum(
+                            [not din.is_taken for din in self.agent.din_objects.values()])
                         msg += str(num_din_objects) + " "
 
                         for din_object in self.agent.din_objects.values():
                             if not din_object.is_taken:
-                                msg += str(din_object.jid) + " "
+                                msg += str(din_object.render_id) + " "
                                 msg += str(din_object.type) + " "
                                 msg += " (" + str(din_object.position.x) + ", "
                                 msg += str(din_object.position.y) + ", "
                                 msg += str(din_object.position.z) + ") "
 
                         for task in self.agent.render_server.get_connections():
-                            self.agent.render_server.send_msg_to_render_engine(task, TCP_AGL, msg)
-                        # logger.info("msg to render engine: {}".format(msg))
+                            if self.agent.render_server.is_ready(task):
+                                self.agent.render_server.send_msg_to_render_engine(
+                                    task, TCP_AGL, msg)
+                            # logger.info("msg to render engine: {}".format(msg))
                 except Exception:
                     pass
 
@@ -239,51 +243,42 @@ class Manager(AbstractAgent):
     def launch_data_from_troop_listener_behaviour(self):
         class DataFromTroopBehaviour(CyclicBehaviour):
             async def run(self):
-                # logger.error("INIT BEHAV [{}]".format(self.counter))
-                #buffer = {}
-                #for _ in range(self.agent.max_total_agents + 1):
-                #    msg = await self.receive(timeout=LONG_RECEIVE_WAIT)
-                #    if msg:
-                #        buffer[msg.sender] = msg
-                #    else:
-                #        break
-                msg = await self.receive(timeout=LONG_RECEIVE_WAIT)
-                # logger.error("POST RECEIVE [{}]".format(self.counter))
-                if self.mailbox_size() > self.agent.max_total_agents + 1:
-                    logger.error("TOO MUCH PENDING MSG: {}".format(self.mailbox_size()))
-                #for msg in buffer.values():
-                if msg:
-                    content = json.loads(msg.body)
-                    id_agent = content[NAME]
-                    self.agent.agents[id_agent].locate.position.x = int(content[X])
-                    self.agent.agents[id_agent].locate.position.y = int(content[Y])
-                    self.agent.agents[id_agent].locate.position.z = int(content[Z])
+                try:
+                    msg = await self.receive(timeout=LONG_RECEIVE_WAIT)
+                    if self.mailbox_size() > self.agent.max_total_agents + 1:
+                        logger.error("TOO MUCH PENDING MSG: {}".format(
+                            self.mailbox_size()))
+                    if msg:
+                        content = json.loads(msg.body)
+                        id_agent = content[NAME]
+                        self.agent.agents[id_agent].locate.position.x = int(content[X])
+                        self.agent.agents[id_agent].locate.position.y = int(content[Y])
+                        self.agent.agents[id_agent].locate.position.z = int(content[Z])
 
-                    self.agent.agents[id_agent].locate.velocity.x = float(content[VEL_X])
-                    self.agent.agents[id_agent].locate.velocity.y = float(content[VEL_Y])
-                    self.agent.agents[id_agent].locate.velocity.z = float(content[VEL_Z])
+                        self.agent.agents[id_agent].locate.velocity.x = float(content[VEL_X])
+                        self.agent.agents[id_agent].locate.velocity.y = float(content[VEL_Y])
+                        self.agent.agents[id_agent].locate.velocity.z = float(content[VEL_Z])
 
-                    self.agent.agents[id_agent].locate.heading.x = float(content[HEAD_X])
-                    self.agent.agents[id_agent].locate.heading.y = float(content[HEAD_Y])
-                    self.agent.agents[id_agent].locate.heading.z = float(content[HEAD_Z])
+                        self.agent.agents[id_agent].locate.heading.x = float(content[HEAD_X])
+                        self.agent.agents[id_agent].locate.heading.y = float(content[HEAD_Y])
+                        self.agent.agents[id_agent].locate.heading.z = float(content[HEAD_Z])
 
-                    self.agent.agents[id_agent].health = int(content[HEALTH])
-                    self.agent.agents[id_agent].ammo = int(content[AMMO])
-                    # logger.error("PRE CHECK OBJECTS [{}] {}".format(self.counter, msg.sender))
-                    packs = await self.agent.check_objects_at_step(id_agent, self)
-                    fov_objects = self.agent.look(id_agent)
-                    content = {PACKS: packs, FOV: fov_objects}
-                    msg = Message(to=id_agent)
-                    msg.set_metadata(PERFORMATIVE, PERFORMATIVE_DATA)
-                    msg.body = json.dumps(content)
-                    await self.send(msg)
+                        self.agent.agents[id_agent].health = int(content[HEALTH])
+                        self.agent.agents[id_agent].ammo = int(content[AMMO])
+                        packs = await self.agent.check_objects_at_step(id_agent, behaviour=self)
+                        fov_objects = self.agent.look(id_agent)
+                        content = {PACKS: packs, FOV: fov_objects}
+                        msg = Message(to=id_agent)
+                        msg.set_metadata(PERFORMATIVE, PERFORMATIVE_DATA)
+                        msg.body = json.dumps(content)
 
-                    # logger.error("POST CHECK OBJECTS [{}] {}".format(self.counter, msg.sender))
-                    if self.agent.check_game_finished(id_agent):
-                        await self.agent.inform_game_finished("ALLIED", self)
-                        logger.success("\n\nManager:  GAME FINISHED!! Winner Team: ALLIED! (Target Returned)\n")
+                        await self.send(msg)
 
-                # logger.info("[{}] BEHAV FINISHED".format(datetime.datetime.now()))
+                        if self.agent.check_game_finished(id_agent):
+                            await self.agent.inform_game_finished("ALLIED", self)
+                            logger.success("\n\nManager:  GAME FINISHED!! Winner Team: ALLIED! (Target Returned)\n")
+                except Exception as e:
+                    logger.warning("Exception at DataFromTroopBehaviour: {}".format(e))
 
         template = Template()
         template.set_metadata(PERFORMATIVE, PERFORMATIVE_DATA)
@@ -291,29 +286,29 @@ class Manager(AbstractAgent):
         self.add_behaviour(DataFromTroopBehaviour(), template)
 
     # Behaviour to handle Shot messages
-    def launch_shot_responder_behaviour(self):
-        class ShotResponderBehaviour(CyclicBehaviour):
+    def launch_shoot_responder_behaviour(self):
+        class ShootResponderBehaviour(CyclicBehaviour):
             async def run(self):
                 msg = await self.receive(timeout=LONG_RECEIVE_WAIT)
                 if msg:
                     content = json.loads(msg.body)
-
                     shooter_id = content[NAME]
                     aim = int(content[AIM])
                     shots = int(content[SHOTS])
-
+                    victim_pos = Vector3D(x=content[X], y=content[Y], z=content[Z])
                     try:
                         shooter = self.agent.agents[shooter_id]
                     except KeyError:
                         return
 
-                    victim = self.agent.shot(shooter_id)
-                    self.agent.game_statistic.shot(victim, shooter.team)
+                    victim = self.agent.shoot(shooter_id, victim_pos)
+                    self.agent.game_statistic.shoot(victim, shooter.team)
 
                     if victim is None:
                         return
 
                     damage = 3 if shooter.type == CLASS_SOLDIER else 2
+                    damage *= shots
                     victim.health -= damage
                     logger.info("Victim hit: {}".format(victim))
 
@@ -330,31 +325,30 @@ class Manager(AbstractAgent):
                                 if din_object.type == PACK_OBJPACK:
                                     # is this necessary?: din_object.taken = False;
                                     din_object.owner = 0
-                                    msg_pack = Message(to=din_object.jid)
+                                    msg_pack = Message(to=str(din_object.jid))
                                     msg_pack.set_metadata(PERFORMATIVE, PERFORMATIVE_PACK_LOST)
                                     din_object.position.x = victim.locate.position.x
                                     din_object.position.y = victim.locate.position.y
                                     din_object.position.z = victim.locate.position.z
-                                    msg_pack.body = json.loads({
+                                    msg_pack.body = json.dumps({
                                         X: victim.locate.position.x,
                                         Y: victim.locate.position.y,
                                         Z: victim.locate.position.z})
                                     await self.send(msg_pack)
 
                                     # Statistics
-                                    self.agent.game_statistic.objective_lost()
-
+                                    self.agent.game_statistic.objective_lost(
+                                        victim.team)
                                     break
 
                     msg_shot = Message(to=victim.jid)
-                    msg_shot.set_metadata(PERFORMATIVE, PERFORMATIVE_SHOT)
-
+                    msg_shot.set_metadata(PERFORMATIVE, PERFORMATIVE_SHOOT)
                     msg_shot.body = json.dumps({DEC_HEALTH: damage})
                     await self.send(msg_shot)
 
         template = Template()
-        template.set_metadata(PERFORMATIVE, PERFORMATIVE_SHOT)
-        self.add_behaviour(ShotResponderBehaviour(), template)
+        template.set_metadata(PERFORMATIVE, PERFORMATIVE_SHOOT)
+        self.add_behaviour(ShootResponderBehaviour(), template)
 
     # No longer needed
     # Behaviour to attend the petitions for register services
@@ -408,6 +402,11 @@ class Manager(AbstractAgent):
                         din_object = DinObject()
                         din_object.jid = msg.sender
                         din_object.type = type_
+                        if din_object.type == PACK_OBJPACK:
+                            din_object.render_id = 1
+                        else:
+                            din_object.render_id = abs(
+                                hash(din_object.jid)) % 1024
                         din_object.team = team
                         din_object.position.x = x
                         din_object.position.y = y
@@ -451,7 +450,11 @@ class Manager(AbstractAgent):
 
         packs = []
 
-        for din_object in self.din_objects.values():
+        keys = list(self.din_objects.keys())
+        for key in keys:
+            if key not in self.din_objects:
+                continue
+            din_object = self.din_objects[key]
             if din_object.type == PACK_MEDICPACK and self.agents[id_agent].health >= 100:
                 continue
             if din_object.type == PACK_AMMOPACK and self.agents[id_agent].ammo >= 100:
@@ -507,9 +510,6 @@ class Manager(AbstractAgent):
                             din_object.position.z = self.map.get_target_z()
                             content = {TYPE: type_, QTY: 0, TEAM: TEAM_AXIS}
 
-                # else:
-                #    content = {TYPE: PACK_NONE, QTY: 0}
-
                 # // Send a destroy/taken msg to pack and an inform msg to agent
                 if content:
                     content = json.dumps(content)
@@ -517,12 +517,6 @@ class Manager(AbstractAgent):
                     msg.set_metadata(PERFORMATIVE, PERFORMATIVE_PACK_TAKEN)
                     msg.body = content
                     await behaviour.send(msg)
-
-                    msg_to_agent = Message(to=self.agents[id_agent].jid)
-                    msg_to_agent.set_metadata(PERFORMATIVE, PERFORMATIVE_PACK_TAKEN)
-                    msg_to_agent.body = content
-                    await behaviour.send(msg_to_agent)
-
                     packs.append(content)
         return packs
 
@@ -632,15 +626,14 @@ class Manager(AbstractAgent):
 
         return objects_in_sight
 
-    def shot(self, id_agent):
+    def shoot(self, id_agent, victim_position):
         """
-        Agent with id id_agent shots
-        :param id_agent: agent who shots
+        Agent with id id_agent shoots
+        :param id_agent: agent who shoots
+        :param victim_position: the coordinates of the victim to be shot
         :return: agent shot or None
         """
         victim = None
-        min_distance = 1e10  # big number
-
         try:
             agent = self.agents[id_agent]
         except KeyError:
@@ -650,46 +643,34 @@ class Manager(AbstractAgent):
         for a in self.agents.values():
             if a.jid == id_agent:
                 continue
-
             if a.health <= 0:
                 continue
-
-            position = Vector3D(v=agent.locate.position)
-
-            position.sub(a.locate.position)
-
-            dv = position.dot(agent.locate.heading)
-            d2 = agent.locate.heading.dot(agent.locate.heading)
-            sq = (dv * dv) - ((d2 * position.dot(position)) - 4)
-
-            if sq >= 0:
-
-                sq = math.sqrt(sq)
-                dist1 = (-dv + sq) / d2
-                dist2 = (-dv - sq) / d2
-                if dist1 < dist2:
-                    distance = dist1
-                else:
-                    distance = dist2
-
-                if 0 < distance < min_distance:
-                    min_distance = distance
-                    victim = a
+            absx = abs(victim_position.x - a.locate.position.x)
+            absz = abs(victim_position.z - a.locate.position.z)
+            if (absx < PRECISION_X) and (absz < PRECISION_Z):
+                victim = a
+                v = Vector3D(v=victim.locate.position)
+                v.sub(agent.locate.position)
+                min_distance = v.length()
+                break
 
         if victim is not None:
-            v = Vector3D(v=victim.locate.position)
-            v.sub(agent.locate.position)
-            distance_terrain = self.intersect(agent.locate.position, agent.locate.heading)
-            # logger.info "distanceTerrain: " + str(distance_terrain)
+            a = Mobile()
+            a.position = agent.locate.position
+            a.destination = victim.locate.position
+            a.calculate_new_orientation(a.destination)
+            distance_terrain = self.intersect(a.position, a.heading, min_distance)
+            # logger.info("distanceTerrain: " + str(distance_terrain))
             if distance_terrain != 0.0 and distance_terrain < min_distance:
                 victim = None
 
         return victim
 
-    def intersect(self, origin, vector):
+    def intersect(self, origin, vector, distance=1e10):
         """
         :param origin:
         :param vector:
+        :param distance:
         :return: 0.0 if it does not intersect
         """
 
@@ -750,6 +731,8 @@ class Manager(AbstractAgent):
                 if point.x >= (self.map.get_size_x()) or point.z >= (self.map.get_size_z()):
                     break
                 error.add(step)
+                if error.length() > distance:
+                    return error.length()
         except Exception as e:
             logger.error("INTERSECT FAILED: (origin: {}) (vector: {}): {}".format(origin, vector, e))
 
@@ -779,7 +762,9 @@ class Manager(AbstractAgent):
 
         msg = Message()
         msg.set_metadata(PERFORMATIVE, PERFORMATIVE_OBJECTIVE)
-        content = {X: self.map.get_target_x(), Y: self.map.get_target_y(), Z: self.map.get_target_z()}
+        content = {X: self.map.get_target_x(),
+                   Y: self.map.get_target_y(),
+                   Z: self.map.get_target_z()}
         msg.body = json.dumps(content)
         for agent in self.agents.values():
             msg.to = agent.jid
@@ -789,23 +774,22 @@ class Manager(AbstractAgent):
 
     async def inform_game_finished(self, winner_team, behaviour):
 
-        msg = Message()
-        msg.set_metadata(PERFORMATIVE, PERFORMATIVE_GAME)
-        msg.body = "GAME FINISHED!! Winner Team: " + str(winner_team)
         for agent in self.agents.values():
+            msg = Message()
+            msg.set_metadata(PERFORMATIVE, PERFORMATIVE_GAME)
+            msg.body = "GAME FINISHED!! Winner Team: " + str(winner_team)
             msg.to = agent.jid
             await behaviour.send(msg)
         for st in self.render_server.get_connections():
             try:
-                st.send_msg_to_render_engine(TCP_COM, "FINISH " + " GAME FINISHED!! Winner Team: " + str(winner_team))
+                st.send_msg_to_render_engine(
+                    TCP_COM, "FINISH " + " GAME FINISHED!! Winner Team: " + str(winner_team))
             except:
                 pass
 
         self.print_statistics(winner_team)
 
-        del self.render_server
-        self.render_server = None
-        self.stop()
+        await self.stop()
 
     def print_statistics(self, winner_team):
 
@@ -827,14 +811,15 @@ class Manager(AbstractAgent):
                 if agent.health > 0:
                     axis_alive_players = axis_alive_players + 1
 
-        self.game_statistic.calculate_data(allied_alive_players, axis_alive_players, allied_health, axis_health)
+        self.game_statistic.calculate_data(
+            allied_alive_players, axis_alive_players, allied_health, axis_health)
 
         try:
-            fw = open("JGOMAS_Statistics.txt", 'w+')
+            fw = open("PGOMAS_Statistics.txt", 'w+')
 
             fw.write(self.game_statistic.__str__(winner_team))
 
             fw.close()
 
-        except:
-            logger.error("COULD NOT WRITE STATISTICS TO FILE")
+        except Exception as e:
+            logger.error("COULD NOT WRITE STATISTICS TO FILE: {}".format(e))

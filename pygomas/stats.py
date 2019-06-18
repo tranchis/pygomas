@@ -65,7 +65,8 @@ class TeamStatistic:
         if self.total_shots <= 0:
             self.army_efficiency = 0
         else:
-            self.army_efficiency = 1.0 - (alive_enemies * 1.0) / self.total_shots
+            self.army_efficiency = 1.0 - \
+                (alive_enemies * 1.0) / self.total_shots
 
     def calculate_anti_efficiency(self):
 
@@ -86,7 +87,8 @@ class TeamStatistic:
         if self.team_hit_shots <= 0:
             self.army_anti_efficiency = 0
         else:
-            self.army_anti_efficiency = (self.alive_players * 1.0) / self.team_hit_shots
+            self.army_anti_efficiency = (
+                self.alive_players * 1.0) / self.team_hit_shots
 
     def __str__(self):
 
@@ -117,7 +119,8 @@ class TeamStatistic:
 
         ret += "\t-ANTI-EFICIENCY:" + "\n"
         ret += "\t\t* Medic:       \t" + str(self.medic_anti_efficiency) + "\n"
-        ret += "\t\t* FieldOps:    \t" + str(self.fieldops_anti_efficiency) + "\n"
+        ret += "\t\t* FieldOps:    \t" + \
+            str(self.fieldops_anti_efficiency) + "\n"
         ret += "\t\t* Army:        \t" + str(self.army_anti_efficiency) + "\n"
 
         return ret
@@ -148,7 +151,7 @@ class GameStatistic:
             else:
                 self.team_statistic[pack_team].packs[pack.type].enemy_taken += 1
 
-    def shot(self, victim, team):
+    def shoot(self, victim, team):
         team = TEAM_ALLIED if team == TEAM_ALLIED else TEAM_AXIS
         self.team_statistic[team].total_shots += 1
 
@@ -159,8 +162,9 @@ class GameStatistic:
         else:
             self.team_statistic[team].enemy_hit_shots += 1
 
-    def objective_lost(self):
-        self.team_statistic[0].total_objective_lost += 1
+    def objective_lost(self, team):
+        team = TEAM_ALLIED if team == TEAM_ALLIED else TEAM_AXIS
+        self.team_statistic[team].total_objective_lost += 1
 
     def pack_destroyed(self, din_object):
         if din_object.team == TEAM_ALLIED:
@@ -190,20 +194,24 @@ class GameStatistic:
 
         self.team_statistic[TEAM_ALLIED].alive_players = allied_alive_players
         if allied_alive_players > 0:
-            self.team_statistic[TEAM_ALLIED].average_health = (allied_health * 1.0) / allied_alive_players
+            self.team_statistic[TEAM_ALLIED].average_health = (
+                allied_health * 1.0) / allied_alive_players
         else:
             self.team_statistic[TEAM_ALLIED].average_health = 0
 
         self.team_statistic[TEAM_AXIS].alive_players = axis_alive_players
         if axis_alive_players > 0:
-            self.team_statistic[TEAM_AXIS].average_health = (axis_health * 1.0) / axis_alive_players
+            self.team_statistic[TEAM_AXIS].average_health = (
+                axis_health * 1.0) / axis_alive_players
         else:
             self.team_statistic[TEAM_AXIS].average_health = 0
 
-        self.team_statistic[TEAM_ALLIED].calculate_efficiency(axis_alive_players)
+        self.team_statistic[TEAM_ALLIED].calculate_efficiency(
+            axis_alive_players)
         self.team_statistic[TEAM_ALLIED].calculate_anti_efficiency()
 
-        self.team_statistic[TEAM_AXIS].calculate_efficiency(allied_alive_players)
+        self.team_statistic[TEAM_AXIS].calculate_efficiency(
+            allied_alive_players)
         self.team_statistic[TEAM_AXIS].calculate_anti_efficiency()
 
     def __str__(self, winner_team=""):
@@ -211,7 +219,8 @@ class GameStatistic:
         self.match_duration = self.match_duration / 1000
         hours = int(self.match_duration / 3600)
         minutes = int((self.match_duration % 3600) / 60)
-        seconds = int((self.match_duration - ((hours * 3600) + (minutes * 60))))
+        seconds = int(
+            (self.match_duration - ((hours * 3600) + (minutes * 60))))
 
         ret = "Winner Team: " + winner_team + "\n"
         if hours <= 0:

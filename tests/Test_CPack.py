@@ -1,6 +1,6 @@
 import unittest
-from jgomas.CPack import CPack
-from jgomas.CJGomasAgent import CJGomasAgent
+from pygomas.CPack import CPack
+from pygomas.CJGomasAgent import CJGomasAgent
 from spade.behaviour import OneShotBehaviour
 from spade.message import Message
 from spade.template import Template

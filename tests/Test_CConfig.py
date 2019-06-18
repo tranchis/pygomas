@@ -1,5 +1,5 @@
 import unittest
-from jgomas.CConfig import CConfig
+from pygomas.CConfig import CConfig
 
 
 class TestCConfig(unittest.TestCase):

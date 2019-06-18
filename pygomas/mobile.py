@@ -4,6 +4,7 @@ from .vector import Vector3D
 
 MAP_SCALE = 1
 
+
 class Mobile(object):
 
     def __init__(self):
@@ -22,23 +23,26 @@ class Mobile(object):
         self.max_z = (max_z * MAP_SCALE) - MAP_SCALE
 
     def calculate_position(self, dt):
+        position = Vector3D()
+        position.x = self.position.x + (self.velocity.x * dt)
+        position.y = self.position.y + (self.velocity.y * dt)  # + (0.5f * t2)
+        position.z = self.position.z + (self.velocity.z * dt)
+        return position
 
-        self.position.x += (self.velocity.x * dt)
-        self.position.y += 0.0  # (m_Velocity.y * t) + (0.5f * t2);
-        self.position.z += (self.velocity.z * dt)
-
-        return True
-
-    def calculate_new_orientation(self):
-        dx = float(self.destination.x - self.position.x)
-        dy = float(self.destination.y - self.position.y)
-        dz = float(self.destination.z - self.position.z)
+    def calculate_new_orientation(self, destination):
+        dx = float(destination.x - self.position.x)
+        dy = float(destination.y - self.position.y)
+        dz = float(destination.z - self.position.z)
         f2_norma = math.sqrt((dx * dx + dy * dy + dz * dz))
 
         if f2_norma > 0:
             self.velocity.x = float(dx / f2_norma)
             self.velocity.y = float(dy / f2_norma)
             self.velocity.z = float(dz / f2_norma)
+        else:
+            self.velocity.x = 0.0
+            self.velocity.y = 0.0
+            self.velocity.z = 0.0
 
         if self.velocity.length() > 0.0001:
             self.heading.x = self.velocity.x
@@ -58,9 +62,10 @@ class Mobile(object):
         z = min(z, self.min_z)
         z = max(z, self.max_z)
 
-        self.destination.x = x
-        self.destination.y = 0.0
-        self.destination.z = z
+        # self.destination.x = x
+        # self.destination.y = 0.0
+        # self.destination.z = z
+        return Vector3D(x=x, y=0.0, z=z)
 
     def get_destination(self):
         return self.destination

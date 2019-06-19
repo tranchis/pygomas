@@ -48,14 +48,14 @@ class BDIMedic(BDITroop):
         """
         logger.info("{} Creating medic packs.".format(self.name))
         while self.perform_medic_action():
-            Medic.packs_delivered += 1
-            name = "medicpack{}@{}".format(Medic.packs_delivered, self.jid.domain)
-            x = self.movement.position.x + random.random() * Medic.medic_pack_offset
-            z = self.movement.position.z + random.random() * Medic.medic_pack_offset
+            BDIMedic.packs_delivered += 1
+            name = "medicpack{}@{}".format(BDIMedic.packs_delivered, self.jid.domain)
+            x = self.movement.position.x + random.random() * BDIMedic.medic_pack_offset
+            z = self.movement.position.z + random.random() * BDIMedic.medic_pack_offset
 
             while not self.check_static_position(x, z):
-                x = self.movement.position.x + random.random() * Medic.medic_pack_offset
-                z = self.movement.position.z + random.random() * Medic.medic_pack_offset
+                x = self.movement.position.x + random.random() * BDIMedic.medic_pack_offset
+                z = self.movement.position.z + random.random() * BDIMedic.medic_pack_offset
             team = self.team
 
             try:

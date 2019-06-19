@@ -111,7 +111,7 @@ class TaskManager(object):
             task = Task()
             task.jid = jid
             task.type = task_type
-            #if task_type in [TASK_PATROLLING, TASK_WALKING_PATH, TASK_GET_OBJECTIVE]:
+            # if task_type in [TASK_PATROLLING, TASK_WALKING_PATH, TASK_GET_OBJECTIVE]:
             #    task.is_erasable = False
 
         task.priority = priority

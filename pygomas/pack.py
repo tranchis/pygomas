@@ -1,7 +1,8 @@
 import json
 from loguru import logger
 
-from .ontology import PERFORMATIVE, PERFORMATIVE_PACK, PERFORMATIVE_PACK_TAKEN, TEAM, X, Y, Z, NAME, ACTION, CREATE, TYPE
+from .ontology import PERFORMATIVE, PERFORMATIVE_PACK, PERFORMATIVE_PACK_TAKEN, TEAM, X, Y, Z, NAME, ACTION, CREATE, \
+    TYPE
 from .agent import AbstractAgent, LONG_RECEIVE_WAIT
 from .vector import Vector3D
 from spade.message import Message
@@ -30,7 +31,6 @@ class Pack(AbstractAgent, Agent):
         return "P(" + str(PACK_NAME[self.type]) + "," + str(self.position) + ")"
 
     def __init__(self, name, passwd="secret", manager_jid="cmanager@localhost", x=0, z=0, team=0):
-
         Agent.__init__(self, name, passwd)
         AbstractAgent.__init__(self, name, team)
 

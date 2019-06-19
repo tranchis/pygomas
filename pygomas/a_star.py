@@ -11,7 +11,7 @@ class a_star():
         # Euclidean distance squared heuristic
         # return ((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2)
         # Euclidean distance heuristic
-        return ((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2)**0.5
+        return ((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2) ** 0.5
 
     def get_path(self, start, goal):
         start = np.round(start)
@@ -43,7 +43,7 @@ class a_star():
             for i, j in neighbors:
                 neighbor = current[0] + i, current[1] + j
                 tentative_g_score = gscore[current] + \
-                    self.heuristic(current, neighbor)
+                                    self.heuristic(current, neighbor)
                 if 0 <= neighbor[0] < self.array.shape[0]:
                     if 0 <= neighbor[1] < self.array.shape[1]:
                         if self.array[neighbor[0]][neighbor[1]] == 0:
@@ -57,11 +57,11 @@ class a_star():
 
                 if neighbor in close_set and tentative_g_score >= gscore.get(neighbor, 0):
                     continue
-                if tentative_g_score < gscore.get(neighbor, 0) or neighbor not in [i[1]for i in oheap]:
+                if tentative_g_score < gscore.get(neighbor, 0) or neighbor not in [i[1] for i in oheap]:
                     came_from[neighbor] = current
                     gscore[neighbor] = tentative_g_score
                     fscore[neighbor] = tentative_g_score + \
-                        self.heuristic(neighbor, goal)
+                                       self.heuristic(neighbor, goal)
                     heappush(oheap, (fscore[neighbor], neighbor))
 
         return False

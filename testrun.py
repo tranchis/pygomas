@@ -29,7 +29,7 @@ manager = Manager(players=sum(num_allied) + sum(num_axis),
                   # name=manager_jid, service_jid=service_jid, map_name="mine")
                   # name=manager_jid, service_jid=service_jid, map_name="mine_medium")
                   # name=manager_jid, service_jid=service_jid, map_name="mine_large")
-                  name=manager_jid, service_jid=service_jid, map_name="map_07")
+                  name=manager_jid, service_jid=service_jid, map_name="map_01")
 future = manager.start()
 future.result()
 

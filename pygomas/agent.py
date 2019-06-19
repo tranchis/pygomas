@@ -1,4 +1,6 @@
 import json
+from abc import ABCMeta
+
 from loguru import logger
 
 from spade.agent import Agent
@@ -11,8 +13,8 @@ from .ontology import PERFORMATIVE, PERFORMATIVE_REGISTER_SERVICE, PERFORMATIVE_
 LONG_RECEIVE_WAIT: int = 1000000
 
 
-class AbstractAgent(object):
-    def __init__(self, jid, team=0, service_jid="cservice@localhost", verify_security=False, *args, **kwargs):
+class AbstractAgent(object, metaclass=ABCMeta):
+    def __init__(self, jid, team=0, service_jid="cservice@localhost"):
         self.services = list()
         self.position_x = None
         self.position_z = None

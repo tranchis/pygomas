@@ -1,12 +1,11 @@
 import json
+from collections import deque
 
-from spade.behaviour import CyclicBehaviour
-from spade.template import Template
-
-from .agent import LONG_RECEIVE_WAIT
+from .vector import Vector3D
 from .bditroop import BDITroop, CLASS_SOLDIER
-from .ontology import BACKUP_SERVICE, PERFORMATIVE, PERFORMATIVE_CFB
+from .ontology import BACKUP_SERVICE, DESTINATION, VELOCITY, HEADING
 
+import agentspeak
 from agentspeak import Actions
 from agentspeak.stdlib import actions as asp_action
 
@@ -19,7 +18,7 @@ class BDISoldier(BDITroop):
         @soldier_actions.add(".reinforce", 3)
         def _reinforce(agent, term, intention):
             """Same as a .goto"""
-            args = pyson.grounded(term.args, intention.scope)
+            args = agentspeak.grounded(term.args, intention.scope)
             self.movement.destination.x = args[0]
             self.movement.destination.y = args[1]
             self.movement.destination.z = args[2]

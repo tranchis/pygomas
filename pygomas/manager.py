@@ -5,6 +5,7 @@ import math
 
 from loguru import logger
 
+import spade
 from spade.agent import Agent
 from spade.behaviour import OneShotBehaviour, PeriodicBehaviour, CyclicBehaviour, TimeoutBehaviour
 from spade.message import Message
@@ -146,7 +147,6 @@ class Manager(AbstractAgent, Agent):
                 self.agent.match_init = time.time()
 
         logger.success("pyGOMAS v. 0.1 (c) GTI-IA 2005 - 2019 (DSIC / UPV)")
-        import spade
         logger.success(spade.__version__)
         # manager_future = super().start(auto_register=auto_register)
 

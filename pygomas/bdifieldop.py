@@ -48,14 +48,14 @@ class BDIFieldOp(BDITroop):
 
         logger.info("{} Creating ammo packs.".format(self.name))
         while self.perform_ammo_action():
-            FieldOps.packs_delivered += 1
-            name = "ammopack{}@{}".format(FieldOps.packs_delivered, self.jid.domain)
-            x = self.movement.position.x + random.random() * FieldOps.ammo_pack_offset
-            z = self.movement.position.z + random.random() * FieldOps.ammo_pack_offset
+            BDIFieldOp.packs_delivered += 1
+            name = "ammopack{}@{}".format(BDIFieldOp.packs_delivered, self.jid.domain)
+            x = self.movement.position.x + random.random() * BDIFieldOp.ammo_pack_offset
+            z = self.movement.position.z + random.random() * BDIFieldOp.ammo_pack_offset
 
             while not self.check_static_position(x, z):
-                x = self.movement.position.x + random.random() * FieldOps.ammo_pack_offset
-                z = self.movement.position.z + random.random() * FieldOps.ammo_pack_offset
+                x = self.movement.position.x + random.random() * BDIFieldOp.ammo_pack_offset
+                z = self.movement.position.z + random.random() * BDIFieldOp.ammo_pack_offset
             team = self.team
 
             try:

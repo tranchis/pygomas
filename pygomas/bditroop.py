@@ -1,6 +1,5 @@
 from collections import deque
 
-import asyncio
 import json
 import random
 import time
@@ -16,7 +15,7 @@ from agentspeak.stdlib import actions as asp_action
 
 from . import MIN_POWER, POWER_UNIT, MIN_STAMINA, STAMINA_UNIT, MIN_AMMO, MAX_AMMO, MAX_STAMINA, MAX_POWER, \
     MAX_HEALTH, MIN_HEALTH
-from .ontology import*
+from .ontology import *
 from .agent import AbstractAgent, LONG_RECEIVE_WAIT
 from .threshold import Threshold
 from .map import TerrainMap
@@ -48,7 +47,8 @@ MV_ALREADY_IN_DEST = 2
 
 class BDITroop(AbstractAgent, BDIAgent):
 
-    def __init__(self, jid, passwd, asl, actions=None, team=TEAM_NONE, manager_jid="cmanager@localhost", service_jid="cservice@localhost", *args, **kwargs):
+    def __init__(self, jid, passwd, asl, actions=None, team=TEAM_NONE, manager_jid="cmanager@localhost",
+                 service_jid="cservice@localhost", *args, **kwargs):
 
         self.service_types = []
 
@@ -122,7 +122,8 @@ class BDITroop(AbstractAgent, BDIAgent):
                 x, z = path[0]
                 self.movement.calculate_new_orientation(Vector3D(x=x, y=0, z=z))
                 self.bdi.set_belief(DESTINATION, args[0], args[1], args[2])
-                self.bdi.set_belief(VELOCITY, self.movement.velocity.x, self.movement.velocity.y, self.movement.velocity.z)
+                self.bdi.set_belief(VELOCITY, self.movement.velocity.x, self.movement.velocity.y,
+                                    self.movement.velocity.z)
                 self.bdi.set_belief(HEADING, self.movement.heading.x, self.movement.heading.y, self.movement.heading.z)
             else:
                 self.destinations = deque()
@@ -224,6 +225,7 @@ class BDITroop(AbstractAgent, BDIAgent):
                message to the service agent asking for those who offer the
                Medic service.
                """
+
             class GetMedicBehaviour(OneShotBehaviour):
                 async def run(self):
                     msg = Message()
@@ -253,6 +255,7 @@ class BDITroop(AbstractAgent, BDIAgent):
                message to the service agent asking for those who offer the
                Ammo service.
                """
+
             class GetFieldopsBehaviour(OneShotBehaviour):
                 async def run(self):
                     msg = Message()
@@ -282,6 +285,7 @@ class BDITroop(AbstractAgent, BDIAgent):
                message to the service agent asking for those who offer the
                Backup service.
                """
+
             class GetBackupBehaviour(OneShotBehaviour):
                 async def run(self):
                     msg = Message()
@@ -315,7 +319,7 @@ class BDITroop(AbstractAgent, BDIAgent):
             yield
 
         AbstractAgent.__init__(self, jid, team=team, service_jid=service_jid)
-        BDIAgent.__init__(self, jid, passwd, asl, troop_actions)
+        BDIAgent.__init__(self, jid=jid, password=passwd, asl=asl, actions=troop_actions, **kwargs)
 
     def start(self, auto_register=True):
         self.health = MAX_HEALTH
@@ -386,11 +390,13 @@ class BDITroop(AbstractAgent, BDIAgent):
                 if (absx < PRECISION_X) and (absz < PRECISION_Z):
                     x, z = self.agent.destinations.popleft()
                     self.agent.movement.position = Vector3D(x=x, y=0, z=z)
-                    self.agent.bdi.set_belief(POSITION, self.agent.movement.position.x, self.agent.movement.position.y, self.agent.movement.position.z)
+                    self.agent.bdi.set_belief(POSITION, self.agent.movement.position.x, self.agent.movement.position.y,
+                                              self.agent.movement.position.z)
 
                     if len(self.agent.destinations) == 0:
                         print("\n\nARRIVED\n\n")
-                        self.agent.bdi.set_belief(PERFORMATIVE_TARGET_REACHED, self.agent.movement.destination.x, self.agent.movement.destination.y, self.agent.movement.destination.z)
+                        self.agent.bdi.set_belief(PERFORMATIVE_TARGET_REACHED, self.agent.movement.destination.x,
+                                                  self.agent.movement.destination.y, self.agent.movement.destination.z)
                     else:
                         x, z = self.agent.destinations[0]
 
@@ -399,9 +405,11 @@ class BDITroop(AbstractAgent, BDIAgent):
                     self.agent.movement.calculate_new_orientation(
                         Vector3D(x=x, y=0, z=z))
                     if last_velocity != self.agent.movement.velocity:
-                        self.agent.bdi.set_belief(VELOCITY, self.agent.movement.velocity.x, self.agent.movement.velocity.y, self.agent.movement.velocity.z)
+                        self.agent.bdi.set_belief(VELOCITY, self.agent.movement.velocity.x,
+                                                  self.agent.movement.velocity.y, self.agent.movement.velocity.z)
                     if last_heading != self.agent.movement.heading:
-                        self.agent.bdi.set_belief(HEADING, self.agent.movement.heading.x, self.agent.movement.heading.y, self.agent.movement.heading.z)
+                        self.agent.bdi.set_belief(HEADING, self.agent.movement.heading.x, self.agent.movement.heading.y,
+                                                  self.agent.movement.heading.z)
 
                 else:
                     move_result = self.agent.move(dt)
@@ -417,8 +425,7 @@ class BDITroop(AbstractAgent, BDIAgent):
                 self.agent.map = TerrainMap()
                 config = Config()
                 self.agent.map.load_map(map_name, config)
-                self.agent.path_finder = a_star(
-                    self.agent.map.terrain[:, :, 1])
+                self.agent.path_finder = a_star(self.agent.map.terrain[:, :, 1])
                 self.agent.movement = Mobile()
                 self.agent.movement.set_size(self.agent.map.get_size_x(), self.agent.map.get_size_z())
                 self.agent.generate_spawn_position()
@@ -438,17 +445,24 @@ class BDITroop(AbstractAgent, BDIAgent):
                 content = json.loads(msg.body)
                 if self.agent.bdi_enabled:
                     if self.agent.team == TEAM_ALLIED:
-                        x = ((self.agent.map.allied_base.get_end_x() - self.agent.map.allied_base.get_init_x()) / 2) + self.agent.map.allied_base.get_init_x()
-                        y = ((self.agent.map.allied_base.get_end_y() - self.agent.map.allied_base.get_init_y()) / 2) + self.agent.map.allied_base.get_init_y()
-                        z = ((self.agent.map.allied_base.get_end_z() - self.agent.map.allied_base.get_init_z()) / 2) + self.agent.map.allied_base.get_init_z()
+                        x = (((self.agent.map.allied_base.get_end_x() - self.agent.map.allied_base.get_init_x()) / 2) +
+                             self.agent.map.allied_base.get_init_x())
+                        y = (((self.agent.map.allied_base.get_end_y() - self.agent.map.allied_base.get_init_y()) / 2) +
+                             self.agent.map.allied_base.get_init_y())
+                        z = (((self.agent.map.allied_base.get_end_z() - self.agent.map.allied_base.get_init_z()) / 2) +
+                             self.agent.map.allied_base.get_init_z())
                     elif self.agent.team == TEAM_AXIS:
-                        x = ((self.agent.map.axis_base.get_end_x() - self.agent.map.axis_base.get_init_x()) / 2) + self.agent.map.axis_base.get_init_x()
-                        y = ((self.agent.map.axis_base.get_end_y() - self.agent.map.axis_base.get_init_y()) / 2) + self.agent.map.axis_base.get_init_y()
-                        z = ((self.agent.map.axis_base.get_end_z() - self.agent.map.axis_base.get_init_z()) / 2) + self.agent.map.axis_base.get_init_z()
+                        x = (((self.agent.map.axis_base.get_end_x() - self.agent.map.axis_base.get_init_x()) / 2) +
+                             self.agent.map.axis_base.get_init_x())
+                        y = (((self.agent.map.axis_base.get_end_y() - self.agent.map.axis_base.get_init_y()) / 2) +
+                             self.agent.map.axis_base.get_init_y())
+                        z = (((self.agent.map.axis_base.get_end_z() - self.agent.map.axis_base.get_init_z()) / 2) +
+                             self.agent.map.axis_base.get_init_z())
                     self.agent.bdi.set_belief(NAME, self.agent.name)
                     self.agent.bdi.set_belief(TEAM, self.agent.team)
                     self.agent.bdi.set_belief(BASE, x, y, z)
-                    self.agent.bdi.set_belief(POSITION, self.agent.movement.position.x, self.agent.movement.position.y, self.agent.movement.position.z)
+                    self.agent.bdi.set_belief(POSITION, self.agent.movement.position.x, self.agent.movement.position.y,
+                                              self.agent.movement.position.z)
                     self.agent.bdi.set_belief(HEALTH, self.agent.health)
                     self.agent.bdi.set_belief(AMMO, self.agent.ammo)
                     self.agent.bdi.set_belief(THRESHOLD_HEALTH, self.agent.threshold.health)
@@ -456,7 +470,8 @@ class BDITroop(AbstractAgent, BDIAgent):
                     self.agent.bdi.set_belief(THRESHOLD_AIM, self.agent.threshold.aim)
                     self.agent.bdi.set_belief(THRESHOLD_SHOTS, self.agent.threshold.shot)
                     self.agent.bdi.set_belief(FLAG, content[X], content[Y], content[Z])
-                logger.info("Team: {}, agent: {}, has its objective at {}".format(self.agent.team, self.agent.name, content))
+                logger.info(
+                    "Team: {}, agent: {}, has its objective at {}".format(self.agent.team, self.agent.name, content))
                 self.kill()
 
     # Behaviour to listen to manager if game has finished
@@ -476,7 +491,9 @@ class BDITroop(AbstractAgent, BDIAgent):
                 content = json.loads(msg.body)
                 decrease_health = int(content[DEC_HEALTH])
                 self.agent.decrease_health(decrease_health)
-                logger.info("Agent {} has been hit by a shot! Loses {} health points ({}).".format(self.agent.name, decrease_health, self.agent.health))
+                logger.info("Agent {} has been hit by a shot! Loses {} health points ({}).".format(self.agent.name,
+                                                                                                   decrease_health,
+                                                                                                   self.agent.health))
 
                 if self.agent.health <= 0:
                     logger.info(self.agent.name + ": DEAD!!")
@@ -544,11 +561,17 @@ class BDITroop(AbstractAgent, BDIAgent):
                         s.position.z = float(obj[Z])
                         self.agent.fov_objects.append(s)
                         if s.team == TEAM_NONE:
-                            self.agent.bdi.set_belief(PACKS_IN_FOV, idx, int(obj[TYPE]), float(obj[ANGLE]), float(obj[DISTANCE]), int(obj[HEALTH]), float(obj[X]), float(obj[X]), float(obj[Z]))
+                            self.agent.bdi.set_belief(PACKS_IN_FOV, idx, int(obj[TYPE]), float(obj[ANGLE]),
+                                                      float(obj[DISTANCE]), int(obj[HEALTH]), float(obj[X]),
+                                                      float(obj[X]), float(obj[Z]))
                         elif s.team == self.agent.team:
-                            self.agent.bdi.set_belief(FRIENDS_IN_FOV, idx, int(obj[TYPE]), float(obj[ANGLE]), float(obj[DISTANCE]), int(obj[HEALTH]), float(obj[X]), float(obj[X]), float(obj[Z]))
+                            self.agent.bdi.set_belief(FRIENDS_IN_FOV, idx, int(obj[TYPE]), float(obj[ANGLE]),
+                                                      float(obj[DISTANCE]), int(obj[HEALTH]), float(obj[X]),
+                                                      float(obj[X]), float(obj[Z]))
                         else:
-                            self.agent.bdi.set_belief(ENEMIES_IN_FOV, idx, int(obj[TYPE]), float(obj[ANGLE]), float(obj[DISTANCE]), int(obj[HEALTH]), float(obj[X]), float(obj[X]), float(obj[Z]))
+                            self.agent.bdi.set_belief(ENEMIES_IN_FOV, idx, int(obj[TYPE]), float(obj[ANGLE]),
+                                                      float(obj[DISTANCE]), int(obj[HEALTH]), float(obj[X]),
+                                                      float(obj[X]), float(obj[Z]))
 
             except ZeroDivisionError:
                 pass

@@ -138,18 +138,18 @@ class TerrainMap:
                     c = file.read(1)  # read next char
                 if c == '*':
                     self.terrain[x * MAP_SCALE:x * MAP_SCALE + MAP_SCALE,
-                                 z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 0] = 0.0
+                    z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 0] = 0.0
                     self.terrain[x * MAP_SCALE:x * MAP_SCALE + MAP_SCALE,
-                                 z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 1] = 0
+                    z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 1] = 0
                     self.terrain[x * MAP_SCALE:x * MAP_SCALE + MAP_SCALE,
-                                 z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 2] = 10000
+                    z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 2] = 10000
                 elif c == ' ':
                     self.terrain[x * MAP_SCALE:x * MAP_SCALE + MAP_SCALE,
-                                 z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 0] = 0.0
+                    z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 0] = 0.0
                     self.terrain[x * MAP_SCALE:x * MAP_SCALE + MAP_SCALE,
-                                 z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 1] = 1
+                    z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 1] = 1
                     self.terrain[x * MAP_SCALE:x * MAP_SCALE + MAP_SCALE,
-                                 z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 2] = 1
+                    z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 2] = 1
         file.close()
 
     def __str__(self):

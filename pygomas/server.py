@@ -5,7 +5,7 @@ from loguru import logger
 
 from spade.container import Container
 
-SERVER_PORT = 8001  # 8072  # our server's own port
+SERVER_PORT = 8072 #8001  # 8072  # our server's own port
 
 TCP_COM = 0  # COMMUNICATION (ACCEPTED, CLOSED, REFUSED)
 TCP_AGL = 1  # AGENT LIST

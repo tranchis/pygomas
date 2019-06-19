@@ -1,12 +1,11 @@
-import json
 from collections import deque
 
 from .vector import Vector3D
 from .bditroop import BDITroop, CLASS_SOLDIER
 from .ontology import BACKUP_SERVICE, DESTINATION, VELOCITY, HEADING
 
-import agentspeak
 from agentspeak import Actions
+from agentspeak import grounded
 from agentspeak.stdlib import actions as asp_action
 
 
@@ -18,7 +17,7 @@ class BDISoldier(BDITroop):
         @soldier_actions.add(".reinforce", 3)
         def _reinforce(agent, term, intention):
             """Same as a .goto"""
-            args = agentspeak.grounded(term.args, intention.scope)
+            args = grounded(term.args, intention.scope)
             self.movement.destination.x = args[0]
             self.movement.destination.y = args[1]
             self.movement.destination.z = args[2]
@@ -30,7 +29,8 @@ class BDISoldier(BDITroop):
                 x, z = path[0]
                 self.movement.calculate_new_orientation(Vector3D(x=x, y=0, z=z))
                 self.bdi.set_belief(DESTINATION, args[0], args[1], args[2])
-                self.bdi.set_belief(VELOCITY, self.movement.velocity.x, self.movement.velocity.y, self.movement.velocity.z)
+                self.bdi.set_belief(VELOCITY, self.movement.velocity.x, self.movement.velocity.y,
+                                    self.movement.velocity.z)
                 self.bdi.set_belief(HEADING, self.movement.heading.x, self.movement.heading.y, self.movement.heading.z)
             else:
                 self.destinations = deque()

@@ -150,8 +150,6 @@ def run(game):
     while any([agent.is_alive() for agent in troops]):
         try:
             time.sleep(1)
-            print("Everyone is online")
-            print([agent.is_alive() for agent in troops])
         except KeyboardInterrupt:
             break
     click.echo("Stopping troops . . .")

@@ -2,7 +2,7 @@ import numpy as np
 from heapq import heappop, heappush
 
 
-class a_star():
+class AStarAlgorithm:
 
     def __init__(self, map_array):
         self.array = map_array
@@ -19,8 +19,8 @@ class a_star():
         start = (int(start[0]), int(start[1]))
         goal = (int(goal[0]), int(goal[1]))
 
-        neighbors = [(0, 1), (0, -1), (1, 0), (-1, 0),
-                     (1, 1), (1, -1), (-1, 1), (-1, -1)]
+        neighbors = ((0, 1), (0, -1), (1, 0), (-1, 0),
+                     (1, 1), (1, -1), (-1, 1), (-1, -1))
 
         close_set = set()
         came_from = {}
@@ -42,8 +42,7 @@ class a_star():
             close_set.add(current)
             for i, j in neighbors:
                 neighbor = current[0] + i, current[1] + j
-                tentative_g_score = gscore[current] + \
-                                    self.heuristic(current, neighbor)
+                tentative_g_score = gscore[current] + self.heuristic(current, neighbor)
                 if 0 <= neighbor[0] < self.array.shape[0]:
                     if 0 <= neighbor[1] < self.array.shape[1]:
                         if self.array[neighbor[0]][neighbor[1]] == 0:
@@ -60,8 +59,7 @@ class a_star():
                 if tentative_g_score < gscore.get(neighbor, 0) or neighbor not in [i[1] for i in oheap]:
                     came_from[neighbor] = current
                     gscore[neighbor] = tentative_g_score
-                    fscore[neighbor] = tentative_g_score + \
-                                       self.heuristic(neighbor, goal)
+                    fscore[neighbor] = tentative_g_score + self.heuristic(neighbor, goal)
                     heappush(oheap, (fscore[neighbor], neighbor))
 
         return False

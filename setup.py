@@ -40,6 +40,11 @@ setup(
     install_requires=requirements,
     license="GNU General Public License v3",
     long_description=readme + '\n\n' + history,
+    entry_points={
+        'console_scripts': [
+            'pygomas=pygomas.cli:cli'
+        ]
+    },
     include_package_data=True,
     keywords='pygomas',
     name='pygomas',

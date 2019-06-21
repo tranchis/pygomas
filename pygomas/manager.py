@@ -80,7 +80,8 @@ class Manager(AbstractAgent, Agent):
                  match_time=380,
                  path=None,
                  map_name="map_01",
-                 service_jid="cservice@localhost"):
+                 service_jid="cservice@localhost",
+                 service_passwd="secret"):
 
         AbstractAgent.__init__(self, name, service_jid=service_jid)
         Agent.__init__(self, name, passwd)
@@ -98,15 +99,15 @@ class Manager(AbstractAgent, Agent):
         self.match_init = 0
         self.domain = name.split('@')[1]
         self.objective_agent = None
-        self.service_agent = Service(self.service_jid)
+        self.service_agent = Service(jid=self.service_jid, password=service_passwd)
         self.render_server = Server(self.map_name)
         self.din_objects = dict()
         self.map = TerrainMap()
 
-    async def stop(self, timeout=5):
-        await self.objective_agent.stop()
-        await self.service_agent.stop()
-        await super().stop()
+    def stop(self, timeout=5):
+        self.objective_agent.stop()
+        self.service_agent.stop()
+        super().stop()
         del self.render_server
         self.render_server = None
 

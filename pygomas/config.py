@@ -1,6 +1,6 @@
 import os
 
-DEFAULT_DATA_PATH = ".{sep}maps{sep}".format(sep=os.sep)
+DEFAULT_DATA_PATH = ".{sep}pygomas{sep}maps{sep}".format(sep=os.sep)
 
 
 class Config(object):

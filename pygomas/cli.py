@@ -25,8 +25,7 @@ help_config = json.dumps(
               {"rank": "fieldop", "name": "fieldops_axis1", "password": "secret", "asl": "pygomas/ASL/fieldops.asl"}],
      "allied": [{"rank": "soldier", "name": "soldier_allied1", "password": "secret", "asl": "pygomas/ASL/bditroop.asl"},
                 {"rank": "medic", "name": "medic_allied1", "password": "secret", "asl": "pygomas/ASL/medic.asl"},
-                {"rank": "fieldop", "name": "fieldops_allied1", "password": "secret",
-                 "asl": "pygomas/ASL/fieldops.asl"}]
+                {"rank": "fieldop", "name": "fieldops_allied1", "password": "secret", "asl": "pygomas/ASL/fieldops.asl"}]
      },
     indent=4)
 
@@ -101,8 +100,8 @@ def run(game):
 
     asl = {
         "soldier": 'pygomas/ASL/bditroop.asl',
-        "medic": 'pygomas/ASL/medic.asl',
-        "fieldop": 'pygomas/ASL/fieldops.asl'
+        "medic": 'pygomas/ASL/bdimedic.asl',
+        "fieldop": 'pygomas/ASL/bdifieldop.asl'
     }
 
     troops: List[Union[BDIMedic, BDIFieldOp, BDISoldier]] = list()
@@ -121,6 +120,9 @@ def run(game):
         troop = _class(jid=jid, passwd=troop["password"], asl=asl, team=TEAM_AXIS,
                        manager_jid=manager_jid, service_jid=service_jid)
 
+        future = troop.start()
+        future.result()
+
         troops.append(troop)
 
     for troop in config["allied"]:
@@ -136,6 +138,9 @@ def run(game):
 
         troop = _class(jid=jid, passwd=troop["password"], asl=asl, team=TEAM_ALLIED,
                        manager_jid=manager_jid, service_jid=service_jid)
+
+        future = troop.start()
+        future.result()
 
         troops.append(troop)
 

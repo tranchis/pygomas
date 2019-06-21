@@ -78,7 +78,8 @@ def draw():
     # Draw bases
     try:
         # ALLIED BASE
-        curses.init_pair(4, curses.COLOR_WHITE, curses.COLOR_RED)  # ALLIED BASE
+        curses.init_pair(4, curses.COLOR_WHITE,
+                         curses.COLOR_RED)  # ALLIED BASE
         for y in range(int(allied_base[1]), int(allied_base[3])):
             for x in range(int(allied_base[0]) * factor, int(allied_base[2]) * factor):
                 f.write("BASE " + str(y) + " " + str(x) + '; \n')
@@ -109,7 +110,8 @@ def draw():
 
         curses.init_pair(5, curses.COLOR_BLACK, curses.COLOR_RED)  # ALLIED
         curses.init_pair(6, curses.COLOR_WHITE, curses.COLOR_BLUE)  # AXIS
-        curses.init_pair(7, curses.COLOR_BLACK, curses.COLOR_WHITE)  #  OTHER / DEAD
+        curses.init_pair(7, curses.COLOR_BLACK,
+                         curses.COLOR_WHITE)  #  OTHER / DEAD
 
         # AGENTS
         stats_allied = []  # ""
@@ -148,14 +150,16 @@ def draw():
             if v["team"] == "100":
                 if int(v["health"]) > 0:
                     # stats_allied += " | %s %s %03d %03d " % (c, k, int(v["health"]), int(v["ammo"]))
-                    stats_allied.append(" | %s %s %03d %03d " % (c, k.ljust(4), int(v["health"]), int(v["ammo"])))
+                    stats_allied.append(" | %s %s %03d %03d " % (
+                        c, k.ljust(4), int(v["health"]), int(v["ammo"])))
                 else:
                     # stats_allied += " | %s %s --- --- " % (c, k)
                     stats_allied.append(" | %s %s --- --- " % (c, k.ljust(4)))
             elif v["team"] == "200":
                 if int(v["health"]) > 0:
                     # stats_axis += " | %s %s %03d %03d " % (c, k, int(v["health"]), int(v["ammo"]))
-                    stats_axis.append(" | %s %s %03d %03d " % (c, k.ljust(4), int(v["health"]), int(v["ammo"])))
+                    stats_axis.append(" | %s %s %03d %03d " % (
+                        c, k.ljust(4), int(v["health"]), int(v["ammo"])))
                 else:
                     # stats_axis += " | %s %s --- --- " % (c, k)
                     stats_axis.append(" | %s %s --- --- " % (c, k.ljust(4)))
@@ -230,7 +234,7 @@ try:
     # Init socket
     if len(sys.argv) < 2:
         ADDRESS = "localhost"
-        PORT = 8001 #8072
+        PORT = 8001  # 8072
     f.write("ADDRESS: %s\n" % (ADDRESS))
     f.write("PORT: %s\n" % (str(PORT)))
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

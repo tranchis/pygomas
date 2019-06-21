@@ -191,12 +191,12 @@ def load_map(map_name):
 
     mapf = open("./maps/" + map_name + "/" + map_name + ".txt", "r")
     for line in mapf.readlines():
-        if "JADE_SPAWN_ALLIED" in line:
+        if "pGomas_SPAWN_ALLIED" in line:
             line = line.split()
             line.pop(0)
             allied_base = copy.copy(line)
             f.write("\n ALLIED_BASE: {}\n".format(line))
-        elif "JADE_SPAWN_AXIS" in line:
+        elif "pGomas_SPAWN_AXIS" in line:
             line = line.split()
             line.pop(0)
             axis_base = copy.copy(line)

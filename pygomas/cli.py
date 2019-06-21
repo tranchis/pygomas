@@ -147,7 +147,6 @@ def run(game):
     container = Container()
     while not container.loop.is_running():
         time.sleep(0.1)
-
     coros = [agent._async_start() for agent in troops]
     future = asyncio.run_coroutine_threadsafe(run_agents(coros), container.loop)
     future.result()

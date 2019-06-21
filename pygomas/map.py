@@ -83,18 +83,16 @@ class TerrainMap:
 
         file = open(config.data_path + main_file + os.sep + main_file + ".txt")
 
-        _ = file.readline()  # [JADE]
-        line = file.readline()  # JADE_OBJECTIVE:  x y
+        _ = file.readline()  # [pGomas]
+        line = file.readline()  # pGomas_OBJECTIVE:  x y
         tokens = line.split()
-        # JADE_OBJECTIVE:
         self.target.x = int(tokens[1]) * MAP_SCALE  # x
         self.target.y = 0
         self.target.z = int(tokens[2]) * MAP_SCALE  # y
         logger.info(f" OBJECTIVE: ({self.target.x}, {self.target.z})")
 
-        line = file.readline()  # JADE_SPAWN_ALLIED: x1 y1 x2 y2
+        line = file.readline()  # pGomas_SPAWN_ALLIED: x1 y1 x2 y2
         tokens = line.split()
-        # JADE_OBJECTIVE:
         self.allied_base.init.x = int(tokens[1]) * MAP_SCALE  # x1
         self.allied_base.init.z = int(tokens[2]) * MAP_SCALE  # z1
         self.allied_base.end.x = int(tokens[3]) * MAP_SCALE  # x2
@@ -102,9 +100,8 @@ class TerrainMap:
         logger.info(f" ALLIED BASE: ({self.allied_base.init.x}, {self.allied_base.init.z})"
                     f" ({self.allied_base.end.x}, {self.allied_base.end.z})")
 
-        line = file.readline()  # JADE_SPAWN_AXIS: x1 y1 x2 y2
+        line = file.readline()  # pGomas_SPAWN_AXIS: x1 y1 x2 y2
         tokens = line.split()
-        # JADE_OBJECTIVE:
         self.axis_base.init.x = int(tokens[1]) * MAP_SCALE  # x1
         self.axis_base.init.z = int(tokens[2]) * MAP_SCALE  # z1
         self.axis_base.end.x = int(tokens[3]) * MAP_SCALE  # x2
@@ -112,9 +109,8 @@ class TerrainMap:
         logger.info(f" AXIS BASE: ({self.axis_base.init.x}, {self.axis_base.init.z}) "
                     f"({self.axis_base.end.x}, {self.axis_base.end.z})")
 
-        line = file.readline()  # JADE_COST_MAP: w h name
+        line = file.readline()  # pGomas_COST_MAP: w h name
         tokens = line.split()
-        # JADE_COST_MAP:
         self.size_x = int(tokens[1]) * MAP_SCALE
         self.size_z = int(tokens[2]) * MAP_SCALE
         cost_map_name = tokens[3]
@@ -138,18 +134,18 @@ class TerrainMap:
                     c = file.read(1)  # read next char
                 if c == '*':
                     self.terrain[x * MAP_SCALE:x * MAP_SCALE + MAP_SCALE,
-                    z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 0] = 0.0
+                                 z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 0] = 0.0
                     self.terrain[x * MAP_SCALE:x * MAP_SCALE + MAP_SCALE,
-                    z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 1] = 0
+                                 z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 1] = 0
                     self.terrain[x * MAP_SCALE:x * MAP_SCALE + MAP_SCALE,
-                    z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 2] = 10000
+                                 z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 2] = 10000
                 elif c == ' ':
                     self.terrain[x * MAP_SCALE:x * MAP_SCALE + MAP_SCALE,
-                    z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 0] = 0.0
+                                 z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 0] = 0.0
                     self.terrain[x * MAP_SCALE:x * MAP_SCALE + MAP_SCALE,
-                    z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 1] = 1
+                                 z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 1] = 1
                     self.terrain[x * MAP_SCALE:x * MAP_SCALE + MAP_SCALE,
-                    z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 2] = 1
+                                 z * MAP_SCALE:z * MAP_SCALE + MAP_SCALE, 2] = 1
         file.close()
 
     def __str__(self):

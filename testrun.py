@@ -21,8 +21,8 @@ axis_fieldops = list()
 allied_fieldops = list()
 
 # soldiers, fieldops, medics
-num_axis = 3, 3, 3
-num_allied = 3, 3, 3
+num_axis = 1, 1, 1
+num_allied = 1, 1, 1
 
 print("Creating manager")
 manager = Manager(players=sum(num_allied) + sum(num_axis),

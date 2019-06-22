@@ -2,7 +2,7 @@ import numpy as np
 from heapq import heappop, heappush
 
 
-class AStarAlgorithm:
+class AAlgorithm:
 
     def __init__(self, map_array):
         self.array = map_array

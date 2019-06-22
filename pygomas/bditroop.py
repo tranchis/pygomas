@@ -24,7 +24,7 @@ from .vector import Vector3D
 from .sight import Sight
 from .pack import PACK_MEDICPACK, PACK_AMMOPACK, PACK_OBJPACK, PACK_NONE
 from .config import Config
-from .a_star import AStarAlgorithm
+from .a_star import AAlgorithm
 
 DEFAULT_RADIUS = 20
 ESCAPE_RADIUS = 50
@@ -425,7 +425,7 @@ class BDITroop(AbstractAgent, BDIAgent):
                 self.agent.map = TerrainMap()
                 config = Config()
                 self.agent.map.load_map(map_name, config)
-                self.agent.path_finder = AStarAlgorithm(self.agent.map.terrain[:, :, 1])
+                self.agent.path_finder = AAlgorithm(self.agent.map.terrain[:, :, 1])
                 self.agent.movement = Mobile()
                 self.agent.movement.set_size(self.agent.map.get_size_x(), self.agent.map.get_size_z())
                 self.agent.generate_spawn_position()

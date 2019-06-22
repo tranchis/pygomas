@@ -167,9 +167,6 @@ class Manager(AbstractAgent, Agent):
         # Behaviour to handle Shot messages
         self.launch_shoot_responder_behaviour()
 
-        # Behaviour to attend the petitions for register services
-        # self.launch_service_register_responder_behaviour()
-
         # Behaviour to handle Pack Management: Creation and Destruction
         self.launch_pack_management_responder_behaviour()
 
@@ -350,25 +347,6 @@ class Manager(AbstractAgent, Agent):
         template = Template()
         template.set_metadata(PERFORMATIVE, PERFORMATIVE_SHOOT)
         self.add_behaviour(ShootResponderBehaviour(), template)
-
-    # No longer needed
-    # Behaviour to attend the petitions for register services
-    def launch_service_register_responder_behaviour(self):
-        class ServiceRegisterResponderBehaviour(CyclicBehaviour):
-            async def run(self):
-                msg = await self.receive(timeout=LONG_RECEIVE_WAIT)
-                if msg:
-                    content = msg.body
-                    self.agent.registry.register_service(content, False)
-
-                    reply = msg.make_reply()
-                    reply.body = " "
-                    reply.set_metadata(PERFORMATIVE, PERFORMATIVE_INFORM)
-                    await self.send(reply)
-
-        template = Template()
-        template.set_metadata(PERFORMATIVE, PERFORMATIVE_SERVICES)
-        self.add_behaviour(ServiceRegisterResponderBehaviour(), template)
 
     # Behaviour to handle Pack Management: Creation and Destruction
     def launch_pack_management_responder_behaviour(self):

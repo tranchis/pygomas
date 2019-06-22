@@ -3,7 +3,7 @@ from spade.behaviour import OneShotBehaviour
 from . import POWER_UNIT
 from .medicpack import MedicPack
 from .bditroop import BDITroop, CLASS_MEDIC
-from .ontology import MEDIC_SERVICE
+from .config import MEDIC_SERVICE
 import random
 from agentspeak import Actions
 from agentspeak.stdlib import actions as asp_action

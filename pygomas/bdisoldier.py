@@ -2,7 +2,7 @@ from collections import deque
 
 from .vector import Vector3D
 from .bditroop import BDITroop, CLASS_SOLDIER
-from .ontology import BACKUP_SERVICE, DESTINATION, VELOCITY, HEADING
+from .config import BACKUP_SERVICE, DESTINATION, VELOCITY, HEADING
 
 from agentspeak import Actions
 from agentspeak import grounded

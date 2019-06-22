@@ -2,8 +2,7 @@ import json
 
 from loguru import logger
 
-from pygomas.ontology import TEAM_AXIS
-from .ontology import X, Y, Z, TEAM, PERFORMATIVE, PERFORMATIVE_PACK_LOST
+from .config import X, Y, Z, TEAM, TEAM_AXIS, PERFORMATIVE, PERFORMATIVE_PACK_LOST
 from .pack import Pack, PACK_OBJPACK
 from .vector import Vector3D
 from spade.behaviour import CyclicBehaviour

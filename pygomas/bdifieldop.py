@@ -3,7 +3,7 @@ from spade.behaviour import OneShotBehaviour
 from . import POWER_UNIT
 from .ammopack import AmmoPack
 from .bditroop import BDITroop, CLASS_FIELDOPS
-from .ontology import AMMO_SERVICE
+from .config import AMMO_SERVICE
 import random
 from agentspeak import Actions
 from agentspeak.stdlib import actions as asp_action

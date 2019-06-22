@@ -12,7 +12,7 @@ from spade.message import Message
 from spade.template import Template
 
 from . import MIN_HEALTH
-from .ontology import *
+from .config import *
 from .stats import GameStatistic
 from .mobile import Mobile
 from .vector import Vector3D

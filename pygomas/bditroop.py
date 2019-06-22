@@ -15,7 +15,7 @@ from agentspeak.stdlib import actions as asp_action
 
 from . import MIN_POWER, POWER_UNIT, MIN_STAMINA, STAMINA_UNIT, MIN_AMMO, MAX_AMMO, MAX_STAMINA, MAX_POWER, \
     MAX_HEALTH, MIN_HEALTH
-from .ontology import *
+from .config import *
 from .agent import AbstractAgent, LONG_RECEIVE_WAIT
 from .threshold import Threshold
 from .map import TerrainMap

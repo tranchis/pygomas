@@ -1,5 +1,5 @@
 from .pack import PACK_MEDICPACK, PACK_AMMOPACK, PACK_OBJPACK
-from pygomas.ontology import TEAM_ALLIED, TEAM_AXIS
+from .config import TEAM_ALLIED, TEAM_AXIS
 
 
 class PackStatistic:
@@ -66,7 +66,7 @@ class TeamStatistic:
             self.army_efficiency = 0
         else:
             self.army_efficiency = 1.0 - \
-                                   (alive_enemies * 1.0) / self.total_shots
+                (alive_enemies * 1.0) / self.total_shots
 
     def calculate_anti_efficiency(self):
 
@@ -88,7 +88,7 @@ class TeamStatistic:
             self.army_anti_efficiency = 0
         else:
             self.army_anti_efficiency = (
-                                                self.alive_players * 1.0) / self.team_hit_shots
+                self.alive_players * 1.0) / self.team_hit_shots
 
     def __str__(self):
 
@@ -195,14 +195,14 @@ class GameStatistic:
         self.team_statistic[TEAM_ALLIED].alive_players = allied_alive_players
         if allied_alive_players > 0:
             self.team_statistic[TEAM_ALLIED].average_health = (
-                                                                      allied_health * 1.0) / allied_alive_players
+                allied_health * 1.0) / allied_alive_players
         else:
             self.team_statistic[TEAM_ALLIED].average_health = 0
 
         self.team_statistic[TEAM_AXIS].alive_players = axis_alive_players
         if axis_alive_players > 0:
             self.team_statistic[TEAM_AXIS].average_health = (
-                                                                    axis_health * 1.0) / axis_alive_players
+                axis_health * 1.0) / axis_alive_players
         else:
             self.team_statistic[TEAM_AXIS].average_health = 0
 

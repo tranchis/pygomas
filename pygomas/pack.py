@@ -1,7 +1,7 @@
 import json
 from loguru import logger
 
-from .ontology import PERFORMATIVE, PERFORMATIVE_PACK, PERFORMATIVE_PACK_TAKEN, TEAM, X, Y, Z, NAME, ACTION, CREATE, \
+from .config import PERFORMATIVE, PERFORMATIVE_PACK, PERFORMATIVE_PACK_TAKEN, TEAM, X, Y, Z, NAME, ACTION, CREATE, \
     TYPE
 from .agent import AbstractAgent, LONG_RECEIVE_WAIT
 from .vector import Vector3D

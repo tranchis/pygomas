@@ -2,7 +2,7 @@ import asyncio
 import json
 from datetime import datetime, timedelta
 
-from .ontology import PERFORMATIVE, PERFORMATIVE_INFORM, NAME, ACTION, DESTROY
+from .config import PERFORMATIVE, PERFORMATIVE_INFORM, NAME, ACTION, DESTROY
 from .pack import Pack, PACK_MEDICPACK, PACK_AUTODESTROY_TIMEOUT
 from spade.behaviour import TimeoutBehaviour
 from spade.message import Message

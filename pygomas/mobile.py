@@ -62,9 +62,6 @@ class Mobile(object):
         z = min(z, self.min_z)
         z = max(z, self.max_z)
 
-        # self.destination.x = x
-        # self.destination.y = 0.0
-        # self.destination.z = z
         return Vector3D(x=x, y=0.0, z=z)
 
     def get_destination(self):

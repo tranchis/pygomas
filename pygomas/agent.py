@@ -16,8 +16,6 @@ LONG_RECEIVE_WAIT: int = 1000000
 class AbstractAgent(object, metaclass=ABCMeta):
     def __init__(self, jid, team=0, service_jid="cservice@localhost"):
         self.services = list()
-        self.position_x = None
-        self.position_z = None
         self._name = jid
         self.team = team
         self.service_jid = service_jid

@@ -25,12 +25,12 @@ from .sight import Sight
 from .pack import PACK_MEDICPACK, PACK_AMMOPACK, PACK_OBJPACK, PACK_NONE
 from .config import Config
 from .a_star import AAlgorithm
+from numpy import sign
 
 DEFAULT_RADIUS = 20
 ESCAPE_RADIUS = 50
 
 INTERVAL_TO_MOVE = 0.033
-INTERVAL_TO_LOOK = 0.500
 
 ARG_TEAM = 0
 
@@ -376,13 +376,9 @@ class BDITroop(AbstractAgent, BDIAgent):
             await self.send(msg)
 
     class MoveBehaviour(PeriodicBehaviour):
-        async def on_start(self):
-            self.agent.last_time_move_attempt = time.time()
 
         async def run(self):
             current_time = time.time()
-            dt = current_time - self.agent.last_time_move_attempt
-            self.agent.last_time_move_attempt = current_time
 
             if len(self.agent.destinations) > 0:
                 absx = abs(self.agent.destinations[0][0] - self.agent.movement.position.x)
@@ -390,31 +386,18 @@ class BDITroop(AbstractAgent, BDIAgent):
                 if (absx < PRECISION_X) and (absz < PRECISION_Z):
                     x, z = self.agent.destinations.popleft()
                     self.agent.movement.position = Vector3D(x=x, y=0, z=z)
-                    self.agent.bdi.set_belief(POSITION, self.agent.movement.position.x, self.agent.movement.position.y,
-                                              self.agent.movement.position.z)
+                    self.agent.bdi.set_belief(POSITION, self.agent.movement.position.x, self.agent.movement.position.y, self.agent.movement.position.z)
 
                     if len(self.agent.destinations) == 0:
                         print("\n\nARRIVED\n\n")
-                        self.agent.bdi.set_belief(PERFORMATIVE_TARGET_REACHED, self.agent.movement.destination.x,
-                                                  self.agent.movement.destination.y, self.agent.movement.destination.z)
+                        self.agent.bdi.set_belief(PERFORMATIVE_TARGET_REACHED, self.agent.movement.destination.x, self.agent.movement.destination.y, self.agent.movement.destination.z)
                     else:
                         x, z = self.agent.destinations[0]
-
-                    last_velocity = Vector3D(self.agent.movement.velocity)
-                    last_heading = Vector3D(self.agent.movement.heading)
-                    self.agent.movement.calculate_new_orientation(
-                        Vector3D(x=x, y=0, z=z))
-                    if last_velocity != self.agent.movement.velocity:
-                        self.agent.bdi.set_belief(VELOCITY, self.agent.movement.velocity.x,
-                                                  self.agent.movement.velocity.y, self.agent.movement.velocity.z)
-                    if last_heading != self.agent.movement.heading:
-                        self.agent.bdi.set_belief(HEADING, self.agent.movement.heading.x, self.agent.movement.heading.y,
-                                                  self.agent.movement.heading.z)
-
+                    self.agent.compare_orientation(x, z)
                 else:
-                    move_result = self.agent.move(dt)
+                    move_result = self.agent.move(INTERVAL_TO_MOVE)
                     if move_result == MV_CANNOT_GET_POSITION:
-                        self.agent.escape_barrier(dt)
+                        self.agent.escape_barrier()
 
     class InitResponderBehaviour(CyclicBehaviour):
         async def run(self):
@@ -617,12 +600,22 @@ class BDITroop(AbstractAgent, BDIAgent):
         if not self.check_static_position(new_position.x, new_position.z):
             logger.info(self.name + ": Can't walk to {}. I stay at {}".format(new_position, self.movement.position))
             return MV_CANNOT_GET_POSITION
-        elif new_position == self.movement.position:
-            return MV_ALREADY_IN_DEST
         else:
-            self.movement.position = Vector3D(new_position)
-            self.bdi.set_belief(POSITION, self.movement.position.x, self.movement.position.y, self.movement.position.z)
+            if self.movement.position != new_position:
+                self.movement.position = Vector3D(new_position)
+                self.bdi.set_belief(POSITION, self.movement.position.x, self.movement.position.y, self.movement.position.z)
+            x, z = self.destinations[0]
+            self.compare_orientation(x, z)
             return MV_OK
+
+    def compare_orientation(self, x, z):
+        last_velocity = Vector3D(self.movement.velocity)
+        last_heading = Vector3D(self.movement.heading)
+        self.movement.calculate_new_orientation(Vector3D(x=x, y=0, z=z))
+        if last_velocity != self.movement.velocity:
+            self.bdi.set_belief(VELOCITY, self.movement.velocity.x, self.movement.velocity.y, self.movement.velocity.z)
+        if last_heading != self.movement.heading:
+            self.bdi.set_belief(HEADING, self.movement.heading.x, self.movement.heading.y, self.movement.heading.z)
 
     def pack_taken(self, pack_type, quantity):
         if pack_type == PACK_MEDICPACK:
@@ -631,7 +624,7 @@ class BDITroop(AbstractAgent, BDIAgent):
         elif pack_type == PACK_AMMOPACK:
             self.bdi.set_belief(PERFORMATIVE_PACK_TAKEN, AMMO_SERVICE, quantity)
             self.increase_ammo(quantity)
-        elif pack_type == PACK_OBJPACK:
+        elif pack_type == PACK_OBJPACK and self.team == TEAM_ALLIED:
             self.is_objective_carried = True
             self.bdi.set_belief(PERFORMATIVE_FLAG_TAKEN)
 
@@ -816,21 +809,21 @@ class BDITroop(AbstractAgent, BDIAgent):
                 self.movement.calculate_new_orientation(self.movement.destination)
                 return
 
-    def escape_barrier(self, dt):
+    def escape_barrier(self):
         """
         Escape a barrier. Sets the agent's velocity vector 
         highest component to zero, forcing it to move only 
-        along the other component, at maximum speed.
+        along the other component.
         """
+        if abs(self.movement.velocity.x) == abs(self.movement.velocity.z):
+            self.movement.velocity.x += random.gauss(0, 0.1)
+            self.movement.velocity.z += random.gauss(0, 0.1)
         if abs(self.movement.velocity.x) > abs(self.movement.velocity.z):
             self.movement.velocity.x = 0
-            self.movement.velocity.z = 1
-        else:
+            self.movement.velocity.z = float(1 * sign(self.movement.velocity.z))
+        elif abs(self.movement.velocity.x) < abs(self.movement.velocity.z):
             self.movement.velocity.z = 0
-            self.movement.velocity.x = 1
-        move_result = self.move(dt)
-        if move_result == MV_OK:
-            self.movement.calculate_new_orientation(self.movement.destination)
+            self.movement.velocity.x = float(1 * sign(self.movement.velocity.x))
 
     def perform_escape_action(self):
         """

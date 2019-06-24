@@ -571,15 +571,15 @@ class BDITroop(AbstractAgent, BDIAgent):
                         if s.team == TEAM_NONE:
                             self.agent.bdi.set_belief(PACKS_IN_FOV, idx, int(obj[TYPE]), float(obj[ANGLE]),
                                                       float(obj[DISTANCE]), int(obj[HEALTH]), float(obj[X]),
-                                                      float(obj[X]), float(obj[Z]))
+                                                      float(obj[Y]), float(obj[Z]))
                         elif s.team == self.agent.team:
                             self.agent.bdi.set_belief(FRIENDS_IN_FOV, idx, int(obj[TYPE]), float(obj[ANGLE]),
                                                       float(obj[DISTANCE]), int(obj[HEALTH]), float(obj[X]),
-                                                      float(obj[X]), float(obj[Z]))
+                                                      float(obj[Y]), float(obj[Z]))
                         else:
                             self.agent.bdi.set_belief(ENEMIES_IN_FOV, idx, int(obj[TYPE]), float(obj[ANGLE]),
                                                       float(obj[DISTANCE]), int(obj[HEALTH]), float(obj[X]),
-                                                      float(obj[X]), float(obj[Z]))
+                                                      float(obj[Y]), float(obj[Z]))
 
             except ZeroDivisionError:
                 pass

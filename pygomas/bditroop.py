@@ -25,7 +25,7 @@ from .sight import Sight
 from .pack import PACK_MEDICPACK, PACK_AMMOPACK, PACK_OBJPACK, PACK_NONE
 from .config import Config
 from .a_star import AAlgorithm
-from numpy import sign
+from numpy import (sign, arctan2, cos, sin)
 
 DEFAULT_RADIUS = 20
 ESCAPE_RADIUS = 50
@@ -307,6 +307,30 @@ class BDITroop(AbstractAgent, BDIAgent):
             t.set_metadata(PERFORMATIVE, PERFORMATIVE_CFB)
             b = GetBackupBehaviour()
             self.add_behaviour(b, t)
+            yield
+
+        @troop_actions.add(".turn", 1)
+        def _turn(agent, term, intention):
+            """
+            Turns an agent orientation given an angle.
+
+            :param angle: angle to turn, in radians.
+            :type angle: float (from -pi to pi)
+
+            """
+
+            args = asp.grounded(term.args, intention.scope)
+            angle = args[0]
+            z = self.movement.heading.z
+            x = self.movement.heading.x
+            if z == 0 and x == 0:
+                self.movement.heading.z = random.random()
+                self.movement.heading.x = random.random()
+            atan_angle = arctan2(z, x)
+            atan_angle += angle
+            norm = self.movement.heading.length()
+            self.movement.heading.x = norm * cos(atan_angle)
+            self.movement.heading.z = norm * sin(atan_angle)
             yield
 
         @troop_actions.add(".stop", 0)

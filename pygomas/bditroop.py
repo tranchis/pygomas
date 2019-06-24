@@ -331,6 +331,7 @@ class BDITroop(AbstractAgent, BDIAgent):
             norm = self.movement.heading.length()
             self.movement.heading.x = norm * cos(atan_angle)
             self.movement.heading.z = norm * sin(atan_angle)
+            self.bdi.set_belief(HEADING, self.movement.heading.x, self.movement.heading.y, self.movement.heading.z)
             yield
 
         @troop_actions.add(".stop", 0)

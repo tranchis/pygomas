@@ -538,7 +538,11 @@ class BDITroop(AbstractAgent, BDIAgent):
 
                 await self.send(msg)
 
-                info = await self.receive(LONG_RECEIVE_WAIT)
+                messages = self.mailbox_size()
+                if messages == 0:
+                    messages = 1
+                for i in range(messages):
+                    info = await self.receive(LONG_RECEIVE_WAIT)
                 if info is None:
                     return
                 info = json.loads(info.body)
@@ -551,7 +555,6 @@ class BDITroop(AbstractAgent, BDIAgent):
                     self.agent.pack_taken(pack_type=type_, quantity=quantity)
 
                 self.agent.fov_objects = []
-
                 fovs = info[FOV] if info[FOV] is not None else []
                 if len(fovs) <= 0:
                     self.agent.aimed_agent = None

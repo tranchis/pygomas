@@ -120,9 +120,6 @@ def run(game):
         troop = _class(jid=jid, passwd=troop["password"], asl=asl, team=TEAM_AXIS,
                        manager_jid=manager_jid, service_jid=service_jid)
 
-        future = troop.start()
-        future.result()
-
         troops.append(troop)
 
     for troop in config["allied"]:
@@ -139,17 +136,14 @@ def run(game):
         troop = _class(jid=jid, passwd=troop["password"], asl=asl, team=TEAM_ALLIED,
                        manager_jid=manager_jid, service_jid=service_jid)
 
-        future = troop.start()
-        future.result()
-
         troops.append(troop)
 
     container = Container()
     while not container.loop.is_running():
         time.sleep(0.1)
-    coros = [agent._async_start() for agent in troops]
-    future = asyncio.run_coroutine_threadsafe(run_agents(coros), container.loop)
-    future.result()
+
+    futures = asyncio.run_coroutine_threadsafe(run_agents(troops), container.loop)
+    futures.result()
 
     while any([agent.is_alive() for agent in troops]):
         try:
@@ -178,8 +172,9 @@ def help(ctx, subcommand):
         click.echo(subcommand_obj.get_help(ctx))
 
 
-async def run_agents(agents):
-    await asyncio.gather(*agents)
+async def run_agents(troops):
+    coros = [agent.start() for agent in troops]
+    return await asyncio.gather(*coros)
 
 
 if __name__ == "__main__":

@@ -378,7 +378,7 @@ class BDITroop(AbstractAgent, BDIAgent):
         # Behaviour to inform manager our position, status, and so on
         t = Template()
         t.set_metadata(PERFORMATIVE, PERFORMATIVE_DATA)
-        self.add_behaviour(self.DataFromTroopBehaviour(period=0.3), t)
+        self.add_behaviour(self.DataFromTroopBehaviour(period=INTERVAL_TO_MOVE), t)
 
         # Behaviour to increment inner variables (Power, Stamina and Health Bars)
         # self.agent.Launch_BarsAddOn_InnerBehaviour()
@@ -538,11 +538,11 @@ class BDITroop(AbstractAgent, BDIAgent):
 
                 await self.send(msg)
 
-                messages = self.mailbox_size()
-                if messages == 0:
-                    messages = 1
-                for i in range(messages):
-                    info = await self.receive(LONG_RECEIVE_WAIT)
+                # messages = self.mailbox_size()
+                # if messages == 0:
+                #     messages = 1
+                # for i in range(messages):
+                info = await self.receive(LONG_RECEIVE_WAIT)
                 if info is None:
                     return
                 info = json.loads(info.body)

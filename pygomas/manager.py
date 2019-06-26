@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import json
 import time
@@ -81,7 +82,8 @@ class Manager(AbstractAgent, Agent):
                  path=None,
                  map_name="map_01",
                  service_jid="cservice@localhost",
-                 service_passwd="secret"):
+                 service_passwd="secret",
+                 port=8001):
 
         AbstractAgent.__init__(self, name, service_jid=service_jid)
         Agent.__init__(self, name, passwd)
@@ -91,6 +93,7 @@ class Manager(AbstractAgent, Agent):
         self.fps = fps
         self.match_time = match_time
         self.map_name = str(map_name)
+        self.port = port
         self.config = Config()
         if path is not None:
             self.config.set_data_path(path)
@@ -100,16 +103,31 @@ class Manager(AbstractAgent, Agent):
         self.domain = name.split('@')[1]
         self.objective_agent = None
         self.service_agent = Service(jid=self.service_jid, password=service_passwd)
-        self.render_server = Server(self.map_name)
+        self.render_server = Server(map_name=self.map_name, port=self.port)
         self.din_objects = dict()
         self.map = TerrainMap()
 
-    def stop(self, timeout=5):
-        self.objective_agent.stop()
-        self.service_agent.stop()
-        super().stop()
+    def _in_coroutine(self):
+        try:
+            return asyncio.get_event_loop() == self.loop
+        except RuntimeError:  # pragma: no cover
+            return False
+
+    def stop(self):
         del self.render_server
         self.render_server = None
+        if self._in_coroutine():
+            coro1 = self.objective_agent.stop()
+            coro2 = self.service_agent.stop()
+            coro3 = super().stop()
+            coro = asyncio.gather(coro1, coro2, coro3)
+
+        else:
+            self.objective_agent.stop().result()
+            self.service_agent.stop().result()
+            coro = super().stop()
+
+        return coro
 
     async def setup(self):
         class InitBehaviour(OneShotBehaviour):
@@ -761,8 +779,7 @@ class Manager(AbstractAgent, Agent):
             await behaviour.send(msg)
         for st in self.render_server.get_connections():
             try:
-                st.send_msg_to_render_engine(
-                    TCP_COM, "FINISH " + " GAME FINISHED!! Winner Team: " + str(winner_team))
+                st.send_msg_to_render_engine(TCP_COM, "FINISH " + " GAME FINISHED!! Winner Team: " + str(winner_team))
             except:
                 pass
 

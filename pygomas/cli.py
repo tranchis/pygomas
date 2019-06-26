@@ -42,12 +42,17 @@ def cli():
 @click.option('-m', "--map", "map_name", default="map_01", help="Map name.")
 @click.option('-sj', "--service-jid", default="cservice@127.0.0.1", help="XMPP Service agent's JID.")
 @click.option('-sp', "--service-password", default="secret", help="Service agent's password.")
-def manager(jid, password, num_players, map_name, service_jid, service_password):
+@click.option('-t', "--match_time", default=360, help="Max time for a match.", type=int)
+@click.option("--fps", default=0.033, help="Frame rate to inform renders (in frames per second).", type=float)
+@click.option("--port", default=8001, help="Port to connect with renders.", type=int)
+def manager(jid, password, num_players, map_name, service_jid, service_password,
+            match_time, fps, port):
     """Console script for running the manager."""
     click.echo("Running manager agent {}".format(jid))
 
     manager_agent = Manager(players=int(num_players), name=jid, passwd=password, map_name=map_name,
-                            service_jid=service_jid, service_passwd=service_password)
+                            service_jid=service_jid, service_passwd=service_password,
+                            match_time=match_time, fps=fps, port=port)
     future = manager_agent.start()
     future.result()
 

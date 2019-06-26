@@ -5,8 +5,6 @@ from loguru import logger
 
 from spade.container import Container
 
-SERVER_PORT = 8001  # 8072  # our server's own port
-
 TCP_COM = 0  # COMMUNICATION (ACCEPTED, CLOSED, REFUSED)
 TCP_AGL = 1  # AGENT LIST
 TCP_MAP = 2  # MAP: NAME, CHANGES, etc.
@@ -14,17 +12,17 @@ TCP_TIME = 3  # TIME: LEFT TIME
 
 
 class Server(object):
-    def __init__(self, map_name):
+    def __init__(self, map_name, port=8001):
         self.clients = {}
         self.map_name = map_name
+        self.port = port
         self.server = None
 
         self.container = Container()
 
         self.loop = self.container.loop
 
-        self.coro = asyncio.start_server(
-            self.accept_client, "", SERVER_PORT, loop=self.loop)
+        self.coro = asyncio.start_server(self.accept_client, "", self.port, loop=self.loop)
 
     def get_connections(self):
         return self.clients.keys()

@@ -339,7 +339,7 @@ class Manager(AbstractAgent, Agent):
                             for din_object in self.agent.din_objects.values():
 
                                 if din_object.type == PACK_OBJPACK:
-                                    # is this necessary?: din_object.taken = False;
+                                    din_object.is_taken = False
                                     din_object.owner = 0
                                     msg_pack = Message(to=str(din_object.jid))
                                     msg_pack.set_metadata(PERFORMATIVE, PERFORMATIVE_PACK_LOST)

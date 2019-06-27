@@ -44,7 +44,9 @@ def agl_parse(data):
     global objective_x
     global objective_y
     global agents
+    global dins
 
+    dins = {}
     f.write("\nAGL_PARSE\n")
     agl = data.split()
     nagents = int(agl[1])

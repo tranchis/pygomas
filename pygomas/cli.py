@@ -12,6 +12,8 @@ import click
 from spade import quit_spade
 from spade.container import Container
 
+from . import canvasviewer
+from . import textviewer
 from .bdifieldop import BDIFieldOp
 from .bdimedic import BDIMedic
 from .bdisoldier import BDISoldier
@@ -25,7 +27,8 @@ help_config = json.dumps(
               {"rank": "fieldop", "name": "fieldops_axis1", "password": "secret", "asl": "pygomas/ASL/fieldops.asl"}],
      "allied": [{"rank": "soldier", "name": "soldier_allied1", "password": "secret", "asl": "pygomas/ASL/bditroop.asl"},
                 {"rank": "medic", "name": "medic_allied1", "password": "secret", "asl": "pygomas/ASL/medic.asl"},
-                {"rank": "fieldop", "name": "fieldops_allied1", "password": "secret", "asl": "pygomas/ASL/fieldops.asl"}]
+                {"rank": "fieldop", "name": "fieldops_allied1", "password": "secret",
+                 "asl": "pygomas/ASL/fieldops.asl"}]
      },
     indent=4)
 
@@ -160,6 +163,18 @@ def run(game):
     quit_spade()
 
     return 0
+
+
+@cli.command()
+@click.option("--ip", default="localhost", help="Manager's address to connect the render.", type=str)
+@click.option("--port", default=8001, help="Manager's port to connect the render.", type=int)
+@click.option('--maps', default=None, help="The path to your custom maps directory.")
+@click.option('--text', is_flag=True, help="Use the curses text render.")
+def render(ip, port, maps, text):
+    if text:
+        textviewer.main(address=ip, port=port, maps=maps)
+    else:
+        canvasviewer.main(address=ip, port=port, maps=maps)
 
 
 @cli.command()

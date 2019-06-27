@@ -1,10 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: UTF8 -*-
+import argparse
 import curses
 import socket
 import sys
+import os
 import copy
 
+stdscr = None
 allied_base = None
 axis_base = None
 graph = {}
@@ -13,6 +16,8 @@ f = None
 agents = {}
 dins = {}
 factor = 2
+curses_up = False
+maps_path = None
 
 
 def chunks(l, n):
@@ -110,8 +115,7 @@ def draw():
 
         curses.init_pair(5, curses.COLOR_BLACK, curses.COLOR_RED)  # ALLIED
         curses.init_pair(6, curses.COLOR_WHITE, curses.COLOR_BLUE)  # AXIS
-        curses.init_pair(7, curses.COLOR_BLACK,
-                         curses.COLOR_WHITE)  #  OTHER / DEAD
+        curses.init_pair(7, curses.COLOR_BLACK, curses.COLOR_WHITE)  #  OTHER / DEAD
 
         # AGENTS
         stats_allied = []  # ""
@@ -150,19 +154,17 @@ def draw():
             if v["team"] == "100":
                 if int(v["health"]) > 0:
                     # stats_allied += " | %s %s %03d %03d " % (c, k, int(v["health"]), int(v["ammo"]))
-                    stats_allied.append(" | %s %s %03d %03d " % (
-                        c, k.ljust(4), int(v["health"]), int(v["ammo"])))
+                    stats_allied.append(f" | {c} {k.ljust(4)} {int(v['health']):03d} {int(v['ammo']):03d} ")
                 else:
                     # stats_allied += " | %s %s --- --- " % (c, k)
-                    stats_allied.append(" | %s %s --- --- " % (c, k.ljust(4)))
+                    stats_allied.append(f" | {c} {k.ljust(4)} --- --- ")
             elif v["team"] == "200":
                 if int(v["health"]) > 0:
                     # stats_axis += " | %s %s %03d %03d " % (c, k, int(v["health"]), int(v["ammo"]))
-                    stats_axis.append(" | %s %s %03d %03d " % (
-                        c, k.ljust(4), int(v["health"]), int(v["ammo"])))
+                    stats_axis.append(f" | {c} {k.ljust(4)} {int(v['health']):03d} {int(v['ammo']):03d} ")
                 else:
                     # stats_axis += " | %s %s --- --- " % (c, k)
-                    stats_axis.append(" | %s %s --- --- " % (c, k.ljust(4)))
+                    stats_axis.append(f" | {c} {k.ljust(4)} --- --- ")
         blank = " " * 81
         # stdscr.addstr(33, 1, blank)
         row = 33
@@ -188,8 +190,17 @@ def draw():
 def load_map(map_name):
     global allied_base
     global axis_base
+    global maps_path
 
-    mapf = open("./maps/" + map_name + "/" + map_name + ".txt", "r")
+    if maps_path is not None:
+        path = f"{maps_path}{os.sep}{map_name}{os.sep}{map_name}"
+    else:
+        this_dir, _ = os.path.split(__file__)
+        path = f"{this_dir}{os.sep}maps{os.sep}{map_name}{os.sep}{map_name}"
+
+    mapf = open(f"{path}.txt", "r")
+    cost = open(f"{path}_cost.txt", "r")
+
     for line in mapf.readlines():
         if "pGomas_SPAWN_ALLIED" in line:
             line = line.split()
@@ -204,7 +215,6 @@ def load_map(map_name):
     mapf.close()
     f.write("MAPF LOADED\n")
 
-    cost = open("./maps/" + map_name + "/" + map_name + "_cost.txt", "r")
     y = 0
     for line in cost.readlines():
         graph[y] = line.strip("\r\n")
@@ -212,84 +222,6 @@ def load_map(map_name):
     cost.close()
     # print "GRAPH",str(graph)
     f.write(str(graph))
-
-
-# Main
-f = open("/tmp/tv.log", "w")
-f.write("LOG\n")
-
-# Init curses
-stdscr = curses.initscr()
-curses.start_color()
-curses.noecho()
-curses.cbreak()
-stdscr.keypad(1)
-# curses.curs_set(0)
-curses_up = True
-# stdscr.addstr("CURSES OPEN\n")
-# stdscr.refresh()
-# pad = curses.newpad(32,32)
-
-try:
-    # Init socket
-    if len(sys.argv) < 2:
-        ADDRESS = "localhost"
-        PORT = 8001  # 8072
-    f.write("ADDRESS: %s\n" % (ADDRESS))
-    f.write("PORT: %s\n" % (str(PORT)))
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    if s:
-        s.connect((ADDRESS, PORT))
-        rfile = s.makefile('rb', -1)
-        wfile = s.makefile('wb', 0)
-        f.write("SOCKET OPEN %s\n" % (str(s)))
-        data = rfile.readline()
-        f.write("Server sent: %s\n" % (data))
-        wfile.write(bytes("READY\n", encoding="UTF-8"))
-        loop = True
-        while loop:
-            data = ""
-            data = rfile.readline()
-            data = str(data)
-            f.write("Server sent: %s\n" % (data))
-            if "COM" in data[0:5]:
-                if "Accepted" in data:
-                    pass
-                elif "Closed" in data:
-                    loop = False
-            elif "MAP" in data[0:5]:
-                f.write("MAP MESSAGE: %s\n" % (data))
-                p = data.split()
-                mapname = p[2]
-                f.write("MAPNAME: %s\n" % (mapname))
-                load_map(mapname)
-            elif "AGL" in data[0:5]:
-                f.write("\nAGL\n")
-                agl_parse(data)
-            elif "TIM" in data[0:5]:
-                pass
-            elif "ERR" in data[0:5]:
-                pass
-            else:
-                # Unknown message type
-                pass
-            draw()
-
-        # Close socket
-        del rfile
-        del wfile
-        s.send(bytes("QUIT\n", encoding="UTF-8"))
-        s.close()
-
-
-except Exception as e:
-    # Terminate
-    if s:
-        s.send(bytes("QUIT\n", encoding="UTF-8"))
-        s.close()
-
-    f.write("Exception: {}\n".format(e))
-    quit()
 
 
 def quit():
@@ -303,7 +235,99 @@ def quit():
         curses_up = False
 
 
-quit()
+def main(address="localhost", port=8001, maps=None):
+    # Main
+    global f
+    global maps_path
+    global stdscr
+    global curses_up
 
-f.close()
-sys.exit(0)
+    maps_path = maps
+
+    f = open("/tmp/tv.log", "w")
+    f.write("LOG\n")
+
+    # Init curses
+    stdscr = curses.initscr()
+    curses.start_color()
+    curses.noecho()
+    curses.cbreak()
+    stdscr.keypad(1)
+    # curses.curs_set(0)
+    curses_up = True
+    # stdscr.addstr("CURSES OPEN\n")
+    # stdscr.refresh()
+    # pad = curses.newpad(32,32)
+
+    try:
+        # Init socket
+        f.write(f'ADDRESS: {address}\n')
+        f.write(f"PORT: {port}\n")
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        if s:
+            s.connect((address, port))
+            rfile = s.makefile('rb', -1)
+            wfile = s.makefile('wb', 0)
+            f.write("SOCKET OPEN %s\n" % (str(s)))
+            data = rfile.readline()
+            f.write("Server sent: %s\n" % (data))
+            wfile.write(bytes("READY\n", encoding="UTF-8"))
+            loop = True
+            while loop:
+                data = ""
+                data = rfile.readline()
+                data = str(data)
+                f.write("Server sent: %s\n" % (data))
+                if "COM" in data[0:5]:
+                    if "Accepted" in data:
+                        pass
+                    elif "Closed" in data:
+                        loop = False
+                elif "MAP" in data[0:5]:
+                    f.write("MAP MESSAGE: %s\n" % (data))
+                    p = data.split()
+                    mapname = p[2]
+                    f.write("MAPNAME: %s\n" % (mapname))
+                    load_map(mapname)
+                elif "AGL" in data[0:5]:
+                    f.write("\nAGL\n")
+                    agl_parse(data)
+                elif "TIM" in data[0:5]:
+                    pass
+                elif "ERR" in data[0:5]:
+                    pass
+                else:
+                    # Unknown message type
+                    pass
+                draw()
+
+            # Close socket
+            del rfile
+            del wfile
+            s.send(bytes("QUIT\n", encoding="UTF-8"))
+            s.close()
+
+
+    except Exception as e:
+        # Terminate
+        if s:
+            s.send(bytes("QUIT\n", encoding="UTF-8"))
+            s.close()
+
+        f.write("Exception: {}\n".format(e))
+        quit()
+
+    quit()
+
+    f.close()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--ip', default="localhost", help="Manager's address to connect the render")
+    parser.add_argument('--port', default=8001, help="Manager's port to connect the render")
+    parser.add_argument('--maps', default=None, help="The path to your custom maps directory")
+
+    args = parser.parse_args()
+    main(args.ip, args.port, args.maps)
+    sys.exit(0)

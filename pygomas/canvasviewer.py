@@ -1,16 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: UTF8 -*-
-import curses
-import time
+import argparse
 import socket
 import sys
+import os
 import traceback
 import copy
-import os
 import pygame
 from pygame import gfxdraw
 import math
-import json
 
 objective_x = -1
 objective_y = -1
@@ -23,6 +21,9 @@ f = None
 agents = {}
 dins = {}
 factor = 2
+screen = None
+font = None
+maps_path = None
 
 iteration = 0
 
@@ -65,7 +66,8 @@ def agl_parse(data):
     f.write("NDIN = %s\n" % (str(ndin)))
     din_data = din_data[1:]
     for din in range(ndin):
-        dins[din_data[0]] = {"type": din_data[1], "posx": din_data[2].strip("(,)"), "posy": din_data[3].strip("(,)"), "posz": din_data[4].strip("(,)")}
+        dins[din_data[0]] = {"type": din_data[1], "posx": din_data[2].strip("(,)"), "posy": din_data[3].strip("(,)"),
+                             "posz": din_data[4].strip("(,)")}
         f.write("DIN " + str(dins[din_data[0]]))
         din_data = din_data[5:]
 
@@ -78,6 +80,8 @@ def draw2():
     global ydesp
     global tile_size
     global iteration
+    global screen
+    global font
 
     events = pygame.event.get()
     for event in events:
@@ -110,7 +114,7 @@ def draw2():
                 pass
 
     # Draw bases
-    if allied_base != None:
+    if allied_base is not None:
         color = (255, 0, 0)
         xpos = int(allied_base[0]) * tile_size + xdesp
         ypos = int(allied_base[1]) * tile_size + ydesp
@@ -119,7 +123,7 @@ def draw2():
 
         pygame.draw.rect(screen, color, (xpos, ypos, xwidth, ywidth))
 
-    if axis_base != None:
+    if axis_base is not None:
         color = (0, 0, 255)
         xpos = int(axis_base[0]) * tile_size + xdesp
         ypos = int(axis_base[1]) * tile_size + ydesp
@@ -187,7 +191,7 @@ def draw2():
             if angx == 0:
                 div = 1000
             else:
-                div = (angy) / (angx)
+                div = angy / angx
 
             if angy >= 0 and angx >= 0:  # q1
                 angle = math.atan(div) * (180 / math.pi)
@@ -242,13 +246,22 @@ def draw2():
     }
 
 
-def loadMap(mapname):
+def loadMap(map_name):
     global allied_base
     global axis_base
     global objective_x
     global objective_y
+    global maps_path
 
-    mapf = open("maps/" + mapname + "/" + mapname + ".txt", "r")
+    if maps_path is not None:
+        path = f"{maps_path}{os.sep}{map_name}{os.sep}{map_name}"
+    else:
+        this_dir, _ = os.path.split(__file__)
+        path = f"{this_dir}{os.sep}maps{os.sep}{map_name}{os.sep}{map_name}"
+
+    mapf = open(f"{path}.txt", "r")
+    cost = open(f"{path}_cost.txt", "r")
+
     for line in mapf.readlines():
         if "pGomas_OBJECTIVE" in line:
             l = line.split()
@@ -267,7 +280,6 @@ def loadMap(mapname):
     mapf.close()
     f.write("MAPF LOADED\n")
 
-    cost = open("maps/" + mapname + "/" + mapname + "_cost.txt", "r")
     y = 0
     for line in cost.readlines():
         graph[y] = line.strip("\r\n")
@@ -277,90 +289,98 @@ def loadMap(mapname):
     f.write(str(graph))
 
 
+def main(address="localhost", port=8001, maps=None):
+    global f
+    global screen
+    global font
+    global maps_path
 
-# Main
-f = open("/tmp/tv.log", "w")
-f.write("LOG\n")
+    # Main
+    maps_path = maps
+    f = open("/tmp/tv.log", "w")
+    f.write("LOG\n")
 
-# Init pygame
-pygame.init()
-font = pygame.font.SysFont("ttf-font-awesome", 12)
+    # Init pygame
+    pygame.init()
+    font = pygame.font.SysFont("ttf-font-awesome", 12)
 
-# Set the height and width of the screen
-size = [map_width, map_height]
-screen = pygame.display.set_mode(size)
+    # Set the height and width of the screen
+    size = [map_width, map_height]
+    screen = pygame.display.set_mode(size)
 
-# Loop until the user clicks the close button.
-done = False
-clock = pygame.time.Clock()
+    # Loop until the user clicks the close button.
+    done = False
+    clock = pygame.time.Clock()
 
-try:
-    # Init socket
-    if len(sys.argv) < 2:
-        ADDRESS = "localhost"
-        PORT = 8001
-#   stdscr.addstr("ADDRESS: %s\n"%(ADDRESS))
-#   stdscr.addstr("PORT: %s\n"%(str(PORT)))
-#   stdscr.refresh()
-    f.write("ADDRESS: %s\n" % (ADDRESS))
-    f.write("PORT: %s\n" % (str(PORT)))
-    s = None
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    if s:
-        # time.sleep(1)
-        s.connect((ADDRESS, PORT))
-        rfile = s.makefile('r', -1)
-        wfile = s.makefile('w', 20)
-#       stdscr.addstr("SOCKET OPEN %s\n"%(str(s)))
-#       stdscr.refresh()
-        f.write("SOCKET OPEN %s\n" % (str(s)))
-        data = rfile.readline()
-        f.write("Server sent: %s\n" % (data))
-#       stdscr.addstr("Server sent: %s\n"%(data))
-#       stdscr.refresh()
-        wfile.write("READY\n")
-        wfile.close()
-        bLoop = True
-        while bLoop:
-            data = ""
+    try:
+        # Init socket
+        f.write("ADDRESS: %s\n" % address)
+        f.write("PORT: %s\n" % (str(port)))
+        s = None
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        if s:
+            # time.sleep(1)
+            s.connect((address, port))
+            rfile = s.makefile('r', -1)
+            wfile = s.makefile('w', 20)
+            f.write(f"SOCKET OPEN {str(s)}\n")
             data = rfile.readline()
-            f.write("Server sent: %s\n" % (data))
-            if "COM" in data[0:5]:
-                if "Accepted" in data:
+            f.write(f"Server sent: {data}\n")
+
+            wfile.write("READY\n")
+            wfile.close()
+            in_loop = True
+            while in_loop:
+                data = ""
+                data = rfile.readline()
+                f.write(f"Server sent: {data}\n")
+                if "COM" in data[0:5]:
+                    if "Accepted" in data:
+                        pass
+                    elif "Closed" in data:
+                        in_loop = False
+                elif "MAP" in data[0:5]:
+                    f.write(f'MAP MESSAGE: {data}\n')
+                    p = data.split()
+                    mapname = p[2]
+                    f.write(f"MAPNAME: {mapname}\n")
+                    loadMap(mapname)
+                elif "AGL" in data[0:5]:
+                    f.write("\nAGL\n")
+                    agl_parse(data)
+                elif "TIM" in data[0:5]:
                     pass
-                elif "Closed" in data:
-                    bLoop = False
-            elif "MAP" in data[0:5]:
-                f.write("MAP MESSAGE: %s\n" % (data))
-                p = data.split()
-                mapname = p[2]
-                f.write("MAPNAME: %s\n" % (mapname))
-                loadMap(mapname)
-            elif "AGL" in data[0:5]:
-                f.write("\nAGL\n")
-                agl_parse(data)
-            elif "TIM" in data[0:5]:
-                pass
-            elif "ERR" in data[0:5]:
-                pass
-            else:
-                # Unknown message type
-                pass
-            draw2()
+                elif "ERR" in data[0:5]:
+                    pass
+                else:
+                    # Unknown message type
+                    pass
+                draw2()
 
-        # Close socket
-        del rfile
-        del wfile
-        s.close()
+            # Close socket
+            del rfile
+            del wfile
+            s.close()
 
-except Exception as e:
-    print("Exception", str(e))
-    print('-' * 60)
-    traceback.print_exc(file=sys.stdout)
-    print('-' * 60)
+    except Exception as e:
+        print("Exception", str(e))
+        print('-' * 60)
+        traceback.print_exc(file=sys.stdout)
+        print('-' * 60)
 
 
-finally:
-    pygame.quit()
-    f.close()
+    finally:
+        pygame.quit()
+        f.close()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--ip', default="localhost", help="Manager's address to connect the render")
+    parser.add_argument('--port', default=8001, help="Manager's port to connect the render")
+    parser.add_argument('--maps', default=None, help="The path to your custom maps directory")
+
+    args = parser.parse_args()
+    main(args.ip, args.port, args.maps)
     sys.exit(0)
+

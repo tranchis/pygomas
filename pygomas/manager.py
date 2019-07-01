@@ -149,6 +149,7 @@ class Manager(AbstractAgent, Agent):
                         self.agent.agents[name].jid = name
                         self.agent.agents[name].type = int(type_)
                         self.agent.agents[name].team = int(team)
+                        self.agent.agents[name].health = 100
 
                         logger.success("Manager: [" + name + "] is Ready!")
                         self.agent.number_of_agents += 1
@@ -164,6 +165,9 @@ class Manager(AbstractAgent, Agent):
 
                 await self.agent.inform_objectives(self)
                 self.agent.match_init = time.time()
+                
+                # Behaviour to check if all alied troops are alive
+                self.agent.launch_check_allied_health()
 
         logger.success("pyGOMAS v. 0.1 (c) GTI-IA 2005 - 2019 (DSIC / UPV)")
         logger.success(spade.__version__)
@@ -199,6 +203,7 @@ class Manager(AbstractAgent, Agent):
 
         # Behaviour to refresh all render engines connected
         self.launch_render_engine_inform_behaviour()
+
 
     # Behaviour to refresh all render engines connected
     def launch_render_engine_inform_behaviour(self):
@@ -289,7 +294,6 @@ class Manager(AbstractAgent, Agent):
                         msg.body = json.dumps(content)
 
                         await self.send(msg)
-
                         if self.agent.check_game_finished(id_agent):
                             await self.agent.inform_game_finished("ALLIED", self)
                             logger.success("\n\nManager:  GAME FINISHED!! Winner Team: ALLIED! (Target Returned)\n")
@@ -431,6 +435,23 @@ class Manager(AbstractAgent, Agent):
 
         timeout = datetime.datetime.now() + datetime.timedelta(seconds=self.match_time)
         self.add_behaviour(GameTimeoutInformBehaviour(start_at=timeout))
+
+    # Behaviour to inform all agents that game has finished because all allied troops died
+    def launch_check_allied_health(self):
+        class CheckAlliedHealthBehaviour(PeriodicBehaviour):
+            async def run(self):
+                allied_alive = False
+                for agent in self.agent.agents.values():
+                    if agent.team == TEAM_AXIS:
+                        continue
+                    if agent.health > 0:
+                        allied_alive = True
+                        break
+                if not allied_alive:
+                    logger.success("\n\nManager:  GAME FINISHED!! Winner Team: AXIS!\n")
+                    await self.agent.inform_game_finished("AXIS!", self)
+
+        self.add_behaviour(CheckAlliedHealthBehaviour(20*self.fps))
 
     async def check_objects_at_step(self, id_agent, behaviour):
 

@@ -1,4 +1,4 @@
- //TEAM_AXIS
+//TEAM_AXIS
 
 +flag (X,Y,Z): team(200) 
   <-

@@ -165,7 +165,7 @@ class Manager(AbstractAgent, Agent):
 
                 await self.agent.inform_objectives(self)
                 self.agent.match_init = time.time()
-                
+
                 # Behaviour to check if all alied troops are alive
                 self.agent.launch_check_allied_health()
 
@@ -203,7 +203,6 @@ class Manager(AbstractAgent, Agent):
 
         # Behaviour to refresh all render engines connected
         self.launch_render_engine_inform_behaviour()
-
 
     # Behaviour to refresh all render engines connected
     def launch_render_engine_inform_behaviour(self):

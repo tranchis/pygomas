@@ -3,9 +3,10 @@
 """Console script for pygomas."""
 import asyncio
 import json
+import os
 import sys
 import time
-from typing import List, Union
+from importlib import import_module
 
 import click
 
@@ -20,15 +21,15 @@ from .bdisoldier import BDISoldier
 from .manager import Manager, TEAM_AXIS, TEAM_ALLIED
 
 help_config = json.dumps(
-    {"host": "127.0.0.1", "manager": "cmanager", "manager_password": "secret", "service": "cservice",
-     "service_password": "secret",
-     "axis": [{"rank": "soldier", "name": "soldier_axis1", "password": "secret", "asl": "pygomas/ASL/bditroop.asl"},
-              {"rank": "medic", "name": "medic_axis1", "password": "secret", "asl": "pygomas/ASL/medic.asl"},
-              {"rank": "fieldop", "name": "fieldops_axis1", "password": "secret", "asl": "pygomas/ASL/fieldops.asl"}],
-     "allied": [{"rank": "soldier", "name": "soldier_allied1", "password": "secret", "asl": "pygomas/ASL/bditroop.asl"},
-                {"rank": "medic", "name": "medic_allied1", "password": "secret", "asl": "pygomas/ASL/medic.asl"},
-                {"rank": "fieldop", "name": "fieldops_allied1", "password": "secret",
-                 "asl": "pygomas/ASL/fieldops.asl"}]
+    {"host": "127.0.0.1", "manager": "cmanager", "service": "cservice",
+     "axis": [{"rank": "BDISoldier", "name": "soldier_axis1", "password": "secret", "asl": "myASL/mybditroop.asl"},
+              {"rank": "BDIMedic", "name": "medic_axis1", "password": "secret", "asl": "myASL/mymedic.asl"},
+              {"rank": "BDIFieldOp", "name": "fieldops_axis1", "password": "secret", "asl": "myASL/myfieldops.asl"}],
+     "allied": [
+         {"rank": "mytroops.MySoldier", "name": "soldier_allied1", "password": "secret", "asl": "myASL/mybditroop.asl"},
+         {"rank": "mytroops.MyMedic", "name": "medic_allied1", "password": "secret", "asl": "myASL/mymedic.asl"},
+         {"rank": "mytroops.MyFieldOp", "name": "fieldops_allied1", "password": "secret", "amount": 2,
+          "asl": "myASL/myfieldops.asl"}]
      },
     indent=4)
 
@@ -39,17 +40,18 @@ def cli():
 
 
 @cli.command()
-@click.option('-j', "--jid", default="cmanager@127.0.0.1", help="XMPP manager's JID.")
-@click.option('-p', "--password", default="secret", help="Manager's password.")
-@click.option('-np', "--num-players", help="Number of players.", required=True, type=int)
-@click.option('-m', "--map", "map_name", default="map_01", help="Map name.")
-@click.option('-sj', "--service-jid", default="cservice@127.0.0.1", help="XMPP Service agent's JID.")
-@click.option('-sp', "--service-password", default="secret", help="Service agent's password.")
-@click.option('-t', "--match_time", default=360, help="Max time for a match.", type=int)
-@click.option("--fps", default=0.033, help="Frame rate to inform renders (in frames per second).", type=float)
-@click.option("--port", default=8001, help="Port to connect with renders.", type=int)
-def manager(jid, password, num_players, map_name, service_jid, service_password,
-            match_time, fps, port):
+@click.option('-j', "--jid", default="cmanager@127.0.0.1", help="XMPP manager's JID (default=cmanager@127.0.0.1).")
+@click.option('-p', "--password", default="secret", help="Manager's password (default=secret).")
+@click.option('-np', "--num-players", help="Number of players (required).", required=True, type=int)
+@click.option('-m', "--map", "map_name", default="map_01", help="Map name (default=map_01).")
+@click.option('-sj', "--service-jid", default="cservice@127.0.0.1",
+              help="XMPP Service agent's JID (default=cservice@127.0.0.1).")
+@click.option('-sp', "--service-password", default="secret", help="Service agent's password (default=secret).")
+@click.option('-t', "--match-time", default=360, help="Max time in seconds for a match (default=360).", type=int)
+@click.option("--fps", default=0.033, help="Frame rate in seconds per frame to inform renders (default=0.033).",
+              type=float)
+@click.option("--port", default=8001, help="Port to connect with renders (default=8001).", type=int)
+def manager(jid, password, num_players, map_name, service_jid, service_password, match_time, fps, port):
     """Console script for running the manager."""
     click.echo("Running manager agent {}".format(jid))
 
@@ -73,7 +75,8 @@ def manager(jid, password, num_players, map_name, service_jid, service_password,
 
 
 @cli.command()
-@click.option("-g", "--game", help="JSON file with game config", type=click.Path(exists=True))
+@click.option("-g", "--game", help="JSON file with game config (pygomas help run to get a sample)",
+              type=click.Path(exists=True))
 def run(game):
     """Console script for running a JSON game file."""
     try:
@@ -86,9 +89,7 @@ def run(game):
     default = {
         "host": "127.0.0.1",
         "manager": "cmanager",
-        "manager_password": "secret",
         "service": "cservice",
-        "service_password": "secret",
         "axis": [],
         "allied": []
     }
@@ -100,51 +101,23 @@ def run(game):
     manager_jid = "{}@{}".format(config["manager"], host)
     service_jid = "{}@{}".format(config["service"], host)
 
-    ranks = {
-        "soldier": BDISoldier,
-        "medic": BDIMedic,
-        "fieldop": BDIFieldOp
-    }
-
+    this_dir, _ = os.path.split(__file__)
+    asl_path = f"{this_dir}{os.sep}ASL{os.sep}"
     asl = {
-        "soldier": 'pygomas/ASL/bditroop.asl',
-        "medic": 'pygomas/ASL/bdimedic.asl',
-        "fieldop": 'pygomas/ASL/bdifieldop.asl'
+        "soldier": asl_path + 'bdisoldier.asl',
+        "medic": asl_path + 'bdimedic.asl',
+        "fieldop": asl_path + 'bdifieldop.asl'
     }
 
-    troops: List[Union[BDIMedic, BDIFieldOp, BDISoldier]] = list()
+    troops = list()
 
     for troop in config["axis"]:
-        assert "rank" in troop, "You must provide a rank for every troop"
-        assert "name" in troop, "You must provide a name for every troop"
-        assert "password" in troop, "You must provide a password for every troop"
-
-        assert troop["rank"] in ranks, "Rank must be one of: soldier, medic or fieldop"
-
-        _class = ranks[troop["rank"]]
-        jid = "{}@{}".format(troop["name"], host)
-        asl = troop["asl"] if "asl" in troop else asl[troop["rank"]]
-
-        troop = _class(jid=jid, passwd=troop["password"], asl=asl, team=TEAM_AXIS,
-                       manager_jid=manager_jid, service_jid=service_jid)
-
-        troops.append(troop)
+        new_troops = create_troops(troop, host, manager_jid, service_jid, asl, team=TEAM_AXIS)
+        troops += new_troops
 
     for troop in config["allied"]:
-        assert "rank" in troop, "You must provide a rank for every troop"
-        assert "name" in troop, "You must provide a name for every troop"
-        assert "password" in troop, "You must provide a password for every troop"
-
-        assert troop["rank"] in ranks, "Rank must be one of: soldier, medic or fieldop"
-
-        _class = ranks[troop["rank"]]
-        jid = "{}@{}".format(troop["name"], host)
-        asl = troop["asl"] if "asl" in troop else asl[troop["rank"]]
-
-        troop = _class(jid=jid, passwd=troop["password"], asl=asl, team=TEAM_ALLIED,
-                       manager_jid=manager_jid, service_jid=service_jid)
-
-        troops.append(troop)
+        new_troops = create_troops(troop, host, manager_jid, service_jid, asl, team=TEAM_ALLIED)
+        troops += new_troops
 
     container = Container()
     while not container.loop.is_running():
@@ -165,9 +138,27 @@ def run(game):
     return 0
 
 
+def create_troops(troop, host, manager_jid, service_jid, asl, team):
+    assert "rank" in troop, "You must provide a rank for every troop"
+    assert "name" in troop, "You must provide a name for every troop"
+    assert "password" in troop, "You must provide a password for every troop"
+
+    amount = troop["amount"] if "amount" in troop else 1
+    new_troops = list()
+    for i in range(amount):
+        _class = load_class(troop["rank"])
+        jid = "{}_{}@{}".format(troop["name"], i, host)
+        agent_asl = troop["asl"] if "asl" in troop else asl[troop["rank"]]
+        new_troop = _class(jid=jid, passwd=troop["password"], asl=agent_asl, team=team,
+                           manager_jid=manager_jid, service_jid=service_jid)
+        new_troops.append(new_troop)
+    return new_troops
+
+
 @cli.command()
-@click.option("--ip", default="localhost", help="Manager's address to connect the render.", type=str)
-@click.option("--port", default=8001, help="Manager's port to connect the render.", type=int)
+@click.option("--ip", default="localhost", help="Manager's address to connect the render (default=localhost).",
+              type=str)
+@click.option("--port", default=8001, help="Manager's port to connect the render (default=8001).", type=int)
 @click.option('--maps', default=None, help="The path to your custom maps directory.")
 @click.option('--text', is_flag=True, help="Use the curses text render.")
 def render(ip, port, maps, text):
@@ -195,6 +186,29 @@ def help(ctx, subcommand):
 async def run_agents(troops):
     coros = [agent.start() for agent in troops]
     return await asyncio.gather(*coros)
+
+
+def load_class(class_path):
+    """
+    Tricky method that imports a class form a string.
+    Args:
+        class_path (str): the path where the class to be imported is.
+    Returns:
+        class: the class imported and ready to be instantiated.
+    """
+    ranks = {
+        "BDISoldier": BDISoldier,
+        "BDIMedic": BDIMedic,
+        "BDIFieldOp": BDIFieldOp
+    }
+
+    if class_path in ranks:
+        return ranks[class_path]
+    else:
+        sys.path.append(os.getcwd())
+        module_path, class_name = class_path.rsplit(".", 1)
+        mod = import_module(module_path)
+        return getattr(mod, class_name)
 
 
 if __name__ == "__main__":

@@ -145,8 +145,8 @@ def create_troops(troop, host, manager_jid, service_jid, asl, team):
 
     amount = troop["amount"] if "amount" in troop else 1
     new_troops = list()
+    _class = load_class(troop["rank"])
     for i in range(amount):
-        _class = load_class(troop["rank"])
         jid = "{}_{}@{}".format(troop["name"], i, host)
         agent_asl = troop["asl"] if "asl" in troop else asl[troop["rank"]]
         new_troop = _class(jid=jid, passwd=troop["password"], asl=agent_asl, team=team,

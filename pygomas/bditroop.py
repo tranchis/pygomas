@@ -536,10 +536,6 @@ class BDITroop(AbstractAgent, BDIAgent):
 
                 await self.send(msg)
 
-                # messages = self.mailbox_size()
-                # if messages == 0:
-                #     messages = 1
-                # for i in range(messages):
                 info = await self.receive(LONG_RECEIVE_WAIT)
                 if info is None:
                     return

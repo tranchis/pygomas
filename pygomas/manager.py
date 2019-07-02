@@ -264,11 +264,13 @@ class Manager(AbstractAgent, Agent):
         class DataFromTroopBehaviour(CyclicBehaviour):
             async def run(self):
                 try:
-                    msg = await self.receive(timeout=LONG_RECEIVE_WAIT)
+                    buffer = list()
+                    while self.mailbox_size() > 0:
+                        msg = await self.receive(timeout=0)
+                        buffer.append(msg)
                     if self.mailbox_size() > self.agent.max_total_agents + 1:
-                        logger.error("TOO MUCH PENDING MSG: {}".format(
-                            self.mailbox_size()))
-                    if msg:
+                        logger.error("TOO MUCH PENDING MSG: {}".format(self.mailbox_size()))
+                    for msg in buffer:
                         content = json.loads(msg.body)
                         id_agent = content[NAME]
                         self.agent.agents[id_agent].locate.position.x = int(content[X])

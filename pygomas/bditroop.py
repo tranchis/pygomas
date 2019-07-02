@@ -414,7 +414,6 @@ class BDITroop(AbstractAgent, BDIAgent):
                     self.agent.bdi.set_belief(POSITION, self.agent.movement.position.x, self.agent.movement.position.y, self.agent.movement.position.z)
 
                     if len(self.agent.destinations) == 0:
-                        print("\n\nARRIVED\n\n")
                         self.agent.bdi.set_belief(PERFORMATIVE_TARGET_REACHED, self.agent.movement.destination.x, self.agent.movement.destination.y, self.agent.movement.destination.z)
                     else:
                         x, z = self.agent.destinations[0]
@@ -508,7 +507,6 @@ class BDITroop(AbstractAgent, BDIAgent):
                     if self.agent.is_objective_carried:
                         self.agent.bdi.remove_belief(PERFORMATIVE_FLAG_TAKEN)
                         self.agent.is_objective_carried = False
-                        print("LOST THE FLAG")
                         logger.info("Agent {} loses the objective.".format(self.agent.name))
                     await self.agent.die()
 

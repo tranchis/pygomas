@@ -220,6 +220,54 @@ class BDITroop(AbstractAgent, BDIAgent):
             self.add_behaviour(b)
             yield
 
+        @troop_actions.add(".register_service", 1)
+        def _register_service(agent, term, intention):
+            """Register the service specified by <service>.
+
+               :param service: service to register
+               :type service: str
+
+               """
+            args = asp.grounded(term.args, intention.scope)
+            service = str(args[0])
+            self.register_service(service)
+            yield
+
+        @troop_actions.add(".get_service", 1)
+        def _get_service(agent, term, intention):
+            """Request for troop agents that offer the service specified by
+               <service>. This action sends a FIPA REQUEST
+               message to the service agent asking for those who offer the
+               <service> service.
+
+               :param service: service requested
+               :type service: str
+
+               """
+            args = asp.grounded(term.args, intention.scope)
+            service = str(args[0])
+
+            class GetServiceBehaviour(OneShotBehaviour):
+                async def run(self):
+                    msg = Message()
+                    msg.set_metadata(PERFORMATIVE, PERFORMATIVE_GET)
+                    msg.to = self.agent.service_jid
+                    msg.body = json.dumps({NAME: service, TEAM: self.agent.team})
+                    await self.send(msg)
+                    result = await self.receive(timeout=LONG_RECEIVE_WAIT)
+                    if result:
+                        result = json.loads(result.body)
+                        logger.info("{} got {} fieldops: {}".format(self.agent.name, self.agent.soldiers_count, result))
+                        self.agent.bdi.set_belief(service, tuple(result))
+                    else:
+                        self.agent.bdi.set_belief(service, 0)
+
+            t = Template()
+            t.set_metadata(PERFORMATIVE, PERFORMATIVE_GENERIC_SERVICE)
+            b = GetServiceBehaviour()
+            self.add_behaviour(b, t)
+            yield
+
         @troop_actions.add(".get_medics", 0)
         def _get_medics(agent, term, intention):
             """Request for medic agents. This action sends a FIPA REQUEST

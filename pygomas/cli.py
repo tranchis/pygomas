@@ -101,22 +101,14 @@ def run(game):
     manager_jid = "{}@{}".format(config["manager"], host)
     service_jid = "{}@{}".format(config["service"], host)
 
-    this_dir, _ = os.path.split(__file__)
-    asl_path = f"{this_dir}{os.sep}ASL{os.sep}"
-    asl = {
-        "soldier": asl_path + 'bdisoldier.asl',
-        "medic": asl_path + 'bdimedic.asl',
-        "fieldop": asl_path + 'bdifieldop.asl'
-    }
-
     troops = list()
 
     for troop in config["axis"]:
-        new_troops = create_troops(troop, host, manager_jid, service_jid, asl, team=TEAM_AXIS)
+        new_troops = create_troops(troop, host, manager_jid, service_jid, team=TEAM_AXIS)
         troops += new_troops
 
     for troop in config["allied"]:
-        new_troops = create_troops(troop, host, manager_jid, service_jid, asl, team=TEAM_ALLIED)
+        new_troops = create_troops(troop, host, manager_jid, service_jid, team=TEAM_ALLIED)
         troops += new_troops
 
     container = Container()
@@ -138,17 +130,29 @@ def run(game):
     return 0
 
 
-def create_troops(troop, host, manager_jid, service_jid, asl, team):
+def create_troops(troop, host, manager_jid, service_jid, team):
+    this_dir, _ = os.path.split(__file__)
+    asl_path = f"{this_dir}{os.sep}ASL{os.sep}"
+    asl = {
+        "BDISoldier": asl_path + 'bdisoldier.asl',
+        "BDIMedic": asl_path + 'bdimedic.asl',
+        "BDIFieldOp": asl_path + 'bdifieldop.asl'
+    }
     assert "rank" in troop, "You must provide a rank for every troop"
     assert "name" in troop, "You must provide a name for every troop"
     assert "password" in troop, "You must provide a password for every troop"
 
     amount = troop["amount"] if "amount" in troop else 1
     new_troops = list()
+    _class = load_class(troop["rank"])
     for i in range(amount):
-        _class = load_class(troop["rank"])
         jid = "{}_{}@{}".format(troop["name"], i, host)
-        agent_asl = troop["asl"] if "asl" in troop else asl[troop["rank"]]
+        try:
+            agent_asl = troop["asl"] if "asl" in troop else asl[troop["rank"]]
+        except KeyError:
+            click.secho(f"No valid ASL file provided for agent {troop['name']}", fg="red", err=True)
+            raise click.Abort()
+
         new_troop = _class(jid=jid, passwd=troop["password"], asl=agent_asl, team=team,
                            manager_jid=manager_jid, service_jid=service_jid)
         new_troops.append(new_troop)

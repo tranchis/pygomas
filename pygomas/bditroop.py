@@ -47,14 +47,15 @@ MV_ALREADY_IN_DEST = 2
 
 class BDITroop(AbstractAgent, BDIAgent):
 
-    def __init__(self, jid, passwd, asl, actions=None, team=TEAM_NONE, manager_jid="cmanager@localhost",
-                 service_jid="cservice@localhost", *args, **kwargs):
+    def __init__(self, jid, passwd, asl, actions=None, team=TEAM_NONE, map_path=None,
+                 manager_jid="cmanager@localhost", service_jid="cservice@localhost", *args, **kwargs):
 
         self.service_types = []
 
         # Variable used to store the AID of Manager
         self.manager = manager_jid
         self.service = service_jid
+        self.map_path = map_path
 
         # Variable indicating if this agent is carrying the objective pack (flag)
         self.is_objective_carried = False
@@ -430,7 +431,7 @@ class BDITroop(AbstractAgent, BDIAgent):
                 map_name = json.loads(msg.body)[MAP]
                 logger.info("[" + self.agent.name + "]: Beginning to fight")
                 self.agent.map = TerrainMap()
-                config = Config()
+                config = Config(self.agent.map_path)
                 self.agent.map.load_map(map_name, config)
                 self.agent.path_finder = AAlgorithm(self.agent.map.terrain[:, :, 1])
                 self.agent.movement = Mobile()

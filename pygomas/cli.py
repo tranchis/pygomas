@@ -44,6 +44,7 @@ def cli():
 @click.option('-p', "--password", default="secret", help="Manager's password (default=secret).")
 @click.option('-np', "--num-players", help="Number of players (required).", required=True, type=int)
 @click.option('-m', "--map", "map_name", default="map_01", help="Map name (default=map_01).")
+@click.option('-mp', "--map-path", "map_path", default=None, help="The path to your custom maps directory.")
 @click.option('-sj', "--service-jid", default="cservice@127.0.0.1",
               help="XMPP Service agent's JID (default=cservice@127.0.0.1).")
 @click.option('-sp', "--service-password", default="secret", help="Service agent's password (default=secret).")
@@ -51,11 +52,11 @@ def cli():
 @click.option("--fps", default=0.033, help="Frame rate in seconds per frame to inform renders (default=0.033).",
               type=float)
 @click.option("--port", default=8001, help="Port to connect with renders (default=8001).", type=int)
-def manager(jid, password, num_players, map_name, service_jid, service_password, match_time, fps, port):
+def manager(jid, password, num_players, map_name, map_path, service_jid, service_password, match_time, fps, port):
     """Console script for running the manager."""
     click.echo("Running manager agent {}".format(jid))
 
-    manager_agent = Manager(players=int(num_players), name=jid, passwd=password, map_name=map_name,
+    manager_agent = Manager(players=int(num_players), name=jid, passwd=password, map_name=map_name, map_path=map_path,
                             service_jid=service_jid, service_passwd=service_password,
                             match_time=match_time, fps=fps, port=port)
     future = manager_agent.start()
@@ -77,7 +78,8 @@ def manager(jid, password, num_players, map_name, service_jid, service_password,
 @cli.command()
 @click.option("-g", "--game", help="JSON file with game config (pygomas help run to get a sample)",
               type=click.Path(exists=True))
-def run(game):
+@click.option('-mp', "--map-path", "map_path", default=None, help="The path to your custom maps directory.")
+def run(game, map_path):
     """Console script for running a JSON game file."""
     try:
         with open(game) as f:
@@ -104,11 +106,11 @@ def run(game):
     troops = list()
 
     for troop in config["axis"]:
-        new_troops = create_troops(troop, host, manager_jid, service_jid, team=TEAM_AXIS)
+        new_troops = create_troops(troop, host, manager_jid, service_jid, map_path, team=TEAM_AXIS)
         troops += new_troops
 
     for troop in config["allied"]:
-        new_troops = create_troops(troop, host, manager_jid, service_jid, team=TEAM_ALLIED)
+        new_troops = create_troops(troop, host, manager_jid, service_jid, map_path, team=TEAM_ALLIED)
         troops += new_troops
 
     container = Container()
@@ -130,7 +132,7 @@ def run(game):
     return 0
 
 
-def create_troops(troop, host, manager_jid, service_jid, team):
+def create_troops(troop, host, manager_jid, service_jid, map_path, team):
     this_dir, _ = os.path.split(__file__)
     asl_path = f"{this_dir}{os.sep}ASL{os.sep}"
     asl = {
@@ -153,7 +155,7 @@ def create_troops(troop, host, manager_jid, service_jid, team):
             click.secho(f"No valid ASL file provided for agent {troop['name']}", fg="red", err=True)
             raise click.Abort()
 
-        new_troop = _class(jid=jid, passwd=troop["password"], asl=agent_asl, team=team,
+        new_troop = _class(jid=jid, passwd=troop["password"], asl=agent_asl, team=team, map_path=map_path,
                            manager_jid=manager_jid, service_jid=service_jid)
         new_troops.append(new_troop)
     return new_troops

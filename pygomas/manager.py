@@ -3,6 +3,7 @@ import datetime
 import json
 import time
 import math
+from collections import defaultdict
 
 from loguru import logger
 
@@ -79,8 +80,8 @@ class Manager(AbstractAgent, Agent):
                  players=10,
                  fps=0.033,
                  match_time=380,
-                 path=None,
                  map_name="map_01",
+                 map_path=None,
                  service_jid="cservice@localhost",
                  service_passwd="secret",
                  port=8001):
@@ -94,9 +95,7 @@ class Manager(AbstractAgent, Agent):
         self.match_time = match_time
         self.map_name = str(map_name)
         self.port = port
-        self.config = Config()
-        if path is not None:
-            self.config.set_data_path(path)
+        self.config = Config(data_path=map_path)
         self.number_of_agents = 0
         self.agents = {}
         self.match_init = 0
@@ -237,8 +236,7 @@ class Manager(AbstractAgent, Agent):
                             msg += str(agent.locate.heading.y) + ", "
                             msg += str(agent.locate.heading.z) + ") "
 
-                        num_din_objects = sum(
-                            [not din.is_taken for din in self.agent.din_objects.values()])
+                        num_din_objects = sum([not din.is_taken for din in self.agent.din_objects.values()])
                         msg += str(num_din_objects) + " "
 
                         for din_object in self.agent.din_objects.values():
@@ -251,9 +249,8 @@ class Manager(AbstractAgent, Agent):
 
                         for task in self.agent.render_server.get_connections():
                             if self.agent.render_server.is_ready(task):
-                                self.agent.render_server.send_msg_to_render_engine(
-                                    task, TCP_AGL, msg)
-                            # logger.info("msg to render engine: {}".format(msg))
+                                self.agent.render_server.send_msg_to_render_engine(task, TCP_AGL, msg)
+                                #logger.info("msg to render engine")
                 except Exception:
                     pass
 
@@ -264,13 +261,17 @@ class Manager(AbstractAgent, Agent):
         class DataFromTroopBehaviour(CyclicBehaviour):
             async def run(self):
                 try:
-                    buffer = list()
-                    while self.mailbox_size() > 0:
-                        msg = await self.receive(timeout=0)
-                        buffer.append(msg)
+                    #buffer = defaultdict(list)
+                    #while self.mailbox_size() > 0:
+                    #    msg = await self.receive(timeout=0)
+                    #    content = json.loads(msg.body)
+                    #    buffer[content[NAME]].append(content)
+                    msg = await self.receive(timeout=LONG_RECEIVE_WAIT)
                     if self.mailbox_size() > self.agent.max_total_agents + 1:
                         logger.error("TOO MUCH PENDING MSG: {}".format(self.mailbox_size()))
-                    for msg in buffer:
+                    #for id_agent, msgs in buffer.items():
+                    if msg:
+                    #    for content in msgs:
                         content = json.loads(msg.body)
                         id_agent = content[NAME]
                         self.agent.agents[id_agent].locate.position.x = int(content[X])
@@ -287,6 +288,7 @@ class Manager(AbstractAgent, Agent):
 
                         self.agent.agents[id_agent].health = int(content[HEALTH])
                         self.agent.agents[id_agent].ammo = int(content[AMMO])
+
                         packs = await self.agent.check_objects_at_step(id_agent, behaviour=self)
                         fov_objects = self.agent.look(id_agent)
                         content = {PACKS: packs, FOV: fov_objects}

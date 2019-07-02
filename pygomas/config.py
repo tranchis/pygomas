@@ -1,6 +1,7 @@
 import os
 
-DEFAULT_DATA_PATH = ".{sep}pygomas{sep}maps{sep}".format(sep=os.sep)
+this_dir, _ = os.path.split(__file__)
+DEFAULT_DATA_PATH = f"{this_dir}{os.sep}maps{os.sep}"
 
 # Ontologies
 ACTION: str = "ACTION"
@@ -93,8 +94,12 @@ VELOCITY: str = "velocity"
 
 
 class Config(object):
-    def __init__(self):
-        self.data_path = DEFAULT_DATA_PATH
+    def __init__(self, data_path=None):
+        self.data_path = data_path if data_path else DEFAULT_DATA_PATH
+        if not self.data_path.endswith(os.sep):
+            self.data_path += os.sep
 
     def set_data_path(self, data_path):
-        self.data_path = data_path + os.sep
+        self.data_path = data_path
+        if not self.data_path.endswith(os.sep):
+            self.data_path += os.sep

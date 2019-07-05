@@ -456,8 +456,6 @@ class BDITroop(AbstractAgent, BDIAgent):
     class MoveBehaviour(PeriodicBehaviour):
 
         async def run(self):
-            current_time = time.time()
-
             if len(self.agent.destinations) > 0:
                 absx = abs(self.agent.destinations[0][0] - self.agent.movement.position.x)
                 absz = abs(self.agent.destinations[0][1] - self.agent.movement.position.z)

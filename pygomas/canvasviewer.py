@@ -15,9 +15,6 @@ objective_y = -1
 allied_base = None
 axis_base = None
 graph = {}
-stdscr = None
-pad = None
-f = None
 agents = {}
 dins = {}
 factor = 2
@@ -48,29 +45,22 @@ def agl_parse(data):
     global dins
 
     dins = {}
-    #f.write("\nAGL_PARSE\n")
     agl = data.split()
     nagents = int(agl[1])
     agl = agl[2:]
     separator = nagents * 15
-    #f.write("NAGENTS = %s\n" % (str(nagents)))
     agent_data = agl[:separator]
     din_data = agl[separator:]
-    #f.write("AGENT_DATA:" + str(agent_data))
     for i in range(nagents):
         agents[agent_data[0]] = {"type": agent_data[1], "team": agent_data[2], "health": agent_data[3], "ammo": agent_data[4], "carrying": agent_data[5], "posx": agent_data[6].strip(
             "(,)"), "posy": agent_data[7].strip("(,)"), "posz": agent_data[8].strip("(,)"), "angx": agent_data[12].strip("(,)"), "angy": agent_data[13].strip("(,)"), "angz": agent_data[14].strip("(,)")}
-        #f.write("AGENT " + str(agents[agent_data[0]]))
         agent_data = agent_data[15:]
 
-    #f.write("DIN_DATA:" + str(din_data))
     ndin = int(din_data[0])
-    #f.write("NDIN = %s\n" % (str(ndin)))
     din_data = din_data[1:]
     for din in range(ndin):
         dins[din_data[0]] = {"type": din_data[1], "posx": din_data[2].strip("(,)"), "posy": din_data[3].strip("(,)"),
                              "posz": din_data[4].strip("(,)")}
-        #f.write("DIN " + str(dins[din_data[0]]))
         din_data = din_data[5:]
 
 
@@ -269,26 +259,21 @@ def loadMap(map_name):
             l = line.split()
             objective_x = copy.copy(int(l[1]))
             objective_y = copy.copy(int(l[2]))
-            #f.write("OBJECTIVE:" + str(objective_x) + " " + str(objective_y))
         elif "pGomas_SPAWN_ALLIED" in line:
             l = line.split()
             l.pop(0)
             allied_base = copy.copy(l)
-            #f.write("ALLIED_BASE:" + str(l))
         elif "pGomas_SPAWN_AXIS" in line:
             l = line.split()
             l.pop(0)
             axis_base = copy.copy(l)
     mapf.close()
-    #f.write("MAPF LOADED\n")
 
     y = 0
     for line in cost.readlines():
         graph[y] = line.strip("\r\n")
         y += 1
     cost.close()
-    # print "GRAPH",str(graph)
-    #f.write(str(graph))
 
 
 def main(address="localhost", port=8001, maps=None):
@@ -299,8 +284,6 @@ def main(address="localhost", port=8001, maps=None):
 
     # Main
     maps_path = maps
-    f = open("/tmp/tv.log", "w")
-    #f.write("LOG\n")
 
     # Init pygame
     pygame.init()
@@ -310,24 +293,15 @@ def main(address="localhost", port=8001, maps=None):
     size = [map_width, map_height]
     screen = pygame.display.set_mode(size)
 
-    # Loop until the user clicks the close button.
-    done = False
-    clock = pygame.time.Clock()
-
     try:
         # Init socket
-        #f.write("ADDRESS: %s\n" % address)
-        #f.write("PORT: %s\n" % (str(port)))
         s = None
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         if s:
-            # time.sleep(1)
             s.connect((address, port))
             rfile = s.makefile('r', -1)
             wfile = s.makefile('w', 20)
-            #f.write(f"SOCKET OPEN {str(s)}\n")
             data = rfile.readline()
-            #f.write(f"Server sent: {data}\n")
 
             wfile.write("READY\n")
             wfile.close()
@@ -335,22 +309,16 @@ def main(address="localhost", port=8001, maps=None):
             while in_loop:
                 data = ""
                 data = rfile.readline()
-                #f.write(f"Server sent: {data}\n")
                 if "COM" in data[0:5]:
                     if "Accepted" in data:
                         pass
                     elif "Closed" in data:
                         in_loop = False
                 elif "MAP" in data[0:5]:
-                    #f.write(f'MAP MESSAGE: {data}\n')
                     p = data.split()
                     mapname = p[2]
-                    #f.write(f"MAPNAME: {mapname}\n")
                     loadMap(mapname)
                 elif "AGL" in data[0:5]:
-                    #f.write("\nAGL\n")
-                    #import datetime
-                    #print("{}: Received msg".format(datetime.datetime.now()))
                     agl_parse(data)
                 elif "TIM" in data[0:5]:
                     pass
@@ -372,7 +340,6 @@ def main(address="localhost", port=8001, maps=None):
         traceback.print_exc(file=sys.stdout)
         print('-' * 60)
 
-
     finally:
         pygame.quit()
         f.close()
@@ -387,4 +354,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
     main(args.ip, args.port, args.maps)
     sys.exit(0)
-

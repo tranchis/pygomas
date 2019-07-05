@@ -1,2 +1,0 @@
-# pgomas
-Python GOMAS

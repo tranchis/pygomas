@@ -257,7 +257,7 @@ class BDITroop(AbstractAgent, BDIAgent):
                     result = await self.receive(timeout=LONG_RECEIVE_WAIT)
                     if result:
                         result = json.loads(result.body)
-                        logger.info("{} got {} fieldops: {}".format(self.agent.name, self.agent.soldiers_count, result))
+                        logger.info("{} got {} troops that offer {}: {}".format(self.agent.name, self.agent.soldiers_count, result, service))
                         self.agent.bdi.set_belief(service, tuple(result))
                     else:
                         self.agent.bdi.set_belief(service, 0)
@@ -441,6 +441,10 @@ class BDITroop(AbstractAgent, BDIAgent):
             if self.agent.service_types is not None:
                 for service in self.agent.service_types:
                     self.agent.register_service(str(service))
+            if self.agent.team == TEAM_ALLIED:
+                self.agent.register_service("allied")
+            else:
+                self.agent.register_service("axis")
 
             msg = Message(to=self.agent.manager)
             msg.set_metadata(PERFORMATIVE, PERFORMATIVE_INIT)
@@ -452,8 +456,6 @@ class BDITroop(AbstractAgent, BDIAgent):
     class MoveBehaviour(PeriodicBehaviour):
 
         async def run(self):
-            current_time = time.time()
-
             if len(self.agent.destinations) > 0:
                 absx = abs(self.agent.destinations[0][0] - self.agent.movement.position.x)
                 absz = abs(self.agent.destinations[0][1] - self.agent.movement.position.z)

@@ -13,6 +13,8 @@ import click
 from spade import quit_spade
 from spade.container import Container
 
+from . import dump_battle
+from . import replay_match
 from . import canvasviewer
 from . import textviewer
 from .bdifieldop import BDIFieldOp
@@ -53,7 +55,7 @@ def cli():
               type=float)
 @click.option("--port", default=8001, help="Port to connect with renders (default=8001).", type=int)
 def manager(jid, password, num_players, map_name, map_path, service_jid, service_password, match_time, fps, port):
-    """Console script for running the manager."""
+    """Run the manager which controls the game."""
     click.echo("Running manager agent {}".format(jid))
 
     manager_agent = Manager(players=int(num_players), name=jid, passwd=password, map_name=map_name, map_path=map_path,
@@ -80,7 +82,7 @@ def manager(jid, password, num_players, map_name, map_path, service_jid, service
               type=click.Path(exists=True))
 @click.option('-mp', "--map-path", "map_path", default=None, help="The path to your custom maps directory.")
 def run(game, map_path):
-    """Console script for running a JSON game file."""
+    """Run a JSON game file with the players definition."""
     try:
         with open(game) as f:
             config = json.load(f)
@@ -168,6 +170,7 @@ def create_troops(troop, host, manager_jid, service_jid, map_path, team):
 @click.option('--maps', default=None, help="The path to your custom maps directory.")
 @click.option('--text', is_flag=True, help="Use the curses text render.")
 def render(ip, port, maps, text):
+    """Show the render to visualize a game."""
     if text:
         textviewer.main(address=ip, port=port, maps=maps)
     else:
@@ -175,9 +178,29 @@ def render(ip, port, maps, text):
 
 
 @cli.command()
+@click.option("--ip", default="localhost", help="Manager's address to connect the dumper (default=localhost).",
+              type=str)
+@click.option("--port", default=8001, help="Manager's port to connect the dumper (default=8001).", type=int)
+@click.option('--log', default="/tmp/tv.log", help="File to save the game.")
+def dump(ip, port, log):
+    """Dump a game play to a file, in order to be replayed later."""
+    dump_battle.main(address=ip, port=port, log=log)
+
+
+@cli.command()
+@click.option("-g", "--game", help="The file that contains the battle to visualize.", type=click.Path(exists=True))
+@click.option('-f', "--fps", default=0.033, help="Frame rate speed to replay the game in seconds per frame.", type=float)
+@click.option('--maps', default=None, help="The path to your custom maps directory.")
+def replay(game, fps, maps):
+    """Replay a game play from a file."""
+    replay_match.main(game_file=game, fps=fps, maps_path=maps)
+
+
+@cli.command()
 @click.argument('subcommand')
 @click.pass_context
 def help(ctx, subcommand):
+    """Show help about the other commands."""
     subcommand_obj = cli.get_command(ctx, subcommand)
     if subcommand_obj is None:
         click.echo("I don't know that command.")

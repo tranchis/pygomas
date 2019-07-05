@@ -269,7 +269,7 @@ def loadMap(path):
     cost.close()
 
 
-def main(game_file, fps):
+def main(game_file, fps, maps_path):
     global screen
     global font
 
@@ -277,7 +277,13 @@ def main(game_file, fps):
     with open(game_file, "r") as rfile:
         game = rfile.read()
     game = game.split("\nSEP\n")
-    map_path = game.pop(0)
+    map_name = game.pop(0)
+
+    if maps_path is not None:
+        path = f"{maps_path}{os.sep}{map_name}{os.sep}{map_name}"
+    else:
+        this_dir, _ = os.path.split(__file__)
+        path = f"{this_dir}{os.sep}maps{os.sep}{map_name}{os.sep}{map_name}"
 
     # Init pygame
     pygame.init()
@@ -287,11 +293,12 @@ def main(game_file, fps):
     size = [map_width, map_height]
     screen = pygame.display.set_mode(size)
 
-    loadMap(map_path)
+    loadMap(path)
     try:
         for data in game:
-            agl_parse(data)
-            draw2()
+            if len(data) > 0:
+                agl_parse(data)
+                draw2()
             time.sleep(fps)
 
     except Exception as e:
@@ -309,6 +316,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--game', default=None, help="The file that contains the battle to visualize")
     parser.add_argument('--fps', default=0.033, help="Frame rate speed to visualize the game in seconds per frame", type=float)
+    parser.add_argument('--maps', default=None, help="The path to your custom maps directory.", type=str)
     args = parser.parse_args()
-    main(args.game, args.fps)
+    main(args.game, args.fps, args.maps)
     sys.exit(0)

@@ -7,9 +7,7 @@ import os
 import traceback
 
 
-def main(address="localhost", port=8001, maps=None, log="/tmp/tv.log"):
-    maps_path = maps
-
+def main(address="localhost", port=8001, log="/tmp/tv.log"):
     f = open(log, "w")
 
     try:
@@ -36,12 +34,7 @@ def main(address="localhost", port=8001, maps=None, log="/tmp/tv.log"):
                 elif "MAP" in data[0:5]:
                     p = data.split()
                     map_name = p[2]
-                    if maps_path is not None:
-                        path = f"{maps_path}{os.sep}{map_name}{os.sep}{map_name}"
-                    else:
-                        this_dir, _ = os.path.split(__file__)
-                        path = f"{this_dir}{os.sep}maps{os.sep}{map_name}{os.sep}{map_name}"
-                    f.write(path)
+                    f.write(map_name)
                     f.write("\nSEP\n")
                 elif "AGL" in data[0:5]:
                     f.write(data)
@@ -73,10 +66,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--ip', default="localhost", help="Manager's address to connect the dumper")
     parser.add_argument('--port', default=8001, help="Manager's port to connect the dumper")
-    parser.add_argument('--maps', default=None, help="The path to your custom maps directory")
     parser.add_argument('--log', default="/tmp/tv.log", help="File to save the game")
 
     args = parser.parse_args()
 
-    main(args.ip, args.port, args.maps, args.log)
+    main(args.ip, args.port, args.log)
     sys.exit(0)

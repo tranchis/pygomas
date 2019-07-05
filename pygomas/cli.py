@@ -13,6 +13,7 @@ import click
 from spade import quit_spade
 from spade.container import Container
 
+from . import dump_battle
 from . import canvasviewer
 from . import textviewer
 from .bdifieldop import BDIFieldOp
@@ -172,6 +173,16 @@ def render(ip, port, maps, text):
         textviewer.main(address=ip, port=port, maps=maps)
     else:
         canvasviewer.main(address=ip, port=port, maps=maps)
+
+
+@cli.command()
+@click.option("--ip", default="localhost", help="Manager's address to connect the dumper (default=localhost).",
+              type=str)
+@click.option("--port", default=8001, help="Manager's port to connect the dumper (default=8001).", type=int)
+@click.option('--maps', default=None, help="The path to your custom maps directory.")
+@click.option('--log', default="/tmp/tv.log", help="File to save the game")
+def dump(ip, port, maps, log):
+    dump_battle.main(address=ip, port=port, maps=maps, log=log)
 
 
 @cli.command()

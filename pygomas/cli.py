@@ -14,6 +14,7 @@ from spade import quit_spade
 from spade.container import Container
 
 from . import dump_battle
+from . import replay_match
 from . import canvasviewer
 from . import textviewer
 from .bdifieldop import BDIFieldOp
@@ -183,6 +184,14 @@ def render(ip, port, maps, text):
 @click.option('--log', default="/tmp/tv.log", help="File to save the game")
 def dump(ip, port, maps, log):
     dump_battle.main(address=ip, port=port, maps=maps, log=log)
+
+
+@cli.command()
+@click.option("-g", "--game", help="The file that contains the battle to visualize",
+              type=click.Path(exists=True))
+@click.option('-f', "--fps", default=0.033, help="Frame rate speed to replay the game in seconds per frame", type=float)
+def replay(game, fps):
+    replay_match.main(game_file=game, fps=fps)
 
 
 @cli.command()

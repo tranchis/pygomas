@@ -12,6 +12,8 @@ import pygomas.ammopack
 import pygomas.medicpack
 import pygomas.objpack
 
+__version__ = '0.1.0'
+
 MIN_POWER = 0
 MAX_POWER = 100
 POWER_UNIT = 25

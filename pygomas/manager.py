@@ -262,16 +262,16 @@ class Manager(AbstractAgent, Agent):
             async def run(self):
                 try:
                     #buffer = defaultdict(list)
-                    #while self.mailbox_size() > 0:
+                    # while self.mailbox_size() > 0:
                     #    msg = await self.receive(timeout=0)
                     #    content = json.loads(msg.body)
                     #    buffer[content[NAME]].append(content)
                     msg = await self.receive(timeout=LONG_RECEIVE_WAIT)
                     if self.mailbox_size() > self.agent.max_total_agents + 1:
                         logger.error("TOO MUCH PENDING MSG: {}".format(self.mailbox_size()))
-                    #for id_agent, msgs in buffer.items():
+                    # for id_agent, msgs in buffer.items():
                     if msg:
-                    #    for content in msgs:
+                        #    for content in msgs:
                         content = json.loads(msg.body)
                         id_agent = content[NAME]
                         self.agent.agents[id_agent].locate.position.x = int(content[X])
@@ -330,7 +330,7 @@ class Manager(AbstractAgent, Agent):
                     if victim is None:
                         return
 
-                    damage = 3 if shooter.type == CLASS_SOLDIER else 2
+                    damage = 2 if shooter.type == CLASS_SOLDIER else 1
                     damage *= shots
                     victim.health -= damage
                     logger.info("Victim hit: {}".format(victim))
@@ -454,7 +454,7 @@ class Manager(AbstractAgent, Agent):
                     logger.success("\n\nManager:  GAME FINISHED!! Winner Team: AXIS!\n")
                     await self.agent.inform_game_finished("AXIS!", self)
 
-        self.add_behaviour(CheckAlliedHealthBehaviour(20*self.fps))
+        self.add_behaviour(CheckAlliedHealthBehaviour(20 * self.fps))
 
     async def check_objects_at_step(self, id_agent, behaviour):
 

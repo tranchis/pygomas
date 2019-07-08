@@ -135,13 +135,13 @@ class BDITroop(AbstractAgent, BDIAgent):
                 logger.success("Control point generated {}".format((x, y, z)))
             return (tuple(control_points))
 
-        @troop_actions.add(".goto", 3)
+        @troop_actions.add(".goto", 1)
         def _goto(agent, term, intention):
             """Sets the PyGomas destination. Expects args to be x,y,z"""
             args = asp.grounded(term.args, intention.scope)
-            self.movement.destination.x = args[0]
-            self.movement.destination.y = args[1]
-            self.movement.destination.z = args[2]
+            self.movement.destination.x = args[0][0]
+            self.movement.destination.y = args[0][1]
+            self.movement.destination.z = args[0][2]
             start = (self.movement.position.x, self.movement.position.z)
             end = (self.movement.destination.x, self.movement.destination.z)
             path = self.path_finder.get_path(start, end)
@@ -149,10 +149,9 @@ class BDITroop(AbstractAgent, BDIAgent):
                 self.destinations = deque(path)
                 x, z = path[0]
                 self.movement.calculate_new_orientation(Vector3D(x=x, y=0, z=z))
-                self.bdi.set_belief(DESTINATION, args[0], args[1], args[2])
-                self.bdi.set_belief(VELOCITY, self.movement.velocity.x, self.movement.velocity.y,
-                                    self.movement.velocity.z)
-                self.bdi.set_belief(HEADING, self.movement.heading.x, self.movement.heading.y, self.movement.heading.z)
+                self.bdi.set_belief(DESTINATION, tuple((args[0][0], args[0][1], args[0][2])))
+                self.bdi.set_belief(VELOCITY, tuple((self.movement.velocity.x, self.movement.velocity.y, self.movement.velocity.z)))
+                self.bdi.set_belief(HEADING, tuple((self.movement.heading.x, self.movement.heading.y, self.movement.heading.z)))
             else:
                 self.destinations = deque()
                 self.movement.destination.x = self.movement.position.x
@@ -160,7 +159,7 @@ class BDITroop(AbstractAgent, BDIAgent):
                 self.movement.destination.z = self.movement.position.z
             yield
 
-        @troop_actions.add(".shoot", 4)
+        @troop_actions.add(".shoot", 2)
         def _shoot(agent, term, intention):
             """
              The agent shoots in the direction at which he is aiming.
@@ -171,16 +170,16 @@ class BDITroop(AbstractAgent, BDIAgent):
              :param shot_num: number of shots
              :param X,Y,Z: position at which to shoot
              :type shot_num: int
-             :type X,Y,Z: float
+             :type X,Y,Z: list of float
              :returns True (shot done) | False (cannot shoot, has no ammo)
              :rtype bool
              """
             args = asp.grounded(term.args, intention.scope)
 
             shot_num = args[0]
-            victim_x = args[1]
-            victim_y = args[2]
-            victim_z = args[3]
+            victim_x = args[1][0]
+            victim_y = args[1][1]
+            victim_z = args[1][2]
 
             class ShootBehaviour(OneShotBehaviour):
                 async def run(self):
@@ -249,7 +248,7 @@ class BDITroop(AbstractAgent, BDIAgent):
                         logger.info("{} got {} troops that offer {}: {}".format(self.agent.name, self.agent.soldiers_count, result, service))
                         self.agent.bdi.set_belief(service, tuple(result))
                     else:
-                        self.agent.bdi.set_belief(service, 0)
+                        self.agent.bdi.set_belief(service, tuple())
 
             t = Template()
             t.set_metadata(PERFORMATIVE, PERFORMATIVE_GENERIC_SERVICE)
@@ -278,7 +277,7 @@ class BDITroop(AbstractAgent, BDIAgent):
                         logger.info("{} got {} medics: {}".format(self.agent.name, self.agent.medics_count, result))
                         self.agent.bdi.set_belief(MY_MEDICS, tuple(result))
                     else:
-                        self.agent.bdi.set_belief(MY_MEDICS, 0)
+                        self.agent.bdi.set_belief(MY_MEDICS, tuple())
                         self.agent.medics_count = 0
 
             t = Template()
@@ -308,7 +307,7 @@ class BDITroop(AbstractAgent, BDIAgent):
                         logger.info("{} got {} fieldops: {}".format(self.agent.name, self.agent.fieldops_count, result))
                         self.agent.bdi.set_belief(MY_FIELDOPS, tuple(result))
                     else:
-                        self.agent.bdi.set_belief(MY_FIELDOPS, 0)
+                        self.agent.bdi.set_belief(MY_FIELDOPS, tuple())
                         self.agent.fieldops_count = 0
 
             t = Template()
@@ -338,7 +337,7 @@ class BDITroop(AbstractAgent, BDIAgent):
                         logger.info("{} got {} fieldops: {}".format(self.agent.name, self.agent.soldiers_count, result))
                         self.agent.bdi.set_belief(MY_BACKUPS, tuple(result))
                     else:
-                        self.agent.bdi.set_belief(MY_BACKUPS, 0)
+                        self.agent.bdi.set_belief(MY_BACKUPS, tuple())
                         self.agent.soldiers_count = 0
 
             t = Template()
@@ -369,7 +368,7 @@ class BDITroop(AbstractAgent, BDIAgent):
             norm = self.movement.heading.length()
             self.movement.heading.x = norm * cos(atan_angle)
             self.movement.heading.z = norm * sin(atan_angle)
-            self.bdi.set_belief(HEADING, self.movement.heading.x, self.movement.heading.y, self.movement.heading.z)
+            self.bdi.set_belief(HEADING, tuple((self.movement.heading.x, self.movement.heading.y, self.movement.heading.z)))
             yield
 
         @troop_actions.add(".stop", 0)
@@ -451,10 +450,10 @@ class BDITroop(AbstractAgent, BDIAgent):
                 if (absx < PRECISION_X) and (absz < PRECISION_Z):
                     x, z = self.agent.destinations.popleft()
                     self.agent.movement.position = Vector3D(x=x, y=0, z=z)
-                    self.agent.bdi.set_belief(POSITION, self.agent.movement.position.x, self.agent.movement.position.y, self.agent.movement.position.z)
+                    self.agent.bdi.set_belief(POSITION, tuple((self.agent.movement.position.x, self.agent.movement.position.y, self.agent.movement.position.z)))
 
                     if len(self.agent.destinations) == 0:
-                        self.agent.bdi.set_belief(PERFORMATIVE_TARGET_REACHED, self.agent.movement.destination.x, self.agent.movement.destination.y, self.agent.movement.destination.z)
+                        self.agent.bdi.set_belief(PERFORMATIVE_TARGET_REACHED, tuple((self.agent.movement.destination.x, self.agent.movement.destination.y, self.agent.movement.destination.z)))
                     else:
                         x, z = self.agent.destinations[0]
                     self.agent.compare_orientation(x, z)
@@ -507,18 +506,16 @@ class BDITroop(AbstractAgent, BDIAgent):
                              self.agent.map.axis_base.get_init_z())
                     self.agent.bdi.set_belief(NAME, self.agent.name)
                     self.agent.bdi.set_belief(TEAM, self.agent.team)
-                    self.agent.bdi.set_belief(BASE, x, y, z)
-                    self.agent.bdi.set_belief(POSITION, self.agent.movement.position.x, self.agent.movement.position.y,
-                                              self.agent.movement.position.z)
+                    self.agent.bdi.set_belief(BASE, tuple((x, y, z)))
+                    self.agent.bdi.set_belief(POSITION, tuple((self.agent.movement.position.x, self.agent.movement.position.y, self.agent.movement.position.z)))
                     self.agent.bdi.set_belief(HEALTH, self.agent.health)
                     self.agent.bdi.set_belief(AMMO, self.agent.ammo)
                     self.agent.bdi.set_belief(THRESHOLD_HEALTH, self.agent.threshold.health)
                     self.agent.bdi.set_belief(THRESHOLD_AMMO, self.agent.threshold.ammo)
                     self.agent.bdi.set_belief(THRESHOLD_AIM, self.agent.threshold.aim)
                     self.agent.bdi.set_belief(THRESHOLD_SHOTS, self.agent.threshold.shot)
-                    self.agent.bdi.set_belief(FLAG, content[X], content[Y], content[Z])
-                logger.info(
-                    "Team: {}, agent: {}, has its objective at {}".format(self.agent.team, self.agent.name, content))
+                    self.agent.bdi.set_belief(FLAG, tuple((content[X], content[Y], content[Z])))
+                logger.info("Team: {}, agent: {}, has its objective at {}".format(self.agent.team, self.agent.name, content))
                 self.kill()
 
     # Behaviour to listen to manager if game has finished
@@ -607,16 +604,13 @@ class BDITroop(AbstractAgent, BDIAgent):
                         self.agent.fov_objects.append(s)
                         if s.team == TEAM_NONE:
                             self.agent.bdi.set_belief(PACKS_IN_FOV, idx, int(obj[TYPE]), float(obj[ANGLE]),
-                                                      float(obj[DISTANCE]), int(obj[HEALTH]), float(obj[X]),
-                                                      float(obj[Y]), float(obj[Z]))
+                                                      float(obj[DISTANCE]), int(obj[HEALTH]), tuple((float(obj[X]), float(obj[Y]), float(obj[Z]))))
                         elif s.team == self.agent.team:
                             self.agent.bdi.set_belief(FRIENDS_IN_FOV, idx, int(obj[TYPE]), float(obj[ANGLE]),
-                                                      float(obj[DISTANCE]), int(obj[HEALTH]), float(obj[X]),
-                                                      float(obj[Y]), float(obj[Z]))
+                                                      float(obj[DISTANCE]), int(obj[HEALTH]), tuple((float(obj[X]), float(obj[Y]), float(obj[Z]))))
                         else:
                             self.agent.bdi.set_belief(ENEMIES_IN_FOV, idx, int(obj[TYPE]), float(obj[ANGLE]),
-                                                      float(obj[DISTANCE]), int(obj[HEALTH]), float(obj[X]),
-                                                      float(obj[Y]), float(obj[Z]))
+                                                      float(obj[DISTANCE]), int(obj[HEALTH]), tuple((float(obj[X]), float(obj[Y]), float(obj[Z]))))
 
             except ZeroDivisionError:
                 pass
@@ -665,7 +659,7 @@ class BDITroop(AbstractAgent, BDIAgent):
         else:
             if self.movement.position != new_position:
                 self.movement.position = Vector3D(new_position)
-                self.bdi.set_belief(POSITION, self.movement.position.x, self.movement.position.y, self.movement.position.z)
+                self.bdi.set_belief(POSITION, tuple((self.movement.position.x, self.movement.position.y, self.movement.position.z)))
             x, z = self.destinations[0]
             self.compare_orientation(x, z)
             return MV_OK
@@ -675,9 +669,9 @@ class BDITroop(AbstractAgent, BDIAgent):
         last_heading = Vector3D(self.movement.heading)
         self.movement.calculate_new_orientation(Vector3D(x=x, y=0, z=z))
         if last_velocity != self.movement.velocity:
-            self.bdi.set_belief(VELOCITY, self.movement.velocity.x, self.movement.velocity.y, self.movement.velocity.z)
+            self.bdi.set_belief(VELOCITY, tuple((self.movement.velocity.x, self.movement.velocity.y, self.movement.velocity.z)))
         if last_heading != self.movement.heading:
-            self.bdi.set_belief(HEADING, self.movement.heading.x, self.movement.heading.y, self.movement.heading.z)
+            self.bdi.set_belief(HEADING, tuple((self.movement.heading.x, self.movement.heading.y, self.movement.heading.z)))
 
     def pack_taken(self, pack_type, quantity):
         if pack_type == PACK_MEDICPACK:

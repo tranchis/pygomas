@@ -1,12 +1,9 @@
 //TEAM_AXIS
 
-+flag (X,Y,Z): team(200) 
++flag (F): team(200) 
   <-
-  .create_control_points(X,Y,Z,25,5);
-  .wait(5000).
-
-+control_points(C) 
-  <- 
+  .create_control_points(F,25,5,C);
+  .wait(5000);
   .length(C,L);
   +total_control_points(L);
   +patrolling;
@@ -14,20 +11,17 @@
   .print("Got control points").
 
 
-+target_reached(X,Y,Z): patrolling & team(200) 
++target_reached(T): patrolling & team(200) 
   <- 
   ?patroll_point(P);
   -+patroll_point(P+1);
-  -target_reached(X,Y,Z).
+  -target_reached(T).
 
 +patroll_point(P): total_control_points(T) & P<T 
   <-
   ?control_points(C);
   .nth(P,C,A);
-  .nth(0,A,X);
-  .nth(1,A,Y);
-  .nth(2,A,Z);
-  .goto(X,Y,Z).
+  .goto(A).
 
 +patroll_point(P): total_control_points(T) & P==T
   <-
@@ -37,16 +31,33 @@
 
 //TEAM_ALLIED 
 
-+flag (X,Y,Z): team(100) 
++flag (F): team(100) 
   <-
-  .goto(X,Y,Z).
+  .goto(F).
 
 +flag_taken: team(100) 
   <-
   .print("In ASL, TEAM_ALLIED flag_taken");
-  ?base(X,Y,Z);
-  .goto(X,Y,Z).
+  ?base(B);
+  +returning;
+  .goto(B);
+  -exploring.
 
-+enemies_in_fov(ID,Type,Angle,Distance,Health,X,Y,Z)
++heading(H): exploring
+  <-
+  .wait(2000);
+  .turn(0.375).
+
++heading(H): returning
+  <-
+  .print("returning").
+
++target_reached(T): team(100)
   <- 
-  .shoot(3,X,Y,Z).
+  .print("target_reached");
+  +exploring;
+  .turn(0.375).
+
++enemies_in_fov(ID,Type,Angle,Distance,Health,Position)
+  <- 
+  .shoot(3,Position).

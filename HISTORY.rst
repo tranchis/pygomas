@@ -2,6 +2,12 @@
 History
 =======
 
+0.2.1 (2019-07-08)
+------------------
+
+* Change the .create_control_points from action to function.
+* Change all coordinate actions and beliefs to tuple of coordinates.
+
 0.2.0 (2019-07-05)
 ------------------
 

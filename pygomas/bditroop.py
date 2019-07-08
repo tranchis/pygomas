@@ -60,12 +60,6 @@ class BDITroop(AbstractAgent, BDIAgent):
         # Variable indicating if this agent is carrying the objective pack (flag)
         self.is_objective_carried = False
 
-        # Array of points used in patrolling task
-        self.control_points = []
-
-        # Current position in array m_ControlPoints
-        self.control_points_index = 0
-
         # List of objects in the agent's Field Of Vision
         self.fov_objects = []
 
@@ -108,6 +102,39 @@ class BDITroop(AbstractAgent, BDIAgent):
         else:
             troop_actions = asp.Actions(asp_action)
 
+        @troop_actions.add_function(".create_control_points", (tuple, float, int))
+        def _create_control_points(center, radius, n):
+            """
+            Calculates an array of positions for patrolling.
+            When this action is called, it creates an array of n random positions.
+            Expects args to be [x,y,z],radius and number of points
+            """
+
+            center_x = center[0]
+            center_y = center[1]
+            center_z = center[2]
+            control_points = []
+            for i in range(n):
+                while True:
+                    x = center_x + ((radius / 2) - (random.random() * radius))
+                    x = max(0, x)
+                    x = int(min(self.map.size_x - 1, x))
+                    y = 0
+                    z = center_z + ((radius / 2) - (random.random() * radius))
+                    z = max(0, z)
+                    z = int(min(self.map.size_z - 1, z))
+
+                    if self.check_static_position(x, z):
+                        if len(control_points):
+                            if (x, y, z) != control_points[i - 1]:
+                                control_points.append((x, y, z))
+                                break
+                        else:
+                            control_points.append((x, y, z))
+                            break
+                logger.success("Control point generated {}".format((x, y, z)))
+            return (tuple(control_points))
+
         @troop_actions.add(".goto", 3)
         def _goto(agent, term, intention):
             """Sets the PyGomas destination. Expects args to be x,y,z"""
@@ -131,44 +158,6 @@ class BDITroop(AbstractAgent, BDIAgent):
                 self.movement.destination.x = self.movement.position.x
                 self.movement.destination.y = self.movement.position.y
                 self.movement.destination.z = self.movement.position.z
-            yield
-
-        @troop_actions.add(".create_control_points", 5)
-        def _create_control_points(agent, term, intention):
-            """
-            Calculates an array of positions for patrolling.
-            When this action is called, it creates an array of n random positions.
-            Expects args to be x,y,z,radius and number of points
-            """
-            args = asp.grounded(term.args, intention.scope)
-
-            center_x = args[0]
-            center_y = args[1]
-            center_z = args[2]
-            radius = args[3]
-            n = int(args[4])
-
-            self.control_points = []  # Vector3D [iMaxCP]
-            for i in range(n):
-                while True:
-                    x = center_x + ((radius / 2) - (random.random() * radius))
-                    x = max(0, x)
-                    x = int(min(self.map.size_x - 1, x))
-                    y = 0
-                    z = center_z + ((radius / 2) - (random.random() * radius))
-                    z = max(0, z)
-                    z = int(min(self.map.size_z - 1, z))
-
-                    if self.check_static_position(x, z):
-                        if len(self.control_points):
-                            if (x, y, z) != self.control_points[i - 1]:
-                                self.control_points.append((x, y, z))
-                                break
-                        else:
-                            self.control_points.append((x, y, z))
-                            break
-                logger.success("Control point generated {}".format((x, y, z)))
-            self.bdi.set_belief(CONTROL_POINTS, tuple(self.control_points))
             yield
 
         @troop_actions.add(".shoot", 4)

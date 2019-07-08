@@ -70,7 +70,6 @@ TEAM_AXIS: int = 200
 # Set of beliefs
 AMMO: str = "ammo"
 BASE: str = "base"
-CONTROL_POINTS: str = "control_points"
 DESTINATION: str = "destination"
 ENEMIES_IN_FOV: str = "enemies_in_fov"
 FRIENDS_IN_FOV: str = "friends_in_fov"

@@ -3,7 +3,6 @@ import datetime
 import json
 import time
 import math
-from collections import defaultdict
 
 from loguru import logger
 

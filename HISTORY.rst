@@ -2,10 +2,16 @@
 History
 =======
 
+0.2.3 (2019-07-10)
+------------------
+
+* Upgrade default ASLs.
+* Agent name in JSON file is no longer required.
+
 0.2.2 (2019-07-10)
 ------------------
 
-* Change all coordinate actions and beliefs to tuple of coordinates
+* Change all coordinate actions and beliefs to tuple of coordinates.
 * Update spade-bdi.
 
 0.2.1 (2019-07-08)

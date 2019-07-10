@@ -2,6 +2,9 @@
 
 """Console script for pygomas."""
 import os
+import random
+import string
+
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import asyncio
 import json
@@ -144,18 +147,19 @@ def create_troops(troop, host, manager_jid, service_jid, map_path, team):
         "BDIFieldOp": asl_path + 'bdifieldop.asl'
     }
     assert "rank" in troop, "You must provide a rank for every troop"
-    assert "name" in troop, "You must provide a name for every troop"
     assert "password" in troop, "You must provide a password for every troop"
+
+    name = troop["name"] if "name" in troop else ''.join(random.choice(string.ascii_lowercase) for _ in range(10))
 
     amount = troop["amount"] if "amount" in troop else 1
     new_troops = list()
     _class = load_class(troop["rank"])
     for i in range(amount):
-        jid = "{}_{}@{}".format(troop["name"], i, host)
+        jid = "{}_{}@{}".format(name, i, host)
         try:
             agent_asl = troop["asl"] if "asl" in troop else asl[troop["rank"]]
         except KeyError:
-            click.secho(f"No valid ASL file provided for agent {troop['name']}", fg="red", err=True)
+            click.secho(f"No valid ASL file provided for agent {name}", fg="red", err=True)
             raise click.Abort()
 
         new_troop = _class(jid=jid, passwd=troop["password"], asl=agent_asl, team=team, map_path=map_path,

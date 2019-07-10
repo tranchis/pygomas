@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """Console script for pygomas."""
+import os
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import asyncio
 import json
-import os
 import sys
 import time
 from importlib import import_module

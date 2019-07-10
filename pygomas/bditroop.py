@@ -245,13 +245,13 @@ class BDITroop(AbstractAgent, BDIAgent):
                     result = await self.receive(timeout=LONG_RECEIVE_WAIT)
                     if result:
                         result = json.loads(result.body)
-                        logger.info("{} got {} troops that offer {}: {}".format(self.agent.name, self.agent.soldiers_count, result, service))
+                        logger.info("{} got {} troops that offer {} service: {}".format(self.agent.name, len(result), service, result))
                         self.agent.bdi.set_belief(service, tuple(result))
                     else:
                         self.agent.bdi.set_belief(service, tuple())
 
             t = Template()
-            t.set_metadata(PERFORMATIVE, PERFORMATIVE_GENERIC_SERVICE)
+            t.set_metadata(PERFORMATIVE, service)
             b = GetServiceBehaviour()
             self.add_behaviour(b, t)
             yield

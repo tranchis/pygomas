@@ -7,7 +7,7 @@ from spade.behaviour import CyclicBehaviour
 from spade.template import Template
 
 from .agent import LONG_RECEIVE_WAIT
-from .config import PERFORMATIVE_GENERIC_SERVICE, PERFORMATIVE_CFM, PERFORMATIVE_CFB, PERFORMATIVE_CFA, AMMO_SERVICE, BACKUP_SERVICE, MEDIC_SERVICE, \
+from .config import PERFORMATIVE_CFM, PERFORMATIVE_CFB, PERFORMATIVE_CFA, AMMO_SERVICE, BACKUP_SERVICE, MEDIC_SERVICE, \
     PERFORMATIVE, PERFORMATIVE_GET, PERFORMATIVE_REGISTER_SERVICE, PERFORMATIVE_DEREGISTER_SERVICE, \
     PERFORMATIVE_DEREGISTER_AGENT, TEAM_AXIS, TEAM_ALLIED, TEAM, NAME, TEAM_NONE
 
@@ -128,6 +128,6 @@ class GetServiceBehaviour(CyclicBehaviour):
             elif body[NAME] == BACKUP_SERVICE:
                 reply.set_metadata(PERFORMATIVE, PERFORMATIVE_CFB)
             else:
-                reply.set_metadata(PERFORMATIVE, PERFORMATIVE_GENERIC_SERVICE)
+                reply.set_metadata(PERFORMATIVE, body[NAME])
             await self.send(reply)
             logger.info("Services sent: {}".format(reply.body))

@@ -3,6 +3,7 @@
 +flag (F): team(200) 
   <-
   .create_control_points(F,25,5,C);
+  +control_points(C);
   .wait(5000);
   .length(C,L);
   +total_control_points(L);

@@ -12,7 +12,7 @@ import pygomas.ammopack
 import pygomas.medicpack
 import pygomas.objpack
 
-__version__ = '0.2.2'
+__version__ = '0.2.3'
 
 MIN_POWER = 0
 MAX_POWER = 100

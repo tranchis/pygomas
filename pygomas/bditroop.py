@@ -364,6 +364,29 @@ class BDITroop(AbstractAgent, BDIAgent):
             self.add_behaviour(b, t)
             yield
 
+        @troop_actions.add(".look_at", 1)
+        def _look_at(agent, term, intention):
+            """
+            Look at a point.
+
+            :param position: Point to look at.
+            :type position: tuple (x,y,z)
+
+            """
+
+            args = asp.grounded(term.args, intention.scope)
+            point = args[0]
+
+            point_x = point[0]
+            point_z = point[2]
+
+            look_at_z, look_at_x = (point_z - self.movement.position.z, point_x - self.movement.position.x)
+
+            self.movement.heading = Vector3D(x=look_at_x, y=0, z=look_at_z)
+            self.movement.heading.normalize()
+            self.bdi.set_belief(HEADING, tuple((self.movement.heading.x, self.movement.heading.y, self.movement.heading.z)))
+            yield
+
         @troop_actions.add(".turn", 1)
         def _turn(agent, term, intention):
             """

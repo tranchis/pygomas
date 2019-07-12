@@ -135,9 +135,27 @@ class BDITroop(AbstractAgent, BDIAgent):
                 logger.success("Control point generated {}".format((x, y, z)))
             return (tuple(control_points))
 
+        @troop_actions.add_function(".shuffle", (tuple))
+        def _shuffle(a_tuple):
+            """
+            Randomly shuffle a tuple
+            """
+            a_list = [i for i in a_tuple]
+            random.shuffle(a_list)
+            return (tuple(a_list))
+
+        @troop_actions.add_function(".random_shift", (tuple))
+        def _random_shift(a_tuple):
+            """
+            Randomly shift a tuple
+            """
+            rotated = deque(a_tuple)
+            rotated.rotate(random.randint(-10, 10))
+            return (tuple(rotated))
+
         @troop_actions.add(".goto", 1)
         def _goto(agent, term, intention):
-            """Sets the PyGomas destination. Expects args to be x,y,z"""
+            """Sets the PyGomas destination. Expects args to be (x,y,z)"""
             args = asp.grounded(term.args, intention.scope)
             self.movement.destination.x = args[0][0]
             self.movement.destination.y = args[0][1]

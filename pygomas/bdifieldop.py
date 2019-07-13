@@ -56,10 +56,9 @@ class BDIFieldOp(BDITroop):
             while not self.check_static_position(x, z):
                 x = self.movement.position.x + random.random() * BDIFieldOp.ammo_pack_offset
                 z = self.movement.position.z + random.random() * BDIFieldOp.ammo_pack_offset
-            team = self.team
 
             try:
-                pack = AmmoPack(name=name, passwd="secret", x=x, z=z, team=team, manager_jid=self.manager)
+                pack = AmmoPack(name=name, passwd="secret", x=x, z=z, manager_jid=self.manager)
                 await pack.start()
             except Exception as e:
                 logger.warning("FieldOps {} could not create AmmoPack: {}".format(self.name, e))

@@ -352,7 +352,7 @@ class BDITroop(AbstractAgent, BDIAgent):
                     if result:
                         result = json.loads(result.body)
                         self.agent.soldiers_count = len(result)
-                        logger.info("{} got {} fieldops: {}".format(self.agent.name, self.agent.soldiers_count, result))
+                        logger.info("{} got {} soldiers: {}".format(self.agent.name, self.agent.soldiers_count, result))
                         self.agent.bdi.set_belief(MY_BACKUPS, tuple(result))
                     else:
                         self.agent.bdi.set_belief(MY_BACKUPS, tuple())
@@ -547,6 +547,7 @@ class BDITroop(AbstractAgent, BDIAgent):
                              self.agent.map.axis_base.get_init_z())
                     self.agent.bdi.set_belief(NAME, self.agent.name)
                     self.agent.bdi.set_belief(TEAM, self.agent.team)
+                    self.agent.bdi.set_belief(CLASS, self.agent.eclass)
                     self.agent.bdi.set_belief(BASE, tuple((x, y, z)))
                     self.agent.bdi.set_belief(POSITION, tuple((self.agent.movement.position.x, self.agent.movement.position.y, self.agent.movement.position.z)))
                     self.agent.bdi.set_belief(HEALTH, self.agent.health)

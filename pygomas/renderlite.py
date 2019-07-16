@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: UTF8 -*-
 import argparse
+import json
 import socket
 import sys
 import os
@@ -63,6 +64,7 @@ class Render(object):
             self._main()
 
     def _main(self, stdscr=None):
+        error = False
         if not self.text:
             # Init pygame
             pygame.init()
@@ -100,7 +102,10 @@ class Render(object):
                     elif "MAP" in data[0:5]:
                         p = data.split()
                         mapname = p[2]
-                        self.load_map(mapname)
+                        result = self.load_map(mapname)
+                        if result["status"] != "ok":
+                            error = result["value"]
+                            self.quit = True
                     elif "AGL" in data[0:5]:
                         self.agl_parse(data)
                     elif "TIM" in data[0:5]:
@@ -116,10 +121,8 @@ class Render(object):
                         self.textdraw(stdscr)
 
         except Exception as e:
-            logger.error("Exception", str(e))
-            logger.error('-' * 60)
-            traceback.print_exc(file=sys.stdout)
-            logger.error('-' * 60)
+            tb = traceback.extract_stack()
+            error = str(e) + "\n" + "\n".join([repr(i) for i in tb])
 
         finally:
             logger.info("Closing...")
@@ -132,6 +135,11 @@ class Render(object):
                 # self.stdscr.keypad(False)
                 curses.echo()
                 curses.endwin()
+
+            if error:
+                logger.error('-' * 60)
+                logger.error(str(error))
+                logger.error('-' * 60)
 
     def agl_parse(self, data):
         self.dins = {}
@@ -438,35 +446,49 @@ class Render(object):
             pass
 
     def load_map(self, map_name):
-        if self.maps_path is not None:
-            path = f"{self.maps_path}{os.sep}{map_name}{os.sep}{map_name}"
-        else:
-            this_dir, _ = os.path.split(__file__)
-            path = f"{this_dir}{os.sep}maps{os.sep}{map_name}{os.sep}{map_name}"
+        try:
+            if self.maps_path is not None:
+                path = f"{self.maps_path}{os.sep}{map_name}{os.sep}"
+            else:
+                this_dir, _ = os.path.split(__file__)
+                path = f"{this_dir}{os.sep}maps{os.sep}{map_name}{os.sep}"
 
-        mapf = open(f"{path}.txt", "r")
-        cost = open(f"{path}_cost.txt", "r")
+            if os.path.exists(f"{path}{map_name}.json"):
+                with open(f"{path}{map_name}.json") as f:
+                    mapf = json.load(f)
+                    self.objective_x = int(mapf["objective"][0])
+                    self.objective_y = int(mapf["objective"][1])
+                    self.allied_base = mapf["spawn"]["allied"]
+                    self.axis_base = mapf["spawn"]["axis"]
+                    cost = open(f"{path}{mapf['cost_map']['file']}", "r")
 
-        for line in mapf.readlines():
-            if "pGomas_OBJECTIVE" in line:
-                splitted_line = line.split()
-                self.objective_x = copy.copy(int(splitted_line[1]))
-                self.objective_y = copy.copy(int(splitted_line[2]))
-            elif "pGomas_SPAWN_ALLIED" in line:
-                splitted_line = line.split()
-                splitted_line.pop(0)
-                self.allied_base = copy.copy(splitted_line)
-            elif "pGomas_SPAWN_AXIS" in line:
-                splitted_line = line.split()
-                splitted_line.pop(0)
-                self.axis_base = copy.copy(splitted_line)
-        mapf.close()
+            else:
+                mapf = open(f"{path}{map_name}.txt", "r")
+                cost = open(f"{path}{map_name}_cost.txt", "r")
+                for line in mapf.readlines():
+                    if "pGomas_OBJECTIVE" in line:
+                        splitted_line = line.split()
+                        self.objective_x = copy.copy(int(splitted_line[1]))
+                        self.objective_y = copy.copy(int(splitted_line[2]))
+                    elif "pGomas_SPAWN_ALLIED" in line:
+                        splitted_line = line.split()
+                        splitted_line.pop(0)
+                        self.allied_base = copy.copy(splitted_line)
+                    elif "pGomas_SPAWN_AXIS" in line:
+                        splitted_line = line.split()
+                        splitted_line.pop(0)
+                        self.axis_base = copy.copy(splitted_line)
+                mapf.close()
 
-        y = 0
-        for line in cost.readlines():
-            self.graph[y] = line.strip("\r\n")
-            y += 1
-        cost.close()
+            y = 0
+            for line in cost.readlines():
+                self.graph[y] = line.strip("\r\n")
+                y += 1
+            cost.close()
+            return {"status": "ok"}
+        except Exception as e:
+            tb = traceback.extract_stack()
+            return {"status": "error", "value": str(e) + "\n" + "\n".join([repr(i) for i in tb])}
 
 
 if __name__ == "__main__":

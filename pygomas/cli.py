@@ -19,8 +19,7 @@ from spade.container import Container
 
 from . import dump_battle
 from . import replay_match
-from . import canvasviewer
-from . import textviewer
+from . import renderlite
 from .bdifieldop import BDIFieldOp
 from .bdimedic import BDIMedic
 from .bdisoldier import BDISoldier
@@ -176,10 +175,8 @@ def create_troops(troop, host, manager_jid, service_jid, map_path, team):
 @click.option('--text', is_flag=True, help="Use the curses text render.")
 def render(ip, port, maps, text):
     """Show the render to visualize a game."""
-    if text:
-        textviewer.main(address=ip, port=port, maps=maps)
-    else:
-        canvasviewer.main(address=ip, port=port, maps=maps)
+    viewer = renderlite.Render(address=ip, port=port, maps=maps, text=text)
+    viewer.main()
 
 
 @cli.command()

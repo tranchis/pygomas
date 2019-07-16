@@ -36,7 +36,7 @@ class Server(object):
         self.loop.run_until_complete(self.server.wait_closed())
 
     def accept_client(self, client_reader, client_writer):
-        logger.info("New Connection")
+        logger.info("New render connection")
         task = asyncio.Task(self.handle_client(client_reader, client_writer))
         self.clients[task] = (client_reader, client_writer, False)
 
@@ -60,12 +60,10 @@ class Server(object):
         logger.info("Preparing Connection to " + str(task))
 
         try:
-            welcome_message = "JGOMAS Render Engine Server v. 0.1.0, {}\n".format(
-                time.asctime()).encode("ASCII")
+            welcome_message = "JGOMAS Render Engine Server v. 0.1.0, {}\n".format(time.asctime()).encode("ASCII")
             writer.write(welcome_message)
             # await writer.drain()
-            logger.info("JGOMAS Render Engine Server v. 0.1.0 (len={})".format(
-                len(welcome_message)))
+            logger.info("pyGOMAS Render Engine Server v. 0.1.0 (len={})".format(len(welcome_message)))
         except Exception as e:
             logger.info("EXCEPTION IN WELCOME MESSAGE")
             logger.info(str(e))
@@ -100,8 +98,7 @@ class Server(object):
 
             elif "QUIT" in data:
                 logger.info("Server: Client quitted")
-                self.send_msg_to_render_engine(
-                    task, TCP_COM, "Server: Connection Closed")
+                self.send_msg_to_render_engine(task, TCP_COM, "Server: Connection Closed")
                 return
             else:
                 # Close connection

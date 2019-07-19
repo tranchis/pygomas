@@ -3,15 +3,23 @@
 import argparse
 import json
 import socket
+import struct
 import sys
 import os
+import time
 import traceback
 import copy
+
+import msgpack
 import pygame
 from pygame import gfxdraw
 import curses
 import math
 from loguru import logger
+
+from .server import MSG_TYPE, MSG_BODY, TCP_AGL, TCP_COM, TCP_MAP, TCP_TIME, TCP_ERR, MSG_AGENTS, MSG_PACKS, \
+    MSG_CONTENT_NAME, MSG_CONTENT_TYPE, MSG_CONTENT_TEAM, MSG_CONTENT_HEALTH, MSG_CONTENT_AMMO, \
+    MSG_CONTENT_CARRYINGFLAG, MSG_CONTENT_POSITION, MSG_CONTENT_HEADING, WELCOME_MSG, READY_MSG, QUIT_MSG, ACCEPT_MSG
 
 
 def chunks(l, n):
@@ -57,9 +65,12 @@ class Render(object):
         self.show_fovs = True
         self.quit = False
 
+        self.fps = list()
+
     def main(self):
         if self.text:
-            curses.wrapper(self._main)
+            # curses.wrapper(self._main)
+            self._main()
         else:
             self._main()
 
@@ -85,44 +96,62 @@ class Render(object):
             self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             if self.s:
                 self.s.connect((self.address, self.port))
-                rfile = self.s.makefile('r', -1)
-                wfile = self.s.makefile('w', 20)
-                data = rfile.readline()
 
-                wfile.write("READY\n")
-                wfile.close()
                 while not self.quit:
-                    data = ""
-                    data = rfile.readline()
-                    if "COM" in data[0:5]:
-                        if "Accepted" in data:
+                    start_time = time.time()
+                    size_of_msg = self.s.recv(4)
+                    if not size_of_msg:
+                        continue
+                    size_of_msg = struct.unpack('>I', size_of_msg)[0]
+
+                    data = bytes()
+                    while len(data) < size_of_msg:
+                        packet = self.s.recv(size_of_msg - len(data))
+                        if not packet:
+                            break
+                        data += packet
+
+                    if len(data) == 0:
+                        continue
+                    data = msgpack.unpackb(data, raw=False)
+
+                    if data[MSG_TYPE] == TCP_COM:
+                        if data[MSG_BODY] == WELCOME_MSG:
+                            msg_to_send = msgpack.packb({MSG_TYPE: TCP_COM, MSG_BODY: READY_MSG}, use_bin_type=True)
+                            size_of_package = len(msg_to_send)
+                            msg = struct.pack('>I', size_of_package) + msg_to_send
+                            self.s.send(msg)
+                        elif data[MSG_BODY] == ACCEPT_MSG:
                             pass
-                        elif "Closed" in data:
+                        elif data[MSG_BODY] == QUIT_MSG:
                             self.quit = True
-                    elif "MAP" in data[0:5]:
-                        p = data.split()
-                        mapname = p[2]
+
+                    elif data[MSG_TYPE] == TCP_MAP:
+                        mapname = data[MSG_BODY]
                         result = self.load_map(mapname)
                         if result["status"] != "ok":
                             error = result["value"]
                             self.quit = True
-                    elif "AGL" in data[0:5]:
-                        self.agl_parse(data)
-                    elif "TIM" in data[0:5]:
+
+                    elif data[MSG_TYPE] == TCP_AGL:
+                        self.agl_parse(data[MSG_BODY])
+                        if not self.text:
+                            self.draw()
+                        else:
+                            self.textdraw(stdscr)
+                        self.fps.append(1/(time.time() - start_time))
+
+                    elif data[MSG_TYPE] == TCP_TIME:
                         pass
-                    elif "ERR" in data[0:5]:
+                    elif data[MSG_TYPE] == TCP_ERR:
                         pass
                     else:
                         # Unknown message type
                         pass
-                    if not self.text:
-                        self.draw()
-                    else:
-                        self.textdraw(stdscr)
 
         except Exception as e:
-            tb = traceback.extract_stack()
-            error = str(e) + "\n" + "\n".join([repr(i) for i in tb])
+            tb = traceback.format_exc()
+            error = str(e) + "\n" + tb
 
         finally:
             logger.info("Closing...")
@@ -135,6 +164,7 @@ class Render(object):
                 # self.stdscr.keypad(False)
                 curses.echo()
                 curses.endwin()
+                pass
 
             if error:
                 logger.error('-' * 60)
@@ -143,28 +173,12 @@ class Render(object):
 
     def agl_parse(self, data):
         self.dins = {}
-        agl = data.split()
-        nagents = int(agl[1])
-        agl = agl[2:]
-        separator = nagents * 15
-        agent_data = agl[:separator]
-        din_data = agl[separator:]
-        for i in range(nagents):
-            self.agents[agent_data[0]] = {"type": agent_data[1], "team": agent_data[2], "health": agent_data[3],
-                                          "ammo": agent_data[4], "carrying": agent_data[5],
-                                          "posx": agent_data[6].strip("(,)"), "posy": agent_data[7].strip("(,)"),
-                                          "posz": agent_data[8].strip("(,)"),
-                                          "angx": agent_data[12].strip("(,)"), "angy": agent_data[13].strip("(,)"),
-                                          "angz": agent_data[14].strip("(,)")}
-            agent_data = agent_data[15:]
 
-        ndin = int(din_data[0])
-        din_data = din_data[1:]
-        for din in range(ndin):
-            self.dins[din_data[0]] = {"type": din_data[1], "posx": din_data[2].strip("(,)"),
-                                      "posy": din_data[3].strip("(,)"),
-                                      "posz": din_data[4].strip("(,)")}
-            din_data = din_data[5:]
+        for agent in data[MSG_AGENTS]:
+            self.agents[agent[MSG_CONTENT_NAME]] = agent
+
+        for pack in data[MSG_PACKS]:
+            self.dins[pack[MSG_CONTENT_NAME]] = pack
 
     def draw(self):
 
@@ -224,62 +238,69 @@ class Render(object):
 
             pygame.draw.rect(self.screen, color, (xpos, ypos, xwidth, ywidth))
 
+        # Draw FPS
+        if len(self.fps) > 5:
+            fps = int(sum(self.fps[-5:])/5)
+            text = self.font.render(str(fps) + " FPS", True, (255, 255, 255))
+            self.screen.blit(text, (1, 1))
+
         # Draw items
-        for i in range(0, len(list(self.dins.items()))):
-            posx = int(float(list(self.dins.items())[i][1]['posx']) * (self.tile_size / 8.0)) + self.xdesp
-            posy = int(float(list(self.dins.items())[i][1]['posz']) * (self.tile_size / 8.0)) + self.ydesp
+        # for i in range(0, len(list(self.dins.items()))):
+        for pack in self.dins.values():
+            posx = int(pack[MSG_CONTENT_POSITION][0] * (self.tile_size / 8.0) + self.xdesp)
+            posy = int(pack[MSG_CONTENT_POSITION][2] * (self.tile_size / 8.0) + self.ydesp)
 
             item_type = {
-                "1001": "M",
-                "1002": "A",
-                "1003": "F"
-            }.get(list(self.dins.items())[i][1]["type"], "X")
+                1001: "M",
+                1002: "A",
+                1003: "F"
+            }.get(pack[MSG_CONTENT_TYPE], "X")
 
             color = {
-                "1001": (255, 255, 255),
-                "1002": (255, 255, 255),
-                "1003": (255, 255, 0)
-            }.get(list(self.dins.items())[i][1]["type"], "X")
+                1001: (255, 255, 255),
+                1002: (255, 255, 255),
+                1003: (255, 255, 0)
+            }.get(pack[MSG_CONTENT_TYPE], "X")
 
             pygame.draw.circle(self.screen, color, [posx, posy], 6)
             text = self.font.render(item_type, True, (0, 0, 0))
             self.screen.blit(text, (posx - text.get_width() // 2, posy - text.get_height() // 2))
 
         # Draw units
-        for i in list(self.agents.items()):
-            health = float(i[1]['health'])
+        # for i in list(self.agents.items()):
+        for agent in self.agents.values():
+            health = float(agent[MSG_CONTENT_HEALTH])
 
             if float(health) > 0:
-
-                carrying = i[1]['carrying']
+                carrying = agent[MSG_CONTENT_CARRYINGFLAG]
 
                 agent_type = {
-                    "0": "X",
-                    "1": "*",
-                    "2": "+",
-                    "3": "Y",
-                    "4": "^"
-                }.get(i[1]['type'], "X")
+                    0: "X",
+                    1: "*",
+                    2: "+",
+                    3: "Y",
+                    4: "^"
+                }.get(agent[MSG_CONTENT_TYPE], "X")
 
                 team = {
-                    "100": (255, 100, 100),
-                    "200": (100, 100, 255)
-                }.get(i[1]['team'], (255, 255, 0))
+                    100: (255, 100, 100),
+                    200: (100, 100, 255)
+                }.get(agent[MSG_CONTENT_TEAM], (255, 255, 0))
 
                 team_aplha = {
-                    "100": (255, 100, 100, 100),
-                    "200": (100, 100, 255, 100)
-                }.get(i[1]['team'], (255, 255, 0, 255))
+                    100: (255, 100, 100, 100),
+                    200: (100, 100, 255, 100)
+                }.get(agent[MSG_CONTENT_TEAM], (255, 255, 0, 255))
 
-                ammo = float(i[1]['ammo'])
+                ammo = float(agent[MSG_CONTENT_AMMO])
 
-                posx = int(float(i[1]['posx']) * self.tile_size / 8.0) + self.xdesp
-                posy = int(float(i[1]['posz']) * self.tile_size / 8.0) + self.ydesp
+                posx = int(float(agent[MSG_CONTENT_POSITION][0]) * self.tile_size / 8.0) + self.xdesp
+                posy = int(float(agent[MSG_CONTENT_POSITION][2]) * self.tile_size / 8.0) + self.ydesp
 
                 # print avatar
                 pygame.draw.circle(self.screen, team, [posx, posy], 8)
                 # print name
-                text = self.font.render(i[0], True, (255, 255, 255))
+                text = self.font.render(agent[MSG_CONTENT_NAME], True, (255, 255, 255))
                 self.screen.blit(text, (posx - text.get_width() // 2 + 15, posy - text.get_height() // 2 - 15))
                 # print health
                 pygame.gfxdraw.aacircle(self.screen, posx, posy, 10, (255, 0, 0))
@@ -289,17 +310,17 @@ class Render(object):
                 # print ammo
                 if ammo >= 1:
                     pygame.gfxdraw.arc(self.screen, posx, posy, 6, 0, int(ammo * 3.6) - 1, (255, 255, 255))
-                    pygame.gfxdraw.arc(self.screen, posx, posy, 7, 0, int(ammo * 3.6) - 1, (255, 255, 255))
+                pygame.gfxdraw.arc(self.screen, posx, posy, 7, 0, int(ammo * 3.6) - 1, (255, 255, 255))
 
                 # is carring flag?
-                if carrying == '1':
+                if carrying:
                     pygame.draw.circle(self.screen, (255, 255, 0), [posx, posy], 5)
 
                 # print fov
                 if self.show_fovs:
                     # compute direction
-                    angx = float(i[1]['angx'])
-                    angy = float(i[1]['angz'])
+                    angx = float(agent[MSG_CONTENT_HEADING][0])
+                    angy = float(agent[MSG_CONTENT_HEADING][2])
 
                     if angx == 0:
                         div = 1000
@@ -329,13 +350,13 @@ class Render(object):
         height, width = stdscr.getmaxyx()
 
         # Draw Map
-        for k, v in list(self.graph.items()):
+        for name, v in list(self.graph.items()):
             try:
                 newline = ""
                 for char in v:
                     newline += char * self.factor
-                if height > k:
-                    stdscr.addstr(k, 0, str(newline))
+                if height > name:
+                    stdscr.addstr(name, 0, str(newline))
             except:
                 pass
 
@@ -358,20 +379,19 @@ class Render(object):
 
         curses.init_pair(2, curses.COLOR_BLACK, curses.COLOR_YELLOW)
         # PACKS
-        for k, v in list(self.dins.items()):
+        # for k, v in list(self.dins.items()):
+        for pack in self.dins.values():
             #  Type
-            if v["type"] == "1001":
-                c = "M"
-            elif v["type"] == "1002":
-                c = "A"
-            elif v["type"] == "1003":
-                c = "F"
-            else:
-                c = "X"
-            y = int(float(v["posz"]) / 8)
-            x = int(float(v["posx"]) / (8 / self.factor))
+            symbol = {
+                "1001": "M",
+                "1002": "A",
+                "1003": "F"
+            }.get(str(pack[MSG_CONTENT_TYPE]), "X")
+
+            y = int(float(pack[MSG_CONTENT_POSITION][2]) / 8)
+            x = int(float(pack[MSG_CONTENT_POSITION][0]) / (8 / self.factor))
             if height > y:
-                stdscr.addstr(y, x, c, curses.color_pair(2))
+                stdscr.addstr(y, x, symbol, curses.color_pair(2))
 
         curses.init_pair(5, curses.COLOR_BLACK, curses.COLOR_RED)  # ALLIED
         curses.init_pair(6, curses.COLOR_WHITE, curses.COLOR_BLUE)  # AXIS
@@ -380,52 +400,50 @@ class Render(object):
         # AGENTS
         stats_allied = []  # ""
         stats_axis = []  # ""
-        for k, v in list(self.agents.items()):
+        # for k, v in list(self.agents.items()):
+        for agent in self.agents.values():
+            name = agent[MSG_CONTENT_NAME]
             # Type
-            if v["type"] == "0":
-                c = "X"
-            elif v["type"] == "1":
-                c = "*"
-            elif v["type"] == "2":
-                c = "+"
-            elif v["type"] == "3":
-                c = "Y"
-            elif v["type"] == "4":
-                c = "^"
-            else:
-                c = "X"
+            symbol = {
+                1: "*",
+                2: "+",
+                3: "Y",
+                4: "^"
+            }.get(agent[MSG_CONTENT_TYPE], 'X')
+
             # Team (or Carrier)
-            if v["carrying"] == "1":
-                t = 2
-            elif v["team"] == "100":
-                t = 5
-            elif v["team"] == "200":
-                t = 6
-            else:
-                t = 1
+            team_color = {
+                100: 5,
+                200: 6,
+            }.get(agent[MSG_CONTENT_TEAM], 1)
+
+            if agent[MSG_CONTENT_CARRYINGFLAG]:
+                team_color = 2
+
             # Draw in map
-            y = int(float(v["posz"]) / 8)
-            x = int(float(v["posx"]) / (8 / self.factor))
-            if int(v["health"]) > 0:
+            y = int(float(agent[MSG_CONTENT_POSITION][2]) / 8)
+            x = int(float(agent[MSG_CONTENT_POSITION][0]) / (8 / self.factor))
+            health = int(agent[MSG_CONTENT_HEALTH])
+            ammo = int(agent[MSG_CONTENT_AMMO])
+            if health > 0:
                 if height > y:
-                    stdscr.addstr(y, x, c, curses.color_pair(t))  #  Alive
+                    stdscr.addstr(y, x, symbol, curses.color_pair(team_color))  #  Alive
             else:
                 if height > y:
                     stdscr.addstr(y, x, "D", curses.color_pair(7))  #  Dead
             # Write stats
-            if v["team"] == "100":
-                if int(v["health"]) > 0:
-                    stats_allied.append(f" | {c} {k.ljust(4)} {int(v['health']):03d} {int(v['ammo']):03d} ")
+            if agent[MSG_CONTENT_TEAM] == 100:
+                if health > 0:
+                    stats_allied.append(f" | {symbol} {name.ljust(4)} {health:03d} {ammo:03d} ")
                 else:
-                    stats_allied.append(f" | {c} {k.ljust(4)} --- --- ")
-            elif v["team"] == "200":
-                if int(v["health"]) > 0:
+                    stats_allied.append(f" | {symbol} {name.ljust(4)} --- --- ")
+            elif agent[MSG_CONTENT_TEAM] == 200:
+                if health > 0:
                     # stats_axis += " | %s %s %03d %03d " % (c, k, int(v["health"]), int(v["ammo"]))
-                    stats_axis.append(f" | {c} {k.ljust(4)} {int(v['health']):03d} {int(v['ammo']):03d} ")
+                    stats_axis.append(f" | {symbol} {name.ljust(4)} {health:03d} {ammo:03d} ")
                 else:
-                    stats_axis.append(f" | {c} {k.ljust(4)} --- --- ")
-        # blank = " " * 81
-        # stdscr.addstr(33, 1, blank)
+                    stats_axis.append(f" | {symbol} {name.ljust(4)} --- --- ")
+
         row = 33
         for _agents in chunks(stats_allied, 4):
             line = "".join(_agents)
@@ -437,6 +455,13 @@ class Render(object):
             line = "".join(_agents)
             if height > row:
                 stdscr.addstr(row, 1, str(line), curses.color_pair(6))
+            row += 1
+
+        # Draw FPS
+        if len(self.fps) > 5:
+            fps = int(sum(self.fps[-5:])/5)
+            if height > row:
+                stdscr.addstr(row, 1, str(fps) + " FPS", curses.color_pair(7))
             row += 1
 
         # Refresh screen

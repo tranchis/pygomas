@@ -461,7 +461,7 @@ class Render(object):
         if len(self.fps) > 5:
             fps = int(sum(self.fps[-5:])/5)
             if height > row:
-                stdscr.addstr(row, 1, str(fps) + " FPS", curses.color_pair(7))
+                stdscr.addstr(row, 1, "{:03d} FPS".format(fps), curses.color_pair(7))
             row += 1
 
         # Refresh screen

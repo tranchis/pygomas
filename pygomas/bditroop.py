@@ -135,9 +135,27 @@ class BDITroop(AbstractAgent, BDIAgent):
                 logger.success("Control point generated {}".format((x, y, z)))
             return (tuple(control_points))
 
+        @troop_actions.add_function(".shuffle", (tuple))
+        def _shuffle(a_tuple):
+            """
+            Randomly shuffle a tuple
+            """
+            a_list = [i for i in a_tuple]
+            random.shuffle(a_list)
+            return (tuple(a_list))
+
+        @troop_actions.add_function(".random_shift", (tuple))
+        def _random_shift(a_tuple):
+            """
+            Randomly shift a tuple
+            """
+            rotated = deque(a_tuple)
+            rotated.rotate(random.randint(-10, 10))
+            return (tuple(rotated))
+
         @troop_actions.add(".goto", 1)
         def _goto(agent, term, intention):
-            """Sets the PyGomas destination. Expects args to be x,y,z"""
+            """Sets the PyGomas destination. Expects args to be (x,y,z)"""
             args = asp.grounded(term.args, intention.scope)
             self.movement.destination.x = args[0][0]
             self.movement.destination.y = args[0][1]
@@ -334,7 +352,7 @@ class BDITroop(AbstractAgent, BDIAgent):
                     if result:
                         result = json.loads(result.body)
                         self.agent.soldiers_count = len(result)
-                        logger.info("{} got {} fieldops: {}".format(self.agent.name, self.agent.soldiers_count, result))
+                        logger.info("{} got {} soldiers: {}".format(self.agent.name, self.agent.soldiers_count, result))
                         self.agent.bdi.set_belief(MY_BACKUPS, tuple(result))
                     else:
                         self.agent.bdi.set_belief(MY_BACKUPS, tuple())
@@ -344,6 +362,29 @@ class BDITroop(AbstractAgent, BDIAgent):
             t.set_metadata(PERFORMATIVE, PERFORMATIVE_CFB)
             b = GetBackupBehaviour()
             self.add_behaviour(b, t)
+            yield
+
+        @troop_actions.add(".look_at", 1)
+        def _look_at(agent, term, intention):
+            """
+            Look at a point.
+
+            :param position: Point to look at.
+            :type position: tuple (x,y,z)
+
+            """
+
+            args = asp.grounded(term.args, intention.scope)
+            point = args[0]
+
+            point_x = point[0]
+            point_z = point[2]
+
+            look_at_z, look_at_x = (point_z - self.movement.position.z, point_x - self.movement.position.x)
+
+            self.movement.heading = Vector3D(x=look_at_x, y=0, z=look_at_z)
+            self.movement.heading.normalize()
+            self.bdi.set_belief(HEADING, tuple((self.movement.heading.x, self.movement.heading.y, self.movement.heading.z)))
             yield
 
         @troop_actions.add(".turn", 1)
@@ -506,6 +547,7 @@ class BDITroop(AbstractAgent, BDIAgent):
                              self.agent.map.axis_base.get_init_z())
                     self.agent.bdi.set_belief(NAME, self.agent.name)
                     self.agent.bdi.set_belief(TEAM, self.agent.team)
+                    self.agent.bdi.set_belief(CLASS, self.agent.eclass)
                     self.agent.bdi.set_belief(BASE, tuple((x, y, z)))
                     self.agent.bdi.set_belief(POSITION, tuple((self.agent.movement.position.x, self.agent.movement.position.y, self.agent.movement.position.z)))
                     self.agent.bdi.set_belief(HEALTH, self.agent.health)

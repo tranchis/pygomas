@@ -118,7 +118,7 @@ class GetServiceBehaviour(CyclicBehaviour):
         if msg:
             logger.info("Requesting service {}".format(msg.body))
             body = json.loads(msg.body)
-            names = self.agent.get_service(body, str(msg.sender))
+            names = self.agent.get_service(body, str(msg.sender).split('/')[0])
             reply = msg.make_reply()
             reply.body = json.dumps(names)
             if body[NAME] == AMMO_SERVICE:

@@ -52,15 +52,30 @@ def agl_parse(data):
     agent_data = agl[:separator]
     din_data = agl[separator:]
     for i in range(nagents):
-        agents[agent_data[0]] = {"type": agent_data[1], "team": agent_data[2], "health": agent_data[3], "ammo": agent_data[4], "carrying": agent_data[5], "posx": agent_data[6].strip(
-            "(,)"), "posy": agent_data[7].strip("(,)"), "posz": agent_data[8].strip("(,)"), "angx": agent_data[12].strip("(,)"), "angy": agent_data[13].strip("(,)"), "angz": agent_data[14].strip("(,)")}
+        agents[agent_data[0]] = {
+            "type": agent_data[1],
+            "team": agent_data[2],
+            "health": agent_data[3],
+            "ammo": agent_data[4],
+            "carrying": agent_data[5],
+            "posx": agent_data[6].strip("(,)"),
+            "posy": agent_data[7].strip("(,)"),
+            "posz": agent_data[8].strip("(,)"),
+            "angx": agent_data[12].strip("(,)"),
+            "angy": agent_data[13].strip("(,)"),
+            "angz": agent_data[14].strip("(,)"),
+        }
         agent_data = agent_data[15:]
 
     ndin = int(din_data[0])
     din_data = din_data[1:]
     for din in range(ndin):
-        dins[din_data[0]] = {"type": din_data[1], "posx": din_data[2].strip("(,)"), "posy": din_data[3].strip("(,)"),
-                             "posz": din_data[4].strip("(,)")}
+        dins[din_data[0]] = {
+            "type": din_data[1],
+            "posx": din_data[2].strip("(,)"),
+            "posy": din_data[3].strip("(,)"),
+            "posz": din_data[4].strip("(,)"),
+        }
         din_data = din_data[5:]
 
 
@@ -100,8 +115,17 @@ def draw2():
     for y in range(0, len(list(graph.items()))):
         for x in range(0, 32):
             try:
-                if list(graph.items())[y][1][x] == '*':
-                    pygame.draw.rect(screen, color_wall, (x * tile_size + xdesp, y * tile_size + ydesp, tile_size, tile_size))
+                if list(graph.items())[y][1][x] == "*":
+                    pygame.draw.rect(
+                        screen,
+                        color_wall,
+                        (
+                            x * tile_size + xdesp,
+                            y * tile_size + ydesp,
+                            tile_size,
+                            tile_size,
+                        ),
+                    )
             except:
                 pass
 
@@ -126,19 +150,17 @@ def draw2():
 
     # Draw items
     for i in range(0, len(list(dins.items()))):
-        posx = int(float(list(dins.items())[i][1]['posx']) * (tile_size / 8.0)) + xdesp
-        posy = int(float(list(dins.items())[i][1]['posz']) * (tile_size / 8.0)) + ydesp
+        posx = int(float(list(dins.items())[i][1]["posx"]) * (tile_size / 8.0)) + xdesp
+        posy = int(float(list(dins.items())[i][1]["posz"]) * (tile_size / 8.0)) + ydesp
 
-        item_type = {
-            "1001": "M",
-            "1002": "A",
-            "1003": "F"
-        }.get(list(dins.items())[i][1]["type"], "X")
+        item_type = {"1001": "M", "1002": "A", "1003": "F"}.get(
+            list(dins.items())[i][1]["type"], "X"
+        )
 
         color = {
             "1001": (255, 255, 255),
             "1002": (255, 255, 255),
-            "1003": (255, 255, 0)
+            "1003": (255, 255, 0),
         }.get(list(dins.items())[i][1]["type"], "X")
 
         pygame.draw.circle(screen, color, [posx, posy], 6)
@@ -147,38 +169,32 @@ def draw2():
 
     # Draw units
     for i in list(agents.items()):
-        health = float(i[1]['health'])
+        health = float(i[1]["health"])
 
         if float(health) > 0:
 
-            carrying = i[1]['carrying']
+            carrying = i[1]["carrying"]
 
-            agent_type = {
-                "0": "X",
-                "1": "*",
-                "2": "+",
-                "3": "Y",
-                "4": "^"
-            }.get(i[1]['type'], "X")
+            agent_type = {"0": "X", "1": "*", "2": "+", "3": "Y", "4": "^"}.get(
+                i[1]["type"], "X"
+            )
 
-            team = {
-                "100": (255, 100, 100),
-                "200": (100, 100, 255)
-            }.get(i[1]['team'], (255, 255, 0))
+            team = {"100": (255, 100, 100), "200": (100, 100, 255)}.get(
+                i[1]["team"], (255, 255, 0)
+            )
 
-            team_aplha = {
-                "100": (255, 100, 100, 100),
-                "200": (100, 100, 255, 100)
-            }.get(i[1]['team'], (255, 255, 0, 255))
+            team_aplha = {"100": (255, 100, 100, 100), "200": (100, 100, 255, 100)}.get(
+                i[1]["team"], (255, 255, 0, 255)
+            )
 
-            ammo = float(i[1]['ammo'])
+            ammo = float(i[1]["ammo"])
 
-            posx = int(float(i[1]['posx']) * tile_size / 8.0) + xdesp
-            posy = int(float(i[1]['posz']) * tile_size / 8.0) + ydesp
+            posx = int(float(i[1]["posx"]) * tile_size / 8.0) + xdesp
+            posy = int(float(i[1]["posz"]) * tile_size / 8.0) + ydesp
 
             # calcula direccion
-            angx = float(i[1]['angx'])
-            angy = float(i[1]['angz'])
+            angx = float(i[1]["angx"])
+            angy = float(i[1]["angz"])
 
             if angx == 0:
                 div = 1000
@@ -198,28 +214,43 @@ def draw2():
             pygame.draw.circle(screen, team, [posx, posy], 8)
             # imprime identificador
             text = font.render(i[0], True, (255, 255, 255))
-            screen.blit(text, (posx - text.get_width() // 2 + 15, posy - text.get_height() // 2 - 15))
+            screen.blit(
+                text,
+                (posx - text.get_width() // 2 + 15, posy - text.get_height() // 2 - 15),
+            )
             # imprime vida
             pygame.gfxdraw.aacircle(screen, posx, posy, 10, (255, 0, 0))
             pygame.gfxdraw.aacircle(screen, posx, posy, 9, (255, 0, 0))
-            pygame.gfxdraw.arc(screen, posx, posy, 10, 0, int(health * 3.6) - 1, (0, 255, 0))
-            pygame.gfxdraw.arc(screen, posx, posy, 9, 0, int(health * 3.6) - 1, (0, 255, 0))
+            pygame.gfxdraw.arc(
+                screen, posx, posy, 10, 0, int(health * 3.6) - 1, (0, 255, 0)
+            )
+            pygame.gfxdraw.arc(
+                screen, posx, posy, 9, 0, int(health * 3.6) - 1, (0, 255, 0)
+            )
             # imprime municion
             if ammo >= 1:
-                pygame.gfxdraw.arc(screen, posx, posy, 6, 0, int(ammo * 3.6) - 1, (255, 255, 255))
-                pygame.gfxdraw.arc(screen, posx, posy, 7, 0, int(ammo * 3.6) - 1, (255, 255, 255))
+                pygame.gfxdraw.arc(
+                    screen, posx, posy, 6, 0, int(ammo * 3.6) - 1, (255, 255, 255)
+                )
+                pygame.gfxdraw.arc(
+                    screen, posx, posy, 7, 0, int(ammo * 3.6) - 1, (255, 255, 255)
+                )
 
             # lleva la bandera
-            if carrying == '1':
+            if carrying == "1":
                 pygame.draw.circle(screen, (255, 255, 0), [posx, posy], 5)
 
             # imprime cono de vision
             for j in range(0, int(48 * (tile_size / 8)), 1):
-                pygame.gfxdraw.arc(screen, posx, posy, j, int(-45 + angle), int(45 + angle), team_aplha)
+                pygame.gfxdraw.arc(
+                    screen, posx, posy, j, int(-45 + angle), int(45 + angle), team_aplha
+                )
 
             # imprime funcion
             text = font.render(agent_type, True, (0, 0, 0))
-            screen.blit(text, (posx - text.get_width() // 2, posy - text.get_height() // 2))
+            screen.blit(
+                text, (posx - text.get_width() // 2, posy - text.get_height() // 2)
+            )
 
     pygame.display.flip()
     iteration += 1
@@ -232,10 +263,7 @@ def draw2():
     for i in list(dins.items()):
         items_json[i[0]] = i[1]
 
-    json_data = {
-        "agents": agents_json,
-        "items": items_json
-    }
+    json_data = {"agents": agents_json, "items": items_json}
 
 
 def loadMap(map_name):
@@ -299,8 +327,8 @@ def main(address="localhost", port=8001, maps=None):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         if s:
             s.connect((address, port))
-            rfile = s.makefile('r', -1)
-            wfile = s.makefile('w', 20)
+            rfile = s.makefile("r", -1)
+            wfile = s.makefile("w", 20)
             data = rfile.readline()
 
             wfile.write("READY\n")
@@ -336,9 +364,9 @@ def main(address="localhost", port=8001, maps=None):
 
     except Exception as e:
         print("Exception", str(e))
-        print('-' * 60)
+        print("-" * 60)
         traceback.print_exc(file=sys.stdout)
-        print('-' * 60)
+        print("-" * 60)
 
     finally:
         pygame.quit()
@@ -347,9 +375,15 @@ def main(address="localhost", port=8001, maps=None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--ip', default="localhost", help="Manager's address to connect the render")
-    parser.add_argument('--port', default=8001, help="Manager's port to connect the render")
-    parser.add_argument('--maps', default=None, help="The path to your custom maps directory")
+    parser.add_argument(
+        "--ip", default="localhost", help="Manager's address to connect the render"
+    )
+    parser.add_argument(
+        "--port", default=8001, help="Manager's port to connect the render"
+    )
+    parser.add_argument(
+        "--maps", default=None, help="The path to your custom maps directory"
+    )
 
     args = parser.parse_args()
     main(args.ip, args.port, args.maps)

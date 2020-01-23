@@ -54,11 +54,21 @@ class BDIMedic(BDITroop):
             z = self.movement.position.z + random.random() * BDIMedic.medic_pack_offset
 
             while not self.check_static_position(x, z):
-                x = self.movement.position.x + random.random() * BDIMedic.medic_pack_offset
-                z = self.movement.position.z + random.random() * BDIMedic.medic_pack_offset
+                x = (
+                    self.movement.position.x
+                    + random.random() * BDIMedic.medic_pack_offset
+                )
+                z = (
+                    self.movement.position.z
+                    + random.random() * BDIMedic.medic_pack_offset
+                )
 
             try:
-                pack = MedicPack(name=name, passwd="secret", x=x, z=z, manager_jid=self.manager)
+                pack = MedicPack(
+                    name=name, passwd="secret", x=x, z=z, manager_jid=self.manager
+                )
                 await pack.start()
             except Exception as e:
-                logger.warning("Medic {} could not create MedicPack: {}".format(self.name, e))
+                logger.warning(
+                    "Medic {} could not create MedicPack: {}".format(self.name, e)
+                )

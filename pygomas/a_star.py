@@ -3,7 +3,6 @@ from heapq import heappop, heappush
 
 
 class AAlgorithm:
-
     def __init__(self, map_array):
         self.array = map_array
 
@@ -19,8 +18,16 @@ class AAlgorithm:
         start = (int(start[0]), int(start[1]))
         goal = (int(goal[0]), int(goal[1]))
 
-        neighbors = ((0, 1), (0, -1), (1, 0), (-1, 0),
-                     (1, 1), (1, -1), (-1, 1), (-1, -1))
+        neighbors = (
+            (0, 1),
+            (0, -1),
+            (1, 0),
+            (-1, 0),
+            (1, 1),
+            (1, -1),
+            (-1, 1),
+            (-1, -1),
+        )
 
         close_set = set()
         came_from = {}
@@ -54,12 +61,18 @@ class AAlgorithm:
                     # array bound x walls
                     continue
 
-                if neighbor in close_set and tentative_g_score >= gscore.get(neighbor, 0):
+                if neighbor in close_set and tentative_g_score >= gscore.get(
+                    neighbor, 0
+                ):
                     continue
-                if tentative_g_score < gscore.get(neighbor, 0) or neighbor not in [i[1] for i in oheap]:
+                if tentative_g_score < gscore.get(neighbor, 0) or neighbor not in [
+                    i[1] for i in oheap
+                ]:
                     came_from[neighbor] = current
                     gscore[neighbor] = tentative_g_score
-                    fscore[neighbor] = tentative_g_score + self.heuristic(neighbor, goal)
+                    fscore[neighbor] = tentative_g_score + self.heuristic(
+                        neighbor, goal
+                    )
                     heappush(oheap, (fscore[neighbor], neighbor))
 
         return False

@@ -10,7 +10,6 @@ from spade.template import Template
 
 
 class ObjectivePack(Pack):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.is_taken = False

@@ -11,7 +11,6 @@ now = datetime.now
 
 
 class AmmoPack(Pack):
-
     async def start(self, auto_register=True):
         self.type = PACK_AMMOPACK
         timeout = now() + timedelta(seconds=PACK_AUTODESTROY_TIMEOUT)
@@ -25,10 +24,7 @@ class AmmoPack(Pack):
         async def run(self):
             msg = Message(to=self.agent.manager)
             msg.set_metadata(PERFORMATIVE, PERFORMATIVE_INFORM)
-            content = {
-                NAME: self.agent.name,
-                ACTION: DESTROY
-            }
+            content = {NAME: self.agent.name, ACTION: DESTROY}
             msg.body = json.dumps(content)
             await self.send(msg)
             await asyncio.sleep(1)

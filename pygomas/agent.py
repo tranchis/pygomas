@@ -7,8 +7,14 @@ from spade.agent import Agent
 from spade.behaviour import OneShotBehaviour
 from spade.message import Message
 
-from .config import PERFORMATIVE, PERFORMATIVE_REGISTER_SERVICE, PERFORMATIVE_DEREGISTER_SERVICE, \
-    PERFORMATIVE_DEREGISTER_AGENT, NAME, TEAM
+from .config import (
+    PERFORMATIVE,
+    PERFORMATIVE_REGISTER_SERVICE,
+    PERFORMATIVE_DEREGISTER_SERVICE,
+    PERFORMATIVE_DEREGISTER_AGENT,
+    NAME,
+    TEAM,
+)
 
 LONG_RECEIVE_WAIT: int = 1000000
 

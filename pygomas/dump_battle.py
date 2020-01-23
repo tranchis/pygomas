@@ -16,8 +16,8 @@ def main(address="localhost", port=8001, log="/tmp/tv.log"):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         if s:
             s.connect((address, port))
-            rfile = s.makefile('r', -1)
-            wfile = s.makefile('w', 20)
+            rfile = s.makefile("r", -1)
+            wfile = s.makefile("w", 20)
             data = rfile.readline()
 
             wfile.write("READY\n")
@@ -54,9 +54,9 @@ def main(address="localhost", port=8001, log="/tmp/tv.log"):
 
     except Exception as e:
         print("Exception", str(e))
-        print('-' * 60)
+        print("-" * 60)
         traceback.print_exc(file=sys.stdout)
-        print('-' * 60)
+        print("-" * 60)
 
     finally:
         f.close()
@@ -64,9 +64,13 @@ def main(address="localhost", port=8001, log="/tmp/tv.log"):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--ip', default="localhost", help="Manager's address to connect the dumper")
-    parser.add_argument('--port', default=8001, help="Manager's port to connect the dumper")
-    parser.add_argument('--log', default="/tmp/tv.log", help="File to save the game")
+    parser.add_argument(
+        "--ip", default="localhost", help="Manager's address to connect the dumper"
+    )
+    parser.add_argument(
+        "--port", default=8001, help="Manager's port to connect the dumper"
+    )
+    parser.add_argument("--log", default="/tmp/tv.log", help="File to save the game")
 
     args = parser.parse_args()
 

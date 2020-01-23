@@ -6,7 +6,6 @@ MAP_SCALE = 1
 
 
 class Mobile(object):
-
     def __init__(self):
         self.position = Vector3D()
         self.destination = Vector3D()

@@ -36,7 +36,7 @@ from .pack import PACK_MEDICPACK, PACK_AMMOPACK, PACK_OBJPACK, PACK_NONE
 from .config import Config
 from .a_star import AAlgorithm
 from .jps import JPSAlgorithm
-from numpy import (sign, arctan2, cos, sin)
+from numpy import sign, arctan2, cos, sin
 
 
 DEFAULT_RADIUS = 20
@@ -620,7 +620,7 @@ class BDITroop(AbstractAgent, BDIAgent):
                 self.agent.map = TerrainMap()
                 config = Config(self.agent.map_path)
                 self.agent.map.load_map(map_name, config)
-                #self.agent.path_finder = AAlgorithm(self.agent.map.terrain[:, :, 1])
+                # self.agent.path_finder = AAlgorithm(self.agent.map.terrain[:, :, 1])
                 self.agent.path_finder = JPSAlgorithm(self.agent.map.terrain[:, :, 1])
                 self.agent.movement = Mobile()
                 self.agent.movement.set_size(

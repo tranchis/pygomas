@@ -175,7 +175,7 @@ def manager(
         except KeyboardInterrupt:
             break
     click.echo("Stopping manager . . .")
-    manager_agent.stop()
+    manager_agent.stop().result()
 
     quit_spade()
 

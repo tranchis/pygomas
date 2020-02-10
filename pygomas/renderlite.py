@@ -17,19 +17,38 @@ import curses
 import math
 from loguru import logger
 
-from .server import MSG_TYPE, MSG_BODY, TCP_AGL, TCP_COM, TCP_MAP, TCP_TIME, TCP_ERR, MSG_AGENTS, MSG_PACKS, \
-    MSG_CONTENT_NAME, MSG_CONTENT_TYPE, MSG_CONTENT_TEAM, MSG_CONTENT_HEALTH, MSG_CONTENT_AMMO, \
-    MSG_CONTENT_CARRYINGFLAG, MSG_CONTENT_POSITION, MSG_CONTENT_HEADING, WELCOME_MSG, READY_MSG, QUIT_MSG, ACCEPT_MSG
+from .server import (
+    MSG_TYPE,
+    MSG_BODY,
+    TCP_AGL,
+    TCP_COM,
+    TCP_MAP,
+    TCP_TIME,
+    TCP_ERR,
+    MSG_AGENTS,
+    MSG_PACKS,
+    MSG_CONTENT_NAME,
+    MSG_CONTENT_TYPE,
+    MSG_CONTENT_TEAM,
+    MSG_CONTENT_HEALTH,
+    MSG_CONTENT_AMMO,
+    MSG_CONTENT_CARRYINGFLAG,
+    MSG_CONTENT_POSITION,
+    MSG_CONTENT_HEADING,
+    WELCOME_MSG,
+    READY_MSG,
+    QUIT_MSG,
+    ACCEPT_MSG,
+)
 
 
 def chunks(l, n):
     """Yield successive n-sized chunks from l."""
     for i in range(0, len(l), n):
-        yield l[i:i + n]
+        yield l[i : i + n]
 
 
 class Render(object):
-
     def __init__(self, address="localhost", port=8001, maps=None, text=False):
         self.address = address
         self.port = port
@@ -95,14 +114,19 @@ class Render(object):
             # Init socket
             self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             if self.s:
+                self.s.settimeout(0.1)
                 self.s.connect((self.address, self.port))
 
                 while not self.quit:
                     start_time = time.time()
-                    size_of_msg = self.s.recv(4)
+                    self.draw(stdscr)
+                    try:
+                        size_of_msg = self.s.recv(4)
+                    except socket.timeout:
+                        size_of_msg = 0
                     if not size_of_msg:
                         continue
-                    size_of_msg = struct.unpack('>I', size_of_msg)[0]
+                    size_of_msg = struct.unpack(">I", size_of_msg)[0]
 
                     data = bytes()
                     while len(data) < size_of_msg:
@@ -117,9 +141,12 @@ class Render(object):
 
                     if data[MSG_TYPE] == TCP_COM:
                         if data[MSG_BODY] == WELCOME_MSG:
-                            msg_to_send = msgpack.packb({MSG_TYPE: TCP_COM, MSG_BODY: READY_MSG}, use_bin_type=True)
+                            msg_to_send = msgpack.packb(
+                                {MSG_TYPE: TCP_COM, MSG_BODY: READY_MSG},
+                                use_bin_type=True,
+                            )
                             size_of_package = len(msg_to_send)
-                            msg = struct.pack('>I', size_of_package) + msg_to_send
+                            msg = struct.pack(">I", size_of_package) + msg_to_send
                             self.s.send(msg)
                         elif data[MSG_BODY] == ACCEPT_MSG:
                             pass
@@ -135,11 +162,7 @@ class Render(object):
 
                     elif data[MSG_TYPE] == TCP_AGL:
                         self.agl_parse(data[MSG_BODY])
-                        if not self.text:
-                            self.draw()
-                        else:
-                            self.textdraw(stdscr)
-                        self.fps.append(1/(time.time() - start_time))
+                        self.fps.append(1 / (time.time() - start_time))
 
                     elif data[MSG_TYPE] == TCP_TIME:
                         pass
@@ -154,6 +177,14 @@ class Render(object):
             error = str(e) + "\n" + tb
 
         finally:
+            logger.info("Sending QUIT message...")
+            msg_to_send = msgpack.packb(
+                {MSG_TYPE: TCP_COM, MSG_BODY: QUIT_MSG}, use_bin_type=True,
+            )
+            size_of_package = len(msg_to_send)
+            msg = struct.pack(">I", size_of_package) + msg_to_send
+            self.s.send(msg)
+
             logger.info("Closing...")
             # Close socket
             self.s.close()
@@ -167,9 +198,9 @@ class Render(object):
                 pass
 
             if error:
-                logger.error('-' * 60)
+                logger.error("-" * 60)
                 logger.error(str(error))
-                logger.error('-' * 60)
+                logger.error("-" * 60)
 
     def agl_parse(self, data):
         self.dins = {}
@@ -180,7 +211,13 @@ class Render(object):
         for pack in data[MSG_PACKS]:
             self.dins[pack[MSG_CONTENT_NAME]] = pack
 
-    def draw(self):
+    def draw(self, stdscr):
+        if self.text:
+            self.textdraw(stdscr)
+        else:
+            self.pygamedraw()
+
+    def pygamedraw(self):
 
         events = pygame.event.get()
         for event in events:
@@ -204,18 +241,26 @@ class Render(object):
 
         # Clear screen
         color_background = (0, 0, 0)
-        pygame.draw.rect(self.screen, color_background, (0, 0, self.map_width, self.map_height))
+        pygame.draw.rect(
+            self.screen, color_background, (0, 0, self.map_width, self.map_height)
+        )
 
         # Draw Map
         color_wall = (100, 100, 100)
         for y in range(0, len(list(self.graph.items()))):
             for x in range(0, 32):
                 try:
-                    if list(self.graph.items())[y][1][x] == '*':
-                        pygame.draw.rect(self.screen, color_wall,
-                                         (x * self.tile_size + self.xdesp,
-                                          y * self.tile_size + self.ydesp,
-                                          self.tile_size, self.tile_size))
+                    if list(self.graph.items())[y][1][x] == "*":
+                        pygame.draw.rect(
+                            self.screen,
+                            color_wall,
+                            (
+                                x * self.tile_size + self.xdesp,
+                                y * self.tile_size + self.ydesp,
+                                self.tile_size,
+                                self.tile_size,
+                            ),
+                        )
                 except:
                     pass
 
@@ -224,8 +269,18 @@ class Render(object):
             color = (255, 0, 0)
             xpos = int(self.allied_base[0]) * self.tile_size + self.xdesp
             ypos = int(self.allied_base[1]) * self.tile_size + self.ydesp
-            xwidth = int(self.allied_base[2]) * self.tile_size - xpos + self.tile_size + self.xdesp
-            ywidth = int(self.allied_base[3]) * self.tile_size - ypos + self.tile_size + self.ydesp
+            xwidth = (
+                int(self.allied_base[2]) * self.tile_size
+                - xpos
+                + self.tile_size
+                + self.xdesp
+            )
+            ywidth = (
+                int(self.allied_base[3]) * self.tile_size
+                - ypos
+                + self.tile_size
+                + self.ydesp
+            )
 
             pygame.draw.rect(self.screen, color, (xpos, ypos, xwidth, ywidth))
 
@@ -233,38 +288,52 @@ class Render(object):
             color = (0, 0, 255)
             xpos = int(self.axis_base[0]) * self.tile_size + self.xdesp
             ypos = int(self.axis_base[1]) * self.tile_size + self.ydesp
-            xwidth = int(self.axis_base[2]) * self.tile_size - xpos + self.tile_size + self.xdesp
-            ywidth = int(self.axis_base[3]) * self.tile_size - ypos + self.tile_size + self.ydesp
+            xwidth = (
+                int(self.axis_base[2]) * self.tile_size
+                - xpos
+                + self.tile_size
+                + self.xdesp
+            )
+            ywidth = (
+                int(self.axis_base[3]) * self.tile_size
+                - ypos
+                + self.tile_size
+                + self.ydesp
+            )
 
             pygame.draw.rect(self.screen, color, (xpos, ypos, xwidth, ywidth))
 
         # Draw FPS
         if len(self.fps) > 5:
-            fps = int(sum(self.fps[-5:])/5)
+            fps = int(sum(self.fps[-5:]) / 5)
             text = self.font.render(str(fps) + " FPS", True, (255, 255, 255))
             self.screen.blit(text, (1, 1))
 
         # Draw items
         # for i in range(0, len(list(self.dins.items()))):
         for pack in self.dins.values():
-            posx = int(pack[MSG_CONTENT_POSITION][0] * (self.tile_size / 8.0) + self.xdesp)
-            posy = int(pack[MSG_CONTENT_POSITION][2] * (self.tile_size / 8.0) + self.ydesp)
+            posx = int(
+                pack[MSG_CONTENT_POSITION][0] * (self.tile_size / 8.0) + self.xdesp
+            )
+            posy = int(
+                pack[MSG_CONTENT_POSITION][2] * (self.tile_size / 8.0) + self.ydesp
+            )
 
-            item_type = {
-                1001: "M",
-                1002: "A",
-                1003: "F"
-            }.get(pack[MSG_CONTENT_TYPE], "X")
+            item_type = {1001: "M", 1002: "A", 1003: "F"}.get(
+                pack[MSG_CONTENT_TYPE], "X"
+            )
 
             color = {
                 1001: (255, 255, 255),
                 1002: (255, 255, 255),
-                1003: (255, 255, 0)
+                1003: (255, 255, 0),
             }.get(pack[MSG_CONTENT_TYPE], "X")
 
             pygame.draw.circle(self.screen, color, [posx, posy], 6)
             text = self.font.render(item_type, True, (0, 0, 0))
-            self.screen.blit(text, (posx - text.get_width() // 2, posy - text.get_height() // 2))
+            self.screen.blit(
+                text, (posx - text.get_width() // 2, posy - text.get_height() // 2)
+            )
 
         # Draw units
         # for i in list(self.agents.items()):
@@ -274,43 +343,63 @@ class Render(object):
             if float(health) > 0:
                 carrying = agent[MSG_CONTENT_CARRYINGFLAG]
 
-                agent_type = {
-                    0: "X",
-                    1: "*",
-                    2: "+",
-                    3: "Y",
-                    4: "^"
-                }.get(agent[MSG_CONTENT_TYPE], "X")
+                agent_type = {0: "X", 1: "*", 2: "+", 3: "Y", 4: "^"}.get(
+                    agent[MSG_CONTENT_TYPE], "X"
+                )
 
-                team = {
-                    100: (255, 100, 100),
-                    200: (100, 100, 255)
-                }.get(agent[MSG_CONTENT_TEAM], (255, 255, 0))
+                team = {100: (255, 100, 100), 200: (100, 100, 255)}.get(
+                    agent[MSG_CONTENT_TEAM], (255, 255, 0)
+                )
 
-                team_aplha = {
-                    100: (255, 100, 100, 100),
-                    200: (100, 100, 255, 100)
-                }.get(agent[MSG_CONTENT_TEAM], (255, 255, 0, 255))
+                team_aplha = {100: (255, 100, 100, 100), 200: (100, 100, 255, 100)}.get(
+                    agent[MSG_CONTENT_TEAM], (255, 255, 0, 255)
+                )
 
                 ammo = float(agent[MSG_CONTENT_AMMO])
 
-                posx = int(float(agent[MSG_CONTENT_POSITION][0]) * self.tile_size / 8.0) + self.xdesp
-                posy = int(float(agent[MSG_CONTENT_POSITION][2]) * self.tile_size / 8.0) + self.ydesp
+                posx = (
+                    int(float(agent[MSG_CONTENT_POSITION][0]) * self.tile_size / 8.0)
+                    + self.xdesp
+                )
+                posy = (
+                    int(float(agent[MSG_CONTENT_POSITION][2]) * self.tile_size / 8.0)
+                    + self.ydesp
+                )
 
                 # print avatar
                 pygame.draw.circle(self.screen, team, [posx, posy], 8)
                 # print name
                 text = self.font.render(agent[MSG_CONTENT_NAME], True, (255, 255, 255))
-                self.screen.blit(text, (posx - text.get_width() // 2 + 15, posy - text.get_height() // 2 - 15))
+                self.screen.blit(
+                    text,
+                    (
+                        posx - text.get_width() // 2 + 15,
+                        posy - text.get_height() // 2 - 15,
+                    ),
+                )
                 # print health
                 pygame.gfxdraw.aacircle(self.screen, posx, posy, 10, (255, 0, 0))
                 pygame.gfxdraw.aacircle(self.screen, posx, posy, 9, (255, 0, 0))
-                pygame.gfxdraw.arc(self.screen, posx, posy, 10, 0, int(health * 3.6) - 1, (0, 255, 0))
-                pygame.gfxdraw.arc(self.screen, posx, posy, 9, 0, int(health * 3.6) - 1, (0, 255, 0))
+                pygame.gfxdraw.arc(
+                    self.screen, posx, posy, 10, 0, int(health * 3.6) - 1, (0, 255, 0)
+                )
+                pygame.gfxdraw.arc(
+                    self.screen, posx, posy, 9, 0, int(health * 3.6) - 1, (0, 255, 0)
+                )
                 # print ammo
                 if ammo >= 1:
-                    pygame.gfxdraw.arc(self.screen, posx, posy, 6, 0, int(ammo * 3.6) - 1, (255, 255, 255))
-                pygame.gfxdraw.arc(self.screen, posx, posy, 7, 0, int(ammo * 3.6) - 1, (255, 255, 255))
+                    pygame.gfxdraw.arc(
+                        self.screen,
+                        posx,
+                        posy,
+                        6,
+                        0,
+                        int(ammo * 3.6) - 1,
+                        (255, 255, 255),
+                    )
+                pygame.gfxdraw.arc(
+                    self.screen, posx, posy, 7, 0, int(ammo * 3.6) - 1, (255, 255, 255)
+                )
 
                 # is carring flag?
                 if carrying:
@@ -337,11 +426,21 @@ class Render(object):
                         angle = math.atan(div) * (180 / math.pi) + 360
 
                     for j in range(0, int(48 * (self.tile_size / 8)), 1):
-                        pygame.gfxdraw.arc(self.screen, posx, posy, j, int(-45 + angle), int(45 + angle), team_aplha)
+                        pygame.gfxdraw.arc(
+                            self.screen,
+                            posx,
+                            posy,
+                            j,
+                            int(-45 + angle),
+                            int(45 + angle),
+                            team_aplha,
+                        )
 
                 # print function
                 text = self.font.render(agent_type, True, (0, 0, 0))
-                self.screen.blit(text, (posx - text.get_width() // 2, posy - text.get_height() // 2))
+                self.screen.blit(
+                    text, (posx - text.get_width() // 2, posy - text.get_height() // 2)
+                )
 
         pygame.display.flip()
         self.iteration += 1
@@ -365,7 +464,10 @@ class Render(object):
         if self.allied_base is not None:
             curses.init_pair(4, curses.COLOR_WHITE, curses.COLOR_RED)  # ALLIED BASE
             for y in range(int(self.allied_base[1]), int(self.allied_base[3])):
-                for x in range(int(self.allied_base[0]) * self.factor, int(self.allied_base[2]) * self.factor):
+                for x in range(
+                    int(self.allied_base[0]) * self.factor,
+                    int(self.allied_base[2]) * self.factor,
+                ):
                     if height > y:
                         stdscr.addstr(y, x, " ", curses.color_pair(4))
 
@@ -373,7 +475,10 @@ class Render(object):
         if self.axis_base is not None:
             curses.init_pair(3, curses.COLOR_RED, curses.COLOR_BLUE)  # AXIS BASE
             for y in range(int(self.axis_base[1]), int(self.axis_base[3])):
-                for x in range(int(self.axis_base[0]) * self.factor, int(self.axis_base[2]) * self.factor):
+                for x in range(
+                    int(self.axis_base[0]) * self.factor,
+                    int(self.axis_base[2]) * self.factor,
+                ):
                     if height > y:
                         stdscr.addstr(y, x, " ", curses.color_pair(3))
 
@@ -382,11 +487,9 @@ class Render(object):
         # for k, v in list(self.dins.items()):
         for pack in self.dins.values():
             #  Type
-            symbol = {
-                "1001": "M",
-                "1002": "A",
-                "1003": "F"
-            }.get(str(pack[MSG_CONTENT_TYPE]), "X")
+            symbol = {"1001": "M", "1002": "A", "1003": "F"}.get(
+                str(pack[MSG_CONTENT_TYPE]), "X"
+            )
 
             y = int(float(pack[MSG_CONTENT_POSITION][2]) / 8)
             x = int(float(pack[MSG_CONTENT_POSITION][0]) / (8 / self.factor))
@@ -404,18 +507,10 @@ class Render(object):
         for agent in self.agents.values():
             name = agent[MSG_CONTENT_NAME]
             # Type
-            symbol = {
-                1: "*",
-                2: "+",
-                3: "Y",
-                4: "^"
-            }.get(agent[MSG_CONTENT_TYPE], 'X')
+            symbol = {1: "*", 2: "+", 3: "Y", 4: "^"}.get(agent[MSG_CONTENT_TYPE], "X")
 
             # Team (or Carrier)
-            team_color = {
-                100: 5,
-                200: 6,
-            }.get(agent[MSG_CONTENT_TEAM], 1)
+            team_color = {100: 5, 200: 6,}.get(agent[MSG_CONTENT_TEAM], 1)
 
             if agent[MSG_CONTENT_CARRYINGFLAG]:
                 team_color = 2
@@ -434,13 +529,17 @@ class Render(object):
             # Write stats
             if agent[MSG_CONTENT_TEAM] == 100:
                 if health > 0:
-                    stats_allied.append(f" | {symbol} {name.ljust(4)} {health:03d} {ammo:03d} ")
+                    stats_allied.append(
+                        f" | {symbol} {name.ljust(4)} {health:03d} {ammo:03d} "
+                    )
                 else:
                     stats_allied.append(f" | {symbol} {name.ljust(4)} --- --- ")
             elif agent[MSG_CONTENT_TEAM] == 200:
                 if health > 0:
                     # stats_axis += " | %s %s %03d %03d " % (c, k, int(v["health"]), int(v["ammo"]))
-                    stats_axis.append(f" | {symbol} {name.ljust(4)} {health:03d} {ammo:03d} ")
+                    stats_axis.append(
+                        f" | {symbol} {name.ljust(4)} {health:03d} {ammo:03d} "
+                    )
                 else:
                     stats_axis.append(f" | {symbol} {name.ljust(4)} --- --- ")
 
@@ -459,7 +558,7 @@ class Render(object):
 
         # Draw FPS
         if len(self.fps) > 5:
-            fps = int(sum(self.fps[-5:])/5)
+            fps = int(sum(self.fps[-5:]) / 5)
             if height > row:
                 stdscr.addstr(row, 1, "{:03d} FPS".format(fps), curses.color_pair(7))
             row += 1
@@ -510,18 +609,29 @@ class Render(object):
                 self.graph[y] = line.strip("\r\n")
                 y += 1
             cost.close()
+            if not self.text:
+                logger.info("Map loaded.")
             return {"status": "ok"}
         except Exception as e:
             tb = traceback.extract_stack()
-            return {"status": "error", "value": str(e) + "\n" + "\n".join([repr(i) for i in tb])}
+            return {
+                "status": "error",
+                "value": str(e) + "\n" + "\n".join([repr(i) for i in tb]),
+            }
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--ip', default="localhost", help="Manager's address to connect the render")
-    parser.add_argument('--port', default=8001, help="Manager's port to connect the render")
-    parser.add_argument('--maps', default=None, help="The path to your custom maps directory")
-    parser.add_argument('--text', default=False, help="Use text render")
+    parser.add_argument(
+        "--ip", default="localhost", help="Manager's address to connect the render"
+    )
+    parser.add_argument(
+        "--port", default=8001, help="Manager's port to connect the render"
+    )
+    parser.add_argument(
+        "--maps", default=None, help="The path to your custom maps directory"
+    )
+    parser.add_argument("--text", default=False, help="Use text render")
 
     args = parser.parse_args()
     render = Render(args.ip, args.port, args.maps, args.text)

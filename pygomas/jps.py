@@ -71,7 +71,16 @@ class JPSAlgorithm(object):
     def node_neighbours(self, cx, cy, parent):
         neighbours = []
         if type(parent) != tuple:
-            for i, j in [(-1, 0), (0, -1), (1, 0), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)]:
+            for i, j in [
+                (-1, 0),
+                (0, -1),
+                (1, 0),
+                (0, 1),
+                (-1, -1),
+                (-1, 1),
+                (1, -1),
+                (1, 1),
+            ]:
                 if not self.blocked(cx, cy, i, j):
                     neighbours.append((cx + i, cy + j))
 
@@ -83,15 +92,13 @@ class JPSAlgorithm(object):
                 neighbours.append((cx, cy + dy))
             if not self.blocked(cx, cy, dx, 0):
                 neighbours.append((cx + dx, cy))
-            if ((not self.blocked(cx, cy, 0, dy) or
-                 not self.blocked(cx, cy, dx, 0)) and
-                    not self.blocked(cx, cy, dx, dy)):
+            if (
+                not self.blocked(cx, cy, 0, dy) or not self.blocked(cx, cy, dx, 0)
+            ) and not self.blocked(cx, cy, dx, dy):
                 neighbours.append((cx + dx, cy + dy))
-            if (self.blocked(cx, cy, -dx, 0) and
-                    not self.blocked(cx, cy, 0, dy)):
+            if self.blocked(cx, cy, -dx, 0) and not self.blocked(cx, cy, 0, dy):
                 neighbours.append((cx - dx, cy + dy))
-            if (self.blocked(cx, cy, 0, -dy) and
-                    not self.blocked(cx, cy, dx, 0)):
+            if self.blocked(cx, cy, 0, -dy) and not self.blocked(cx, cy, dx, 0):
                 neighbours.append((cx + dx, cy - dy))
 
         else:
@@ -129,11 +136,18 @@ class JPSAlgorithm(object):
 
         if dx != 0 and dy != 0:
             while True:
-                if (not self.blocked(ox, oy, -dx, dy) and self.blocked(ox, oy, -dx, 0) or
-                        not self.blocked(ox, oy, dx, -dy) and self.blocked(ox, oy, 0, -dy)):
+                if (
+                    not self.blocked(ox, oy, -dx, dy)
+                    and self.blocked(ox, oy, -dx, 0)
+                    or not self.blocked(ox, oy, dx, -dy)
+                    and self.blocked(ox, oy, 0, -dy)
+                ):
                     return ox, oy
 
-                if self.jump(ox, oy, dx, 0, goal) is not None or self.jump(ox, oy, 0, dy, goal) is not None:
+                if (
+                    self.jump(ox, oy, dx, 0, goal) is not None
+                    or self.jump(ox, oy, 0, dy, goal) is not None
+                ):
                     return ox, oy
 
                 ox += dx
@@ -150,10 +164,12 @@ class JPSAlgorithm(object):
         else:
             if dx != 0:
                 while True:
-                    if (not self.blocked(ox, ny, dx, 1) and
-                            self.blocked(ox, ny, 0, 1) or
-                            not self.blocked(ox, ny, dx, -1) and
-                            self.blocked(ox, ny, 0, -1)):
+                    if (
+                        not self.blocked(ox, ny, dx, 1)
+                        and self.blocked(ox, ny, 0, 1)
+                        or not self.blocked(ox, ny, dx, -1)
+                        and self.blocked(ox, ny, 0, -1)
+                    ):
                         return ox, ny
 
                     ox += dx
@@ -166,10 +182,12 @@ class JPSAlgorithm(object):
 
             else:
                 while True:
-                    if (not self.blocked(nx, oy, 1, dy) and
-                            self.blocked(nx, oy, 1, 0) or
-                            not self.blocked(nx, oy, -1, dy) and
-                            self.blocked(nx, oy, -1, 0)):
+                    if (
+                        not self.blocked(nx, oy, 1, dy)
+                        and self.blocked(nx, oy, 1, 0)
+                        or not self.blocked(nx, oy, -1, dy)
+                        and self.blocked(nx, oy, -1, 0)
+                    ):
                         return nx, oy
 
                     oy += dy
@@ -225,26 +243,39 @@ class JPSAlgorithm(object):
                     current = came_from[current]
                 data.append(start)
                 data = data[::-1]
-                logger.debug("Got path from {} to {} with score {} in {:.02f}".format(start, goal, gscore[goal],
-                                                                                      time.time() - start_time))
+                logger.debug(
+                    "Got path from {} to {} with score {} in {:.02f}".format(
+                        start, goal, gscore[goal], time.time() - start_time
+                    )
+                )
                 return data
 
             close_set.add(current)
 
-            successors = self.identify_successors(current[0], current[1], came_from, goal)
+            successors = self.identify_successors(
+                current[0], current[1], came_from, goal
+            )
 
             for successor in successors:
                 jump_point = successor
 
-                if jump_point in close_set:  # and tentative_g_score >= gscore.get(jump_point,0):
+                if (
+                    jump_point in close_set
+                ):  # and tentative_g_score >= gscore.get(jump_point,0):
                     continue
 
-                tentative_g_score = gscore[current] + self.lenght(current, jump_point, hchoice)
+                tentative_g_score = gscore[current] + self.lenght(
+                    current, jump_point, hchoice
+                )
 
-                if tentative_g_score < gscore.get(jump_point, 0) or jump_point not in [j[1] for j in pqueue]:
+                if tentative_g_score < gscore.get(jump_point, 0) or jump_point not in [
+                    j[1] for j in pqueue
+                ]:
                     came_from[jump_point] = current
                     gscore[jump_point] = tentative_g_score
-                    fscore[jump_point] = tentative_g_score + self.heuristic(jump_point, goal, hchoice)
+                    fscore[jump_point] = tentative_g_score + self.heuristic(
+                        jump_point, goal, hchoice
+                    )
                     heapq.heappush(pqueue, (fscore[jump_point], jump_point))
         return False
 
@@ -262,4 +293,6 @@ class JPSAlgorithm(object):
                 lenght = (dx * lx + dy * ly) * 10
                 return lenght
         if hchoice == EUCLIDEAN:
-            return math.sqrt((current[0] - jumppoint[0]) ** 2 + (current[1] - jumppoint[1]) ** 2)
+            return math.sqrt(
+                (current[0] - jumppoint[0]) ** 2 + (current[1] - jumppoint[1]) ** 2
+            )

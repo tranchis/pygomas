@@ -27,9 +27,23 @@ from .pack import PACK_NAME, PACK_NONE, PACK_OBJPACK, PACK_MEDICPACK, PACK_AMMOP
 from .agent import AbstractAgent, LONG_RECEIVE_WAIT
 from .config import Config
 from .service import Service
-from .server import Server, TCP_AGL, TCP_COM, MSG_AGENTS, MSG_CONTENT_NAME, MSG_CONTENT_TYPE, MSG_CONTENT_TEAM, \
-    MSG_CONTENT_HEALTH, MSG_CONTENT_AMMO, MSG_CONTENT_CARRYINGFLAG, MSG_CONTENT_POSITION, MSG_CONTENT_VELOCITY, \
-    MSG_CONTENT_HEADING, MSG_PACKS, QUIT_MSG
+from .server import (
+    Server,
+    TCP_AGL,
+    TCP_COM,
+    MSG_AGENTS,
+    MSG_CONTENT_NAME,
+    MSG_CONTENT_TYPE,
+    MSG_CONTENT_TEAM,
+    MSG_CONTENT_HEALTH,
+    MSG_CONTENT_AMMO,
+    MSG_CONTENT_CARRYINGFLAG,
+    MSG_CONTENT_POSITION,
+    MSG_CONTENT_VELOCITY,
+    MSG_CONTENT_HEADING,
+    MSG_PACKS,
+    QUIT_MSG,
+)
 from .bditroop import CLASS_SOLDIER
 from .objpack import ObjectivePack
 from .map import TerrainMap
@@ -220,7 +234,10 @@ class Manager(AbstractAgent, Agent):
     def launch_render_engine_inform_behaviour(self):
         class InformRenderEngineBehaviour(PeriodicBehaviour):
             async def run(self):
-                if self.agent.render_server and len(self.agent.render_server.get_connections()) != 0:
+                if (
+                    self.agent.render_server
+                    and len(self.agent.render_server.get_connections()) != 0
+                ):
 
                     msg = {
                         MSG_AGENTS: [
@@ -231,30 +248,44 @@ class Manager(AbstractAgent, Agent):
                                 MSG_CONTENT_HEALTH: agent.health,
                                 MSG_CONTENT_AMMO: agent.ammo,
                                 MSG_CONTENT_CARRYINGFLAG: agent.is_carrying_objective,
-                                MSG_CONTENT_POSITION: [agent.locate.position.x,
-                                                       agent.locate.position.y,
-                                                       agent.locate.position.z],
-                                MSG_CONTENT_VELOCITY: [agent.locate.velocity.x,
-                                                       agent.locate.velocity.y,
-                                                       agent.locate.velocity.z],
-                                MSG_CONTENT_HEADING: [agent.locate.heading.x,
-                                                      agent.locate.heading.y,
-                                                      agent.locate.heading.z],
-
-                            } for agent in self.agent.agents.values()],
+                                MSG_CONTENT_POSITION: [
+                                    agent.locate.position.x,
+                                    agent.locate.position.y,
+                                    agent.locate.position.z,
+                                ],
+                                MSG_CONTENT_VELOCITY: [
+                                    agent.locate.velocity.x,
+                                    agent.locate.velocity.y,
+                                    agent.locate.velocity.z,
+                                ],
+                                MSG_CONTENT_HEADING: [
+                                    agent.locate.heading.x,
+                                    agent.locate.heading.y,
+                                    agent.locate.heading.z,
+                                ],
+                            }
+                            for agent in self.agent.agents.values()
+                        ],
                         MSG_PACKS: [
                             {
                                 MSG_CONTENT_NAME: pack.render_id,
                                 MSG_CONTENT_TYPE: pack.type,
-                                MSG_CONTENT_POSITION: [pack.position.x,
-                                                       pack.position.y,
-                                                       pack.position.z]
-                            } for pack in self.agent.din_objects.values() if not pack.is_taken]
+                                MSG_CONTENT_POSITION: [
+                                    pack.position.x,
+                                    pack.position.y,
+                                    pack.position.z,
+                                ],
+                            }
+                            for pack in self.agent.din_objects.values()
+                            if not pack.is_taken
+                        ],
                     }
 
                     for task in self.agent.render_server.get_connections():
                         if self.agent.render_server.is_ready(task):
-                            self.agent.render_server.send_msg_to_render_engine(task, TCP_AGL, msg)
+                            self.agent.render_server.send_msg_to_render_engine(
+                                task, TCP_AGL, msg
+                            )
 
         self.add_behaviour(InformRenderEngineBehaviour(self.fps))
         logger.debug("InformRenderEngineBehaviour started.")

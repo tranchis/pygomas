@@ -2,6 +2,13 @@
 History
 =======
 
+0.3.0 (2020-02-10)
+------------------
+
+* Migrated msg format to msgpack.
+* Black sttyle applied to code.
+* Major refactoring of code in renders.
+
 0.2.3 (2019-07-10)
 ------------------
 

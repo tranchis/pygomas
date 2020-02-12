@@ -129,8 +129,8 @@ def cli():
 )
 @click.option(
     "--fps",
-    default=0.033,
-    help="Frame rate in seconds per frame to inform renders (default=0.033).",
+    default=33,
+    help="Frame rate in seconds per frame to inform renders (default=33).",
     type=float,
 )
 @click.option(

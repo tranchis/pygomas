@@ -38,7 +38,6 @@ from .a_star import AAlgorithm
 from .jps import JPSAlgorithm
 from numpy import sign, arctan2, cos, sin
 
-
 DEFAULT_RADIUS = 20
 ESCAPE_RADIUS = 50
 
@@ -59,17 +58,17 @@ MV_ALREADY_IN_DEST = 2
 
 class BDITroop(AbstractAgent, BDIAgent):
     def __init__(
-        self,
-        jid,
-        passwd,
-        asl,
-        actions=None,
-        team=TEAM_NONE,
-        map_path=None,
-        manager_jid="cmanager@localhost",
-        service_jid="cservice@localhost",
-        *args,
-        **kwargs
+            self,
+            jid,
+            passwd,
+            asl,
+            actions=None,
+            team=TEAM_NONE,
+            map_path=None,
+            manager_jid="cmanager@localhost",
+            service_jid="cservice@localhost",
+            *args,
+            **kwargs
     ):
 
         self.service_types = []
@@ -621,7 +620,8 @@ class BDITroop(AbstractAgent, BDIAgent):
                 config = Config(self.agent.map_path)
                 self.agent.map.load_map(map_name, config)
                 # self.agent.path_finder = AAlgorithm(self.agent.map.terrain[:, :, 1])
-                self.agent.path_finder = JPSAlgorithm(self.agent.map.terrain[:, :, 1])
+                # self.agent.path_finder = JPSAlgorithm(self.agent.map.terrain[:, :, 1])
+                self.agent.path_finder = JPSAlgorithm(self.agent.map.cost_terrain[:, :, 1])
                 self.agent.movement = Mobile()
                 self.agent.movement.set_size(
                     self.agent.map.get_size_x(), self.agent.map.get_size_z()
@@ -646,48 +646,48 @@ class BDITroop(AbstractAgent, BDIAgent):
                 if self.agent.bdi_enabled:
                     if self.agent.team == TEAM_ALLIED:
                         x = (
-                            (
-                                self.agent.map.allied_base.get_end_x()
-                                - self.agent.map.allied_base.get_init_x()
-                            )
-                            / 2
-                        ) + self.agent.map.allied_base.get_init_x()
+                                    (
+                                            self.agent.map.allied_base.get_end_x()
+                                            - self.agent.map.allied_base.get_init_x()
+                                    )
+                                    / 2
+                            ) + self.agent.map.allied_base.get_init_x()
                         y = (
-                            (
-                                self.agent.map.allied_base.get_end_y()
-                                - self.agent.map.allied_base.get_init_y()
-                            )
-                            / 2
-                        ) + self.agent.map.allied_base.get_init_y()
+                                    (
+                                            self.agent.map.allied_base.get_end_y()
+                                            - self.agent.map.allied_base.get_init_y()
+                                    )
+                                    / 2
+                            ) + self.agent.map.allied_base.get_init_y()
                         z = (
-                            (
-                                self.agent.map.allied_base.get_end_z()
-                                - self.agent.map.allied_base.get_init_z()
-                            )
-                            / 2
-                        ) + self.agent.map.allied_base.get_init_z()
+                                    (
+                                            self.agent.map.allied_base.get_end_z()
+                                            - self.agent.map.allied_base.get_init_z()
+                                    )
+                                    / 2
+                            ) + self.agent.map.allied_base.get_init_z()
                     elif self.agent.team == TEAM_AXIS:
                         x = (
-                            (
-                                self.agent.map.axis_base.get_end_x()
-                                - self.agent.map.axis_base.get_init_x()
-                            )
-                            / 2
-                        ) + self.agent.map.axis_base.get_init_x()
+                                    (
+                                            self.agent.map.axis_base.get_end_x()
+                                            - self.agent.map.axis_base.get_init_x()
+                                    )
+                                    / 2
+                            ) + self.agent.map.axis_base.get_init_x()
                         y = (
-                            (
-                                self.agent.map.axis_base.get_end_y()
-                                - self.agent.map.axis_base.get_init_y()
-                            )
-                            / 2
-                        ) + self.agent.map.axis_base.get_init_y()
+                                    (
+                                            self.agent.map.axis_base.get_end_y()
+                                            - self.agent.map.axis_base.get_init_y()
+                                    )
+                                    / 2
+                            ) + self.agent.map.axis_base.get_init_y()
                         z = (
-                            (
-                                self.agent.map.axis_base.get_end_z()
-                                - self.agent.map.axis_base.get_init_z()
-                            )
-                            / 2
-                        ) + self.agent.map.axis_base.get_init_z()
+                                    (
+                                            self.agent.map.axis_base.get_end_z()
+                                            - self.agent.map.axis_base.get_init_z()
+                                    )
+                                    / 2
+                            ) + self.agent.map.axis_base.get_init_z()
                     self.agent.bdi.set_belief(NAME, self.agent.name)
                     self.agent.bdi.set_belief(TEAM, self.agent.team)
                     self.agent.bdi.set_belief(CLASS, self.agent.eclass)
@@ -887,8 +887,8 @@ class BDITroop(AbstractAgent, BDIAgent):
         if not self.check_static_position(new_position.x, new_position.z):
             logger.info(
                 self.name
-                + ": Can't walk to {}. I stay at {}".format(
-                    new_position, self.movement.position
+                + ": Can't walk to {} with velocity {}. I stay at {}".format(
+                    new_position, self.movement.velocity, self.movement.position
                 )
             )
             return MV_CANNOT_GET_POSITION
@@ -1127,7 +1127,7 @@ class BDITroop(AbstractAgent, BDIAgent):
                 radius_x=ESCAPE_RADIUS, radius_y=ESCAPE_RADIUS
             )
             if self.check_static_position(
-                self.movement.destination.x, self.movement.destination.z
+                    self.movement.destination.x, self.movement.destination.z
             ):
                 self.movement.calculate_new_orientation(self.movement.destination)
                 return
@@ -1138,15 +1138,26 @@ class BDITroop(AbstractAgent, BDIAgent):
         highest component to zero, forcing it to move only
         along the other component.
         """
+        '''
         if abs(self.movement.velocity.x) == abs(self.movement.velocity.z):
             self.movement.velocity.x += random.gauss(0, 0.1)
             self.movement.velocity.z += random.gauss(0, 0.1)
-        if abs(self.movement.velocity.x) > abs(self.movement.velocity.z):
-            self.movement.velocity.x = 0
+        elif abs(self.movement.velocity.x) > abs(self.movement.velocity.z):
+            self.movement.velocity.x = 0.0
             self.movement.velocity.z = float(1 * sign(self.movement.velocity.z))
         elif abs(self.movement.velocity.x) < abs(self.movement.velocity.z):
-            self.movement.velocity.z = 0
+            self.movement.velocity.z = 0.0
             self.movement.velocity.x = float(1 * sign(self.movement.velocity.x))
+        '''
+        gx, gz = random.gauss(0, 0.1), random.gauss(0, 0.1)
+        self.movement.velocity.x += gx
+        self.movement.velocity.z += gz
+        if random.randint(0, 1) == 0:
+            self.movement.velocity.x *= (-1)
+        else:
+            self.movement.velocity.z *= (-1)
+        logger.error(self.name
+                     + ": New velocity is <{},{}>".format(self.movement.velocity.x, self.movement.velocity.z))
 
     def perform_escape_action(self):
         """

@@ -98,7 +98,7 @@ class Manager(AbstractAgent, Agent):
         name="cmanager@localhost",
         passwd="secret",
         players=10,
-        fps=0.033,
+        fps=33,
         match_time=380,
         map_name="map_01",
         map_path=None,
@@ -112,7 +112,7 @@ class Manager(AbstractAgent, Agent):
 
         self.game_statistic = GameStatistic()
         self.max_total_agents = players
-        self.fps = fps
+        self.fps = 1/fps
         self.match_time = match_time
         self.map_name = str(map_name)
         self.port = port

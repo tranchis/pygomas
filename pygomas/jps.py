@@ -19,7 +19,6 @@ class JPSAlgorithm(object):
         if downsample:
             m, n = self.array.shape
             self.array = self.array.reshape(m // 8, 8, n // 8, 8).min(axis=(1, 3))
-        logger.warning("\n" + str(self.array))
 
     @staticmethod
     def heuristic(a, b, hchoice=EUCLIDEAN):

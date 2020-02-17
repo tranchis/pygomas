@@ -1,13 +1,12 @@
 import asyncio
 import datetime
 import json
-import time
 import math
+import time
 import traceback
 
-from loguru import logger
-
 import spade
+from loguru import logger
 from spade.agent import Agent
 from spade.behaviour import (
     OneShotBehaviour,
@@ -18,15 +17,15 @@ from spade.behaviour import (
 from spade.message import Message
 from spade.template import Template
 
-from . import MIN_HEALTH
-from .config import *
-from .stats import GameStatistic
-from .mobile import Mobile
-from .vector import Vector3D
-from .pack import PACK_NAME, PACK_NONE, PACK_OBJPACK, PACK_MEDICPACK, PACK_AMMOPACK
+from . import MIN_HEALTH, __version__
 from .agent import AbstractAgent, LONG_RECEIVE_WAIT
+from .bditroop import CLASS_SOLDIER
+from .config import *
 from .config import Config
-from .service import Service
+from .map import TerrainMap
+from .mobile import Mobile
+from .objpack import ObjectivePack
+from .pack import PACK_NAME, PACK_NONE, PACK_OBJPACK, PACK_MEDICPACK, PACK_AMMOPACK
 from .server import (
     Server,
     TCP_AGL,
@@ -44,10 +43,10 @@ from .server import (
     MSG_PACKS,
     QUIT_MSG,
 )
-from .bditroop import CLASS_SOLDIER
-from .objpack import ObjectivePack
-from .map import TerrainMap
+from .service import Service
 from .sight import Sight
+from .stats import GameStatistic
+from .vector import Vector3D
 
 MILLISECONDS_IN_A_SECOND: int = 1000
 
@@ -198,11 +197,9 @@ class Manager(AbstractAgent, Agent):
                 # Behaviour to refresh all render engines connected
                 self.agent.launch_render_engine_inform_behaviour()
 
-        logger.success("pygomas v.0.1 (c) GTI-IA 2005-2019 (VRAIN/UPV)")
-        logger.success(spade.__version__)
-        # manager_future = super().start(auto_register=auto_register)
+        logger.success("pygomas {} (c) VRAIN 2005-{} (VRAIN/UPV)".format(__version__, time.strftime("%Y")))
+        logger.success("Powered by SPADE {}".format(spade.__version__))
 
-        # Manager notify its services in a different way
         coro = self.service_agent.start(auto_register=True)
         await coro
 
@@ -769,7 +766,6 @@ class Manager(AbstractAgent, Agent):
             a.destination = victim.locate.position
             a.calculate_new_orientation(a.destination)
             distance_terrain = self.intersect(a.position, a.heading, min_distance)
-            # logger.info("distanceTerrain: " + str(distance_terrain))
             if distance_terrain != 0.0 and distance_terrain < min_distance:
                 victim = None
 
@@ -929,8 +925,7 @@ class Manager(AbstractAgent, Agent):
 
         self.game_statistic.match_duration = time.time() * MILLISECONDS_IN_A_SECOND
         self.game_statistic.match_duration -= self.match_init
-        logger.info("\nTHIS IS THE REAL BATTLE TIME IN SECONDS\n")
-        logger.info(time.time() - self.match_init)
+        logger.info("Match took {} seconds".format(time.time() - self.match_init))
 
         for agent in self.agents.values():
             if agent.team == TEAM_ALLIED:

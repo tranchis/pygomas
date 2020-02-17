@@ -1,17 +1,15 @@
 from collections import deque
 
-from .vector import Vector3D
+from agentspeak import grounded
+
 from .bditroop import BDITroop, CLASS_SOLDIER
 from .config import BACKUP_SERVICE, DESTINATION, VELOCITY, HEADING
-
-from agentspeak import Actions
-from agentspeak import grounded
-from agentspeak.stdlib import actions as asp_action
+from .vector import Vector3D
 
 
 class BDISoldier(BDITroop):
-    def __init__(self, *args, **kwargs):
-        soldier_actions = Actions(asp_action)
+    def __init__(self, actions=None, *args, **kwargs):
+        soldier_actions = self.get_actions(actions=actions)
 
         @soldier_actions.add(".reinforce", 3)
         def _reinforce(agent, term, intention):

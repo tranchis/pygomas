@@ -1,17 +1,15 @@
-from collections import deque
-
 import json
 import random
-import time
+from collections import deque
 
-from loguru import logger
-
-from spade.message import Message
-from spade.behaviour import OneShotBehaviour, PeriodicBehaviour, CyclicBehaviour
-from spade.template import Template
-from spade_bdi.bdi import BDIAgent
 import agentspeak as asp
 from agentspeak.stdlib import actions as asp_action
+from loguru import logger
+from numpy import arctan2, cos, sin
+from spade.behaviour import OneShotBehaviour, PeriodicBehaviour, CyclicBehaviour
+from spade.message import Message
+from spade.template import Template
+from spade_bdi.bdi import BDIAgent
 
 from . import (
     MIN_POWER,
@@ -25,18 +23,16 @@ from . import (
     MAX_HEALTH,
     MIN_HEALTH,
 )
-from .config import *
 from .agent import AbstractAgent, LONG_RECEIVE_WAIT
-from .threshold import Threshold
+from .config import *
+from .config import Config
+from .jps import JPSAlgorithm
 from .map import TerrainMap
 from .mobile import Mobile
-from .vector import Vector3D
-from .sight import Sight
 from .pack import PACK_MEDICPACK, PACK_AMMOPACK, PACK_OBJPACK, PACK_NONE
-from .config import Config
-from .a_star import AAlgorithm
-from .jps import JPSAlgorithm
-from numpy import sign, arctan2, cos, sin
+from .sight import Sight
+from .threshold import Threshold
+from .vector import Vector3D
 
 DEFAULT_RADIUS = 20
 ESCAPE_RADIUS = 50
@@ -118,10 +114,7 @@ class BDITroop(AbstractAgent, BDIAgent):
         # Destination Queue
         self.destinations = deque()
 
-        if isinstance(actions, asp.Actions):
-            troop_actions = actions
-        else:
-            troop_actions = asp.Actions(asp_action)
+        troop_actions = self.get_actions(actions)
 
         @troop_actions.add_function(".create_control_points", (tuple, float, int))
         def _create_control_points(center, radius, n):
@@ -153,7 +146,7 @@ class BDITroop(AbstractAgent, BDIAgent):
                         else:
                             control_points.append((x, y, z))
                             break
-                logger.success("Control point generated {}".format((x, y, z)))
+                logger.info("Control point generated {}".format((x, y, z)))
             return tuple(control_points)
 
         @troop_actions.add_function(".shuffle", (tuple))
@@ -506,6 +499,12 @@ class BDITroop(AbstractAgent, BDIAgent):
             self, jid=jid, password=passwd, asl=asl, actions=troop_actions, **kwargs
         )
 
+    @staticmethod
+    def get_actions(actions):
+        if not isinstance(actions, asp.Actions):
+            actions = asp.Actions(asp_action)
+        return actions
+
     def start(self, auto_register=True):
         self.health = MAX_HEALTH
         self.protection = 25
@@ -746,7 +745,7 @@ class BDITroop(AbstractAgent, BDIAgent):
                 )
 
                 if self.agent.health <= 0:
-                    logger.info(self.agent.name + ": DEAD!!")
+                    logger.success(self.agent.name + ": DEAD!!")
                     if self.agent.is_objective_carried:
                         self.agent.bdi.remove_belief(PERFORMATIVE_FLAG_TAKEN)
                         self.agent.is_objective_carried = False
@@ -1156,7 +1155,7 @@ class BDITroop(AbstractAgent, BDIAgent):
             self.movement.velocity.x *= (-1)
         else:
             self.movement.velocity.z *= (-1)
-        logger.error(self.name
+        logger.trace(self.name
                      + ": New velocity is <{},{}>".format(self.movement.velocity.x, self.movement.velocity.z))
 
     def perform_escape_action(self):

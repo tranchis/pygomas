@@ -1,20 +1,20 @@
+import random
+
 from loguru import logger
 from spade.behaviour import OneShotBehaviour
+
 from . import POWER_UNIT
-from .medicpack import MedicPack
 from .bditroop import BDITroop, CLASS_MEDIC
 from .config import MEDIC_SERVICE
-import random
-from agentspeak import Actions
-from agentspeak.stdlib import actions as asp_action
+from .medicpack import MedicPack
 
 
 class BDIMedic(BDITroop):
     packs_delivered = 0
     medic_pack_offset = 5
 
-    def __init__(self, *args, **kwargs):
-        medic_actions = Actions(asp_action)
+    def __init__(self, actions=None, *args, **kwargs):
+        medic_actions = self.get_actions(actions)
 
         @medic_actions.add(".cure", 0)
         def _cure(agent, term, intention):

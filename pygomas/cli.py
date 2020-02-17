@@ -416,11 +416,11 @@ def load_class(class_path):
 def set_verbosity(verbose):
     logger.remove()
     if verbose == 0:
-        logger.add(sys.stderr, level="WARNING")
+        logger.add(sys.stderr, level="SUCCESS")
     elif verbose == 1:
         logger.add(sys.stderr, level="INFO")
     else:
-        logger.add(sys.stderr, level="DEBUG")
+        logger.add(sys.stderr, level="TRACE")
 
     logging.getLogger("aiohttp").setLevel(logging.WARNING)
     logging.getLogger("aioopenssl").setLevel(logging.WARNING)

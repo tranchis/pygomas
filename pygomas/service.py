@@ -40,7 +40,7 @@ class Service(Agent):
             self.services[name] = {TEAM_AXIS: [], TEAM_ALLIED: [], TEAM_NONE: []}
 
         self.services[name][team].append(jid)
-        logger.success(
+        logger.info(
             "Service {} of team {} registered for {}".format(name, team, jid)
         )
 
@@ -50,7 +50,7 @@ class Service(Agent):
 
         if name in self.services.keys() and jid in self.services[name][team]:
             self.services[name][team].remove(jid)
-        logger.success(
+        logger.info(
             "Service {} of team {} deregistered for {}".format(name, team, jid)
         )
 
@@ -60,25 +60,25 @@ class Service(Agent):
             for team in [TEAM_ALLIED, TEAM_AXIS]:
                 if jid in self.services[name][team]:
                     self.services[name][team].remove(jid)
-                    logger.success(
+                    logger.info(
                         "Service {} of team {} deregistered for {}".format(
                             name, team, jid
                         )
                     )
 
     def get_service(self, service_descriptor, questioner):
-        logger.info("get service: {}".format(service_descriptor))
+        logger.debug("get service: {}".format(service_descriptor))
         name = service_descriptor[NAME]
         team = service_descriptor[TEAM]
 
         if name in self.services.keys():
-            logger.info("I got service")
+            logger.debug("I got service")
             request = self.services[name][team][:]
             if questioner in request:
                 request.remove(questioner)
             return request
         else:
-            logger.info("No service")
+            logger.debug("No service")
             return []
 
     async def setup(self):

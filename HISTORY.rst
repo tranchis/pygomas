@@ -2,6 +2,15 @@
 History
 =======
 
+0.3.1 (2020-02-17)
+------------------
+
+* Fixed adding new actions in inherited classes.
+* Improved logger.
+* Added verbosity parameter.
+* Improved jps and a* algorithms by avoiding being near walls.
+
+
 0.3.0 (2020-02-10)
 ------------------
 

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """Console script for pygomas."""
+import logging
 import os
 import random
 import string
@@ -11,6 +12,8 @@ import json
 import sys
 import time
 from importlib import import_module
+
+from loguru import logger
 
 import click
 
@@ -129,8 +132,8 @@ def cli():
 )
 @click.option(
     "--fps",
-    default=0.033,
-    help="Frame rate in seconds per frame to inform renders (default=0.033).",
+    default=33,
+    help="Frame rate in seconds per frame to inform renders (default=33).",
     type=float,
 )
 @click.option(
@@ -139,20 +142,25 @@ def cli():
     help="Port to connect with renders (default=8001).",
     type=int,
 )
+@click.option('-v', '--verbose', count=True,
+              help="Show verbose debug level: -v level 1, -vv level 2, -vvv level 3, -vvvv level 4")
 def manager(
-    jid,
-    password,
-    num_players,
-    map_name,
-    map_path,
-    service_jid,
-    service_password,
-    match_time,
-    fps,
-    port,
+        jid,
+        password,
+        num_players,
+        map_name,
+        map_path,
+        service_jid,
+        service_password,
+        match_time,
+        fps,
+        port,
+        verbose
 ):
     """Run the manager which controls the game."""
     click.echo("Running manager agent {}".format(jid))
+
+    set_verbosity(verbose)
 
     manager_agent = Manager(
         players=int(num_players),
@@ -196,8 +204,13 @@ def manager(
     default=None,
     help="The path to your custom maps directory.",
 )
-def run(game, map_path):
+@click.option('-v', '--verbose', count=True,
+              help="Show verbose debug level: -v level 1, -vv level 2, -vvv level 3, -vvvv level 4")
+def run(game, map_path, verbose):
     """Run a JSON game file with the players definition."""
+
+    set_verbosity(verbose)
+
     try:
         with open(game) as f:
             config = json.load(f)
@@ -398,6 +411,28 @@ def load_class(class_path):
         module_path, class_name = class_path.rsplit(".", 1)
         mod = import_module(module_path)
         return getattr(mod, class_name)
+
+
+def set_verbosity(verbose):
+    logger.remove()
+    if verbose == 0:
+        logger.add(sys.stderr, level="SUCCESS")
+    elif verbose == 1:
+        logger.add(sys.stderr, level="INFO")
+    else:
+        logger.add(sys.stderr, level="TRACE")
+
+    logging.getLogger("aiohttp").setLevel(logging.WARNING)
+    logging.getLogger("aioopenssl").setLevel(logging.WARNING)
+    logging.getLogger("aiosasl").setLevel(logging.WARNING)
+    logging.getLogger("asyncio").setLevel(logging.WARNING)
+    logging.getLogger("spade").setLevel(logging.WARNING)
+    if verbose > 2:
+        logging.getLogger("spade").setLevel(logging.INFO)
+    if verbose > 3:
+        logging.getLogger("aioxmpp").setLevel(logging.INFO)
+    else:
+        logging.getLogger("aioxmpp").setLevel(logging.WARNING)
 
 
 if __name__ == "__main__":

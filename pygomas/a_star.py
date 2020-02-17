@@ -52,6 +52,7 @@ class AAlgorithm:
                 tentative_g_score = gscore[current] + self.heuristic(current, neighbor)
                 if 0 <= neighbor[0] < self.array.shape[0]:
                     if 0 <= neighbor[1] < self.array.shape[1]:
+                        #if not all([self.array[current[0] + i*d][current[1] + j*d] for d in range(1, 9)]):
                         if self.array[neighbor[0]][neighbor[1]] == 0:
                             continue
                     else:

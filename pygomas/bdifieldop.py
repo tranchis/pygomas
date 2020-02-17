@@ -1,20 +1,20 @@
+import random
+
 from loguru import logger
 from spade.behaviour import OneShotBehaviour
+
 from . import POWER_UNIT
 from .ammopack import AmmoPack
 from .bditroop import BDITroop, CLASS_FIELDOPS
 from .config import AMMO_SERVICE
-import random
-from agentspeak import Actions
-from agentspeak.stdlib import actions as asp_action
 
 
 class BDIFieldOp(BDITroop):
     packs_delivered = 0
     ammo_pack_offset = 5
 
-    def __init__(self, *args, **kwargs):
-        fieldop_actions = Actions(asp_action)
+    def __init__(self, actions=None, *args, **kwargs):
+        fieldop_actions = self.get_actions(actions)
 
         @fieldop_actions.add(".reload", 0)
         def _cure(agent, term, intention):

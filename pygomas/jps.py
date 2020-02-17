@@ -19,7 +19,6 @@ class JPSAlgorithm(object):
         if downsample:
             m, n = self.array.shape
             self.array = self.array.reshape(m // 8, 8, n // 8, 8).min(axis=(1, 3))
-        logger.warning("\n" + str(self.array))
 
     @staticmethod
     def heuristic(a, b, hchoice=EUCLIDEAN):
@@ -39,7 +38,7 @@ class JPSAlgorithm(object):
         if cy + dy < 0 or cy + dy >= self.array.shape[1]:
             return True
         if dx != 0 and dy != 0:
-            if self.array[cx + dx][cy] == 0 and self.array[cx][cy + dy] == OBSTACLE:
+            if self.array[cx + dx][cy] == OBSTACLE and self.array[cx][cy + dy] == OBSTACLE:
                 return True
             if self.array[cx + dx][cy + dy] == OBSTACLE:
                 return True

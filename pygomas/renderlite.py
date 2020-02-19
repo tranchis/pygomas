@@ -175,6 +175,11 @@ class Render(object):
         except Exception as e:
             tb = traceback.format_exc()
             error = str(e) + "\n" + tb
+            curses.nocbreak()
+            # self.stdscr.keypad(False)
+            curses.echo()
+            curses.endwin()
+            logger.exception("Exception.")
 
         finally:
             logger.info("Sending QUIT message...")
@@ -195,12 +200,9 @@ class Render(object):
                 # self.stdscr.keypad(False)
                 curses.echo()
                 curses.endwin()
-                pass
 
             if error:
-                logger.error("-" * 60)
                 logger.error(str(error))
-                logger.error("-" * 60)
 
     def agl_parse(self, data):
         self.dins = {}
@@ -506,6 +508,7 @@ class Render(object):
         # for k, v in list(self.agents.items()):
         for agent in self.agents.values():
             name = agent[MSG_CONTENT_NAME]
+            name = name[:5] + ".." + name[-5:] if len(name) > 12 else name
             # Type
             symbol = {1: "*", 2: "+", 3: "Y", 4: "^"}.get(agent[MSG_CONTENT_TYPE], "X")
 

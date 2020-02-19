@@ -3,10 +3,10 @@ import random
 from loguru import logger
 from spade.behaviour import OneShotBehaviour
 
-from . import POWER_UNIT
+from .config import POWER_UNIT
 from .ammopack import AmmoPack
 from .bditroop import BDITroop, CLASS_FIELDOPS
-from .config import AMMO_SERVICE
+from .ontology import AMMO_SERVICE
 
 
 class BDIFieldOp(BDITroop):
@@ -49,7 +49,9 @@ class BDIFieldOp(BDITroop):
         logger.info("{} Creating ammo packs.".format(self.name))
         while self.perform_ammo_action():
             BDIFieldOp.packs_delivered += 1
-            name = "ammopack{}@{}".format(BDIFieldOp.packs_delivered, self.jid.domain)
+            name = "ammopack_{}_{}@{}".format(
+                self.jid.localpart, BDIFieldOp.packs_delivered, self.jid.domain
+            )
             x = self.movement.position.x + random.random() * BDIFieldOp.ammo_pack_offset
             z = self.movement.position.z + random.random() * BDIFieldOp.ammo_pack_offset
 

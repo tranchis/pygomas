@@ -2,7 +2,7 @@ import asyncio
 import json
 from datetime import datetime, timedelta
 
-from .config import PERFORMATIVE, PERFORMATIVE_INFORM, NAME, ACTION, DESTROY
+from .ontology import ACTION, DESTROY, PERFORMATIVE, PERFORMATIVE_INFORM, NAME
 from .pack import Pack, PACK_MEDICPACK, PACK_AUTODESTROY_TIMEOUT
 from spade.behaviour import TimeoutBehaviour
 from spade.message import Message
@@ -27,5 +27,5 @@ class MedicPack(Pack):
             content = {NAME: self.agent.name, ACTION: DESTROY}
             msg.body = json.dumps(content)
             await self.send(msg)
-            await asyncio.sleep(1)
-            await self.agent.stop()
+            # await asyncio.sleep(1)
+            # await self.agent.stop()

@@ -1,3 +1,5 @@
+import datetime
+
 from .pack import PACK_MEDICPACK, PACK_AMMOPACK, PACK_OBJPACK
 from .config import TEAM_ALLIED, TEAM_AXIS
 
@@ -204,27 +206,10 @@ class GameStatistic:
         self.team_statistic[TEAM_AXIS].calculate_efficiency(allied_alive_players)
         self.team_statistic[TEAM_AXIS].calculate_anti_efficiency()
 
-    def __str__(self, winner_team=""):
-
-        self.match_duration = self.match_duration / 1000
-        hours = int(self.match_duration / 3600)
-        minutes = int((self.match_duration % 3600) / 60)
-        seconds = int((self.match_duration - ((hours * 3600) + (minutes * 60))))
+    def dumps(self, winner_team=""):
 
         ret = "Winner Team: " + winner_team + "\n"
-        if hours <= 0:
-            ret += "Duration: [" + str(minutes) + "m:" + str(seconds) + "s]\n"
-        else:
-            ret += (
-                "Duration: ["
-                + str(hours)
-                + "h:"
-                + str(minutes)
-                + "m:"
-                + str(seconds)
-                + "s]\n"
-            )
-
+        ret += "Duration: [" + str(str(datetime.timedelta(seconds=self.match_duration))) + "]\n"
         ret += "Statistics for ALLIED TEAM\n"
         ret += str(self.team_statistic[TEAM_ALLIED])
 

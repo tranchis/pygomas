@@ -7,24 +7,22 @@ from spade.behaviour import CyclicBehaviour
 from spade.template import Template
 
 from .agent import LONG_RECEIVE_WAIT
-from .config import (
-    PERFORMATIVE_CFM,
-    PERFORMATIVE_CFB,
+from .ontology import (
+    PERFORMATIVE,
     PERFORMATIVE_CFA,
+    PERFORMATIVE_CFB,
+    PERFORMATIVE_CFM,
+    PERFORMATIVE_DEREGISTER_AGENT,
+    PERFORMATIVE_DEREGISTER_SERVICE,
+    PERFORMATIVE_GET,
+    PERFORMATIVE_REGISTER_SERVICE,
     AMMO_SERVICE,
     BACKUP_SERVICE,
     MEDIC_SERVICE,
-    PERFORMATIVE,
-    PERFORMATIVE_GET,
-    PERFORMATIVE_REGISTER_SERVICE,
-    PERFORMATIVE_DEREGISTER_SERVICE,
-    PERFORMATIVE_DEREGISTER_AGENT,
-    TEAM_AXIS,
-    TEAM_ALLIED,
-    TEAM,
     NAME,
-    TEAM_NONE,
+    TEAM,
 )
+from .config import TEAM_NONE, TEAM_ALLIED, TEAM_AXIS
 
 
 class Service(Agent):
@@ -40,9 +38,7 @@ class Service(Agent):
             self.services[name] = {TEAM_AXIS: [], TEAM_ALLIED: [], TEAM_NONE: []}
 
         self.services[name][team].append(jid)
-        logger.info(
-            "Service {} of team {} registered for {}".format(name, team, jid)
-        )
+        logger.info("Service {} of team {} registered for {}".format(name, team, jid))
 
     def deregister_service(self, service_descriptor, jid):
         name = service_descriptor[NAME]
@@ -50,9 +46,7 @@ class Service(Agent):
 
         if name in self.services.keys() and jid in self.services[name][team]:
             self.services[name][team].remove(jid)
-        logger.info(
-            "Service {} of team {} deregistered for {}".format(name, team, jid)
-        )
+        logger.info("Service {} of team {} deregistered for {}".format(name, team, jid))
 
     def deregister_agent(self, jid):
         logger.info("Deregistering all services of agent {}".format(jid))

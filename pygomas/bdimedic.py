@@ -3,9 +3,9 @@ import random
 from loguru import logger
 from spade.behaviour import OneShotBehaviour
 
-from . import POWER_UNIT
+from .config import POWER_UNIT
 from .bditroop import BDITroop, CLASS_MEDIC
-from .config import MEDIC_SERVICE
+from .ontology import MEDIC_SERVICE
 from .medicpack import MedicPack
 
 
@@ -49,7 +49,9 @@ class BDIMedic(BDITroop):
         logger.info("{} Creating medic packs.".format(self.name))
         while self.perform_medic_action():
             BDIMedic.packs_delivered += 1
-            name = "medicpack{}@{}".format(BDIMedic.packs_delivered, self.jid.domain)
+            name = "medicpack_{}_{}@{}".format(
+                self.jid.localpart, BDIMedic.packs_delivered, self.jid.domain
+            )
             x = self.movement.position.x + random.random() * BDIMedic.medic_pack_offset
             z = self.movement.position.z + random.random() * BDIMedic.medic_pack_offset
 

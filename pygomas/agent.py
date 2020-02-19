@@ -7,11 +7,11 @@ from spade.agent import Agent
 from spade.behaviour import OneShotBehaviour
 from spade.message import Message
 
-from .config import (
+from .ontology import (
     PERFORMATIVE,
-    PERFORMATIVE_REGISTER_SERVICE,
-    PERFORMATIVE_DEREGISTER_SERVICE,
     PERFORMATIVE_DEREGISTER_AGENT,
+    PERFORMATIVE_DEREGISTER_SERVICE,
+    PERFORMATIVE_REGISTER_SERVICE,
     NAME,
     TEAM,
 )
@@ -25,6 +25,7 @@ class AbstractAgent(object, metaclass=ABCMeta):
         self._name = jid
         self.team = team
         self.service_jid = service_jid
+        self.alive = True
 
     def start(self, auto_register=True):
         future = Agent.start(self, auto_register=auto_register)
@@ -36,8 +37,13 @@ class AbstractAgent(object, metaclass=ABCMeta):
 
     async def die(self):
         await self.deregister_agent()
+        self.alive = False
         await self.stop()
         logger.info("Agent {} was stopped.".format(self.name))
+
+    async def send(self, msg):
+        if self.alive:
+            await super().send(msg)
 
     def register_service(self, service_name):
         class RegisterBehaviour(OneShotBehaviour):

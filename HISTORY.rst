@@ -2,6 +2,16 @@
 History
 =======
 
+0.3.2 (2020-02-19)
+------------------
+
+* Added friendly fire.
+* Added a probability to miss a shot.
+* Fixed agent stop when there are pending messages to be sent.
+* Fixed max length bug in text render.
+* Moved ontology constants to a new file.
+
+
 0.3.1 (2020-02-17)
 ------------------
 

@@ -2,7 +2,7 @@ import asyncio
 import json
 from spade.behaviour import TimeoutBehaviour
 
-from .config import PERFORMATIVE, PERFORMATIVE_INFORM, NAME, ACTION, DESTROY
+from .ontology import ACTION, DESTROY, PERFORMATIVE, PERFORMATIVE_INFORM, NAME
 from .pack import Pack, PACK_AMMOPACK, PACK_AUTODESTROY_TIMEOUT
 from datetime import datetime, timedelta
 from spade.message import Message
@@ -11,11 +11,11 @@ now = datetime.now
 
 
 class AmmoPack(Pack):
-    async def start(self, auto_register=True):
+    async def setup(self):
         self.type = PACK_AMMOPACK
         timeout = now() + timedelta(seconds=PACK_AUTODESTROY_TIMEOUT)
         self.add_behaviour(self.AutoDestroyBehaviour(start_at=timeout))
-        await super().start(auto_register)
+        await super().setup()
 
     async def perform_pack_taken(self, content):
         await self.stop()
@@ -27,5 +27,5 @@ class AmmoPack(Pack):
             content = {NAME: self.agent.name, ACTION: DESTROY}
             msg.body = json.dumps(content)
             await self.send(msg)
-            await asyncio.sleep(1)
-            await self.agent.stop()
+            # await asyncio.sleep(1)
+            # await self.agent.stop()

@@ -66,11 +66,11 @@ class TerrainMap:
 
     def can_walk(self, x, z):
         if (
-                x < 0
-                or z < 0
-                or x >= self.size_x
-                or z >= self.size_z
-                or len(self.terrain) == 0
+            x < 0
+            or z < 0
+            or x >= self.size_x
+            or z >= self.size_z
+            or len(self.terrain) == 0
         ):
             logger.info(
                 "Can't walk outside the map! {}:{} <> {}:{}".format(
@@ -84,11 +84,11 @@ class TerrainMap:
 
     def get_cost(self, x, z):
         if (
-                x < 0
-                or z < 0
-                or x >= self.size_x
-                or z >= self.size_z
-                or len(self.terrain) == 0
+            x < 0
+            or z < 0
+            or x >= self.size_x
+            or z >= self.size_z
+            or len(self.terrain) == 0
         ):
             return 2 * 10000
 
@@ -152,35 +152,35 @@ class TerrainMap:
                     c = file.read(1)  # read next char
                 if c == "*":
                     self.terrain[
-                    x * MAP_SCALE: x * MAP_SCALE + MAP_SCALE,
-                    z * MAP_SCALE: z * MAP_SCALE + MAP_SCALE,
-                    0,
+                        x * MAP_SCALE : x * MAP_SCALE + MAP_SCALE,
+                        z * MAP_SCALE : z * MAP_SCALE + MAP_SCALE,
+                        0,
                     ] = 0.0
                     self.terrain[
-                    x * MAP_SCALE: x * MAP_SCALE + MAP_SCALE,
-                    z * MAP_SCALE: z * MAP_SCALE + MAP_SCALE,
-                    1,
+                        x * MAP_SCALE : x * MAP_SCALE + MAP_SCALE,
+                        z * MAP_SCALE : z * MAP_SCALE + MAP_SCALE,
+                        1,
                     ] = 0
                     self.terrain[
-                    x * MAP_SCALE: x * MAP_SCALE + MAP_SCALE,
-                    z * MAP_SCALE: z * MAP_SCALE + MAP_SCALE,
-                    2,
+                        x * MAP_SCALE : x * MAP_SCALE + MAP_SCALE,
+                        z * MAP_SCALE : z * MAP_SCALE + MAP_SCALE,
+                        2,
                     ] = 10000
                 elif c == " ":
                     self.terrain[
-                    x * MAP_SCALE: x * MAP_SCALE + MAP_SCALE,
-                    z * MAP_SCALE: z * MAP_SCALE + MAP_SCALE,
-                    0,
+                        x * MAP_SCALE : x * MAP_SCALE + MAP_SCALE,
+                        z * MAP_SCALE : z * MAP_SCALE + MAP_SCALE,
+                        0,
                     ] = 0.0
                     self.terrain[
-                    x * MAP_SCALE: x * MAP_SCALE + MAP_SCALE,
-                    z * MAP_SCALE: z * MAP_SCALE + MAP_SCALE,
-                    1,
+                        x * MAP_SCALE : x * MAP_SCALE + MAP_SCALE,
+                        z * MAP_SCALE : z * MAP_SCALE + MAP_SCALE,
+                        1,
                     ] = 1
                     self.terrain[
-                    x * MAP_SCALE: x * MAP_SCALE + MAP_SCALE,
-                    z * MAP_SCALE: z * MAP_SCALE + MAP_SCALE,
-                    2,
+                        x * MAP_SCALE : x * MAP_SCALE + MAP_SCALE,
+                        z * MAP_SCALE : z * MAP_SCALE + MAP_SCALE,
+                        2,
                     ] = 1
         file.close()
 
@@ -189,10 +189,16 @@ class TerrainMap:
         for z in range(1, self.size_z - 1):
             for x in range(1, self.size_x - 1):
                 if self.terrain[x, z, 1] == 1:
-                    if self.terrain[x - 1, z - 1, 1] == 0 or self.terrain[x, z - 1, 1] == 0 \
-                            or self.terrain[x + 1, z - 1, 1] == 0 or self.terrain[x - 1, z, 1] == 0 \
-                            or self.terrain[x + 1, z, 1] == 0 or self.terrain[x - 1, z + 1, 1] == 0 \
-                            or self.terrain[x, z + 1, 1] == 0 or self.terrain[x + 1, z + 1, 1] == 0:
+                    if (
+                        self.terrain[x - 1, z - 1, 1] == 0
+                        or self.terrain[x, z - 1, 1] == 0
+                        or self.terrain[x + 1, z - 1, 1] == 0
+                        or self.terrain[x - 1, z, 1] == 0
+                        or self.terrain[x + 1, z, 1] == 0
+                        or self.terrain[x - 1, z + 1, 1] == 0
+                        or self.terrain[x, z + 1, 1] == 0
+                        or self.terrain[x + 1, z + 1, 1] == 0
+                    ):
                         self.cost_terrain[x, z, 1] = 0
                         self.cost_terrain[x, z, 2] = 5000
 

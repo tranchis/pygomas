@@ -2,6 +2,7 @@ import asyncio
 import datetime
 import json
 import math
+import random
 import time
 import traceback
 
@@ -17,14 +18,58 @@ from spade.behaviour import (
 from spade.message import Message
 from spade.template import Template
 
-from . import MIN_HEALTH, __version__
+from . import __version__
 from .agent import AbstractAgent, LONG_RECEIVE_WAIT
 from .bditroop import CLASS_SOLDIER
-from .config import *
-from .config import Config
+from .config import (
+    Config,
+    MIN_HEALTH,
+    TEAM_NONE,
+    TEAM_ALLIED,
+    TEAM_AXIS,
+    MISSING_SHOT_PROBABILITY,
+)
 from .map import TerrainMap
 from .mobile import Mobile
 from .objpack import ObjectivePack
+from .ontology import (
+    ACTION,
+    AIM,
+    ANGLE,
+    CREATE,
+    DEC_HEALTH,
+    DESTROY,
+    DISTANCE,
+    FOV,
+    HEAD_X,
+    HEAD_Y,
+    HEAD_Z,
+    MAP,
+    PACKS,
+    QTY,
+    SHOTS,
+    VEL_X,
+    TYPE,
+    VEL_Y,
+    VEL_Z,
+    X,
+    Y,
+    Z,
+    PERFORMATIVE,
+    PERFORMATIVE_DATA,
+    PERFORMATIVE_GAME,
+    PERFORMATIVE_INIT,
+    PERFORMATIVE_OBJECTIVE,
+    PERFORMATIVE_PACK,
+    PERFORMATIVE_PACK_LOST,
+    PERFORMATIVE_SHOOT,
+    MANAGEMENT_SERVICE,
+    AMMO,
+    HEALTH,
+    NAME,
+    PERFORMATIVE_PACK_TAKEN,
+    TEAM,
+)
 from .pack import PACK_NAME, PACK_NONE, PACK_OBJPACK, PACK_MEDICPACK, PACK_AMMOPACK
 from .server import (
     Server,
@@ -111,7 +156,7 @@ class Manager(AbstractAgent, Agent):
 
         self.game_statistic = GameStatistic()
         self.max_total_agents = players
-        self.fps = 1/fps
+        self.fps = 1 / fps
         self.match_time = match_time
         self.map_name = str(map_name)
         self.port = port
@@ -197,7 +242,11 @@ class Manager(AbstractAgent, Agent):
                 # Behaviour to refresh all render engines connected
                 self.agent.launch_render_engine_inform_behaviour()
 
-        logger.success("pygomas {} (c) VRAIN 2005-{} (VRAIN/UPV)".format(__version__, time.strftime("%Y")))
+        logger.success(
+            "pygomas {} (c) VRAIN 2005-{} (VRAIN/UPV)".format(
+                __version__, time.strftime("%Y")
+            )
+        )
         logger.success("Powered by SPADE {}".format(spade.__version__))
 
         coro = self.service_agent.start(auto_register=True)
@@ -668,7 +717,7 @@ class Manager(AbstractAgent, Agent):
 
             # check distance
             # get distance to the closest wall
-            distance_terrain = self.intersect(
+            distance_terrain = self.intersect_with_walls(
                 agent.locate.position, v
             )  # a.locate.heading)
 
@@ -708,7 +757,7 @@ class Manager(AbstractAgent, Agent):
 
                 # check distance
                 # get distance to the closest wall
-                distance_terrain = self.intersect(
+                distance_terrain = self.intersect_with_walls(
                     agent.locate.position, v
                 )  # a.locate.heading)
 
@@ -732,46 +781,76 @@ class Manager(AbstractAgent, Agent):
 
         return objects_in_sight
 
-    def shoot(self, id_agent, victim_position):
+    def shoot(self, shooter_agent_id, victim_position):
         """
         Agent with id id_agent shoots
-        :param id_agent: agent who shoots
+        :param shooter_agent_id: agent who shoots
         :param victim_position: the coordinates of the victim to be shot
         :return: agent shot or None
         """
         victim = None
+        min_distance = 1e10
+
+        if random.random() <= MISSING_SHOT_PROBABILITY:
+            return None
+
         try:
-            agent = self.agents[id_agent]
+            shooter_agent = Mobile()
+            shooter_agent.position = self.agents[shooter_agent_id].locate.position
+            shooter_agent.destination = Vector3D(victim_position)
+            shooter_agent.calculate_new_orientation(shooter_agent.destination)
         except KeyError:
             return None
 
         # agents
-        for a in self.agents.values():
-            if a.jid == id_agent:
+        for agent in self.agents.values():
+            if agent.jid == shooter_agent_id:
                 continue
-            if a.health <= 0:
+            if agent.health <= 0:
                 continue
-            absx = abs(victim_position.x - a.locate.position.x)
-            absz = abs(victim_position.z - a.locate.position.z)
+
+            shooter_position = Vector3D(shooter_agent.position)
+            shooter_position.sub(agent.locate.position)
+
+            dv = shooter_position.dot(shooter_agent.heading)
+            d2 = shooter_agent.heading.dot(shooter_agent.heading)
+            sq = (dv * dv) - ((d2 * shooter_position.dot(shooter_position)) - 4)
+
+            if sq >= 0:
+                sq = math.sqrt(sq)
+                dist1 = (-dv + sq) / d2
+                dist2 = (-dv - sq) / d2
+                distance = dist1 if dist1 < dist2 else dist2
+
+                if 0 < distance < min_distance:
+                    min_distance = distance
+                    victim = agent
+
+            """
+            absx = abs(victim_position.x - agent.locate.position.x)
+            absz = abs(victim_position.z - agent.locate.position.z)
             if (absx < PRECISION_X) and (absz < PRECISION_Z):
-                victim = a
+                victim = agent
                 v = Vector3D(v=victim.locate.position)
-                v.sub(agent.locate.position)
+                v.sub(shooter_agent.locate.position)
                 min_distance = v.length()
                 break
+            """
 
         if victim is not None:
-            a = Mobile()
-            a.position = agent.locate.position
-            a.destination = victim.locate.position
-            a.calculate_new_orientation(a.destination)
-            distance_terrain = self.intersect(a.position, a.heading, min_distance)
-            if distance_terrain != 0.0 and distance_terrain < min_distance:
+            shooter_agent.destination = victim.locate.position
+            shooter_agent.calculate_new_orientation(shooter_agent.destination)
+            # victim_position = Vector3D(victim.locate.position)
+            # victim_position.sub(shooter_agent.locate.position)
+            distance_to_obstacle = self.intersect_with_walls(
+                shooter_agent.position, shooter_agent.heading, min_distance
+            )
+            if distance_to_obstacle != 0.0 and distance_to_obstacle < min_distance:
                 victim = None
 
         return victim
 
-    def intersect(self, origin, vector, distance=1e10):
+    def intersect_with_walls(self, origin, vector, distance=1e10):
         """
         :param origin:
         :param vector:
@@ -923,9 +1002,8 @@ class Manager(AbstractAgent, Agent):
         allied_health = 0
         axis_health = 0
 
-        self.game_statistic.match_duration = time.time() * MILLISECONDS_IN_A_SECOND
-        self.game_statistic.match_duration -= self.match_init
-        logger.info("Match took {} seconds".format(time.time() - self.match_init))
+        self.game_statistic.match_duration = time.time() - self.match_init
+        logger.info("Match took {} seconds".format(self.game_statistic.match_duration))
 
         for agent in self.agents.values():
             if agent.team == TEAM_ALLIED:
@@ -942,11 +1020,11 @@ class Manager(AbstractAgent, Agent):
         )
 
         try:
-            fw = open("PGOMAS_Statistics.txt", "w+")
+            fw = open("pygomas_stats.txt", "w+")
 
-            fw.write(self.game_statistic.__str__(winner_team))
+            fw.write(self.game_statistic.dumps(winner_team))
 
             fw.close()
 
         except Exception as e:
-            logger.error("COULD NOT WRITE STATISTICS TO FILE: {}".format(e))
+            logger.exception("COULD NOT WRITE STATISTICS TO FILE: {}".format(e))

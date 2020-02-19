@@ -23,10 +23,11 @@ from spade.container import Container
 from . import dump_battle
 from . import replay_match
 from . import renderlite
+from .config import TEAM_ALLIED, TEAM_AXIS
 from .bdifieldop import BDIFieldOp
 from .bdimedic import BDIMedic
 from .bdisoldier import BDISoldier
-from .manager import Manager, TEAM_AXIS, TEAM_ALLIED
+from .manager import Manager
 
 help_config = json.dumps(
     {
@@ -142,20 +143,24 @@ def cli():
     help="Port to connect with renders (default=8001).",
     type=int,
 )
-@click.option('-v', '--verbose', count=True,
-              help="Show verbose debug level: -v level 1, -vv level 2, -vvv level 3, -vvvv level 4")
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    help="Show verbose debug level: -v level 1, -vv level 2, -vvv level 3, -vvvv level 4",
+)
 def manager(
-        jid,
-        password,
-        num_players,
-        map_name,
-        map_path,
-        service_jid,
-        service_password,
-        match_time,
-        fps,
-        port,
-        verbose
+    jid,
+    password,
+    num_players,
+    map_name,
+    map_path,
+    service_jid,
+    service_password,
+    match_time,
+    fps,
+    port,
+    verbose,
 ):
     """Run the manager which controls the game."""
     click.echo("Running manager agent {}".format(jid))
@@ -204,8 +209,12 @@ def manager(
     default=None,
     help="The path to your custom maps directory.",
 )
-@click.option('-v', '--verbose', count=True,
-              help="Show verbose debug level: -v level 1, -vv level 2, -vvv level 3, -vvvv level 4")
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    help="Show verbose debug level: -v level 1, -vv level 2, -vvv level 3, -vvvv level 4",
+)
 def run(game, map_path, verbose):
     """Run a JSON game file with the players definition."""
 

@@ -49,9 +49,9 @@
   .wait(2000);
   .turn(0.375).
 
-+heading(H): returning
-  <-
-  .print("returning").
+//+heading(H): returning
+//  <-
+//  .print("returning").
 
 +target_reached(T): team(100)
   <- 

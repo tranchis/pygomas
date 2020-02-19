@@ -12,15 +12,4 @@ import pygomas.ammopack
 import pygomas.medicpack
 import pygomas.objpack
 
-__version__ = '0.3.1'
-
-MIN_POWER = 0
-MAX_POWER = 100
-POWER_UNIT = 25
-MIN_STAMINA = 0
-MAX_STAMINA = 100
-STAMINA_UNIT = 5
-MIN_AMMO = 0
-MAX_AMMO = 100
-MIN_HEALTH = 0
-MAX_HEALTH = 100
+__version__ = "__version__ = '0.3.2'"

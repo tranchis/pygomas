@@ -2,7 +2,8 @@ import json
 
 from loguru import logger
 
-from .config import X, Y, Z, TEAM, TEAM_AXIS, PERFORMATIVE, PERFORMATIVE_PACK_LOST
+from .ontology import X, Y, Z, PERFORMATIVE, PERFORMATIVE_PACK_LOST, TEAM
+from .config import TEAM_AXIS
 from .pack import Pack, PACK_OBJPACK
 from .vector import Vector3D
 from spade.behaviour import CyclicBehaviour

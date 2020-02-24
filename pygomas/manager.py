@@ -802,7 +802,9 @@ class Manager(AbstractAgent, Agent):
         except KeyError:
             return None
 
-        victim, min_distance = self._check_agents_in_row(shooter_agent_id, shooter_agent, victim, min_distance)
+        victim, min_distance = self._check_agents_in_row(
+            shooter_agent_id, shooter_agent, victim, min_distance
+        )
 
         if victim is not None:
             shooter_agent.destination = victim.locate.position
@@ -815,7 +817,9 @@ class Manager(AbstractAgent, Agent):
 
         return victim
 
-    def _check_agents_in_row(self, shooter_agent_id, shooter_agent, victim, min_distance):
+    def _check_agents_in_row(
+        self, shooter_agent_id, shooter_agent, victim, min_distance
+    ):
         for agent in self.agents.values():
             if agent.jid == shooter_agent_id:
                 continue

@@ -209,7 +209,11 @@ class GameStatistic:
     def dumps(self, winner_team=""):
 
         ret = "Winner Team: " + winner_team + "\n"
-        ret += "Duration: [" + str(str(datetime.timedelta(seconds=self.match_duration))) + "]\n"
+        ret += (
+            "Duration: ["
+            + str(str(datetime.timedelta(seconds=self.match_duration)))
+            + "]\n"
+        )
         ret += "Statistics for ALLIED TEAM\n"
         ret += str(self.team_statistic[TEAM_ALLIED])
 

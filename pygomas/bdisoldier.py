@@ -3,8 +3,7 @@ from .ontology import BACKUP_SERVICE
 
 
 class BDISoldier(BDITroop):
-    def __init__(self, actions=None, *args, **kwargs):
-        soldier_actions = self.get_actions(actions=actions)
-        super().__init__(actions=soldier_actions, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.services.append(BACKUP_SERVICE)
         self.eclass = CLASS_SOLDIER

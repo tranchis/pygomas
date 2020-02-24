@@ -13,10 +13,15 @@ class BDIMedic(BDITroop):
     packs_delivered = 0
     medic_pack_offset = 5
 
-    def __init__(self, actions=None, *args, **kwargs):
-        medic_actions = self.get_actions(actions)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.services.append(MEDIC_SERVICE)
+        self.eclass = CLASS_MEDIC
 
-        @medic_actions.add(".cure", 0)
+    def add_custom_actions(self, actions):
+        super().add_custom_actions(actions)
+
+        @actions.add(".cure", 0)
         def _cure(agent, term, intention):
             class CreateMedicPackBehaviour(OneShotBehaviour):
                 async def run(self):
@@ -25,10 +30,6 @@ class BDIMedic(BDITroop):
             b = CreateMedicPackBehaviour()
             self.add_behaviour(b)
             yield
-
-        super().__init__(actions=medic_actions, *args, **kwargs)
-        self.services.append(MEDIC_SERVICE)
-        self.eclass = CLASS_MEDIC
 
     def perform_medic_action(self):
         # We can give medic paks if we have power enough...

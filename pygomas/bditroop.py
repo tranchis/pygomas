@@ -121,7 +121,6 @@ class BDITroop(AbstractAgent, BDIAgent):
         jid,
         passwd,
         asl,
-        actions=None,
         team=TEAM_NONE,
         map_path=None,
         manager_jid="cmanager@localhost",
@@ -129,6 +128,9 @@ class BDITroop(AbstractAgent, BDIAgent):
         *args,
         **kwargs
     ):
+
+        AbstractAgent.__init__(self, jid, team=team, service_jid=service_jid)
+        BDIAgent.__init__(self, jid=jid, password=passwd, asl=asl, **kwargs)
 
         self.service_types = []
 
@@ -177,9 +179,8 @@ class BDITroop(AbstractAgent, BDIAgent):
         # Destination Queue
         self.destinations = deque()
 
-        troop_actions = self.get_actions(actions)
-
-        @troop_actions.add_function(".create_control_points", (tuple, float, int))
+    def add_custom_actions(self, actions):
+        @actions.add_function(".create_control_points", (tuple, float, int))
         def _create_control_points(center, radius, n):
             """
             Calculates an array of positions for patrolling.
@@ -191,7 +192,9 @@ class BDITroop(AbstractAgent, BDIAgent):
             center_y = center[1]
             center_z = center[2]
             control_points = []
+            initial_radius = radius
             for i in range(n):
+                radius = initial_radius
                 while True:
                     x = center_x + ((radius / 2) - (random.random() * radius))
                     x = max(0, x)
@@ -202,17 +205,19 @@ class BDITroop(AbstractAgent, BDIAgent):
                     z = int(min(self.map.size_z - 1, z))
 
                     if self.check_static_position(x, z):
-                        if len(control_points):
+                        if i != 0:
                             if (x, y, z) != control_points[i - 1]:
                                 control_points.append((x, y, z))
                                 break
                         else:
                             control_points.append((x, y, z))
                             break
-                logger.info("Control point generated {}".format((x, y, z)))
+                    radius = min(1, radius - 1)
+                logger.debug("Control point generated {}".format((x, y, z)))
+            logger.info("{} Control points: {}".format(self.jid.localpart, control_points))
             return tuple(control_points)
 
-        @troop_actions.add_function(".shuffle", (tuple))
+        @actions.add_function(".shuffle", (tuple))
         def _shuffle(a_tuple):
             """
             Randomly shuffle a tuple
@@ -221,7 +226,7 @@ class BDITroop(AbstractAgent, BDIAgent):
             random.shuffle(a_list)
             return tuple(a_list)
 
-        @troop_actions.add_function(".random_shift", (tuple))
+        @actions.add_function(".random_shift", (tuple))
         def _random_shift(a_tuple):
             """
             Randomly shift a tuple
@@ -230,7 +235,7 @@ class BDITroop(AbstractAgent, BDIAgent):
             rotated.rotate(random.randint(-10, 10))
             return tuple(rotated)
 
-        @troop_actions.add(".goto", 1)
+        @actions.add(".goto", 1)
         def _goto(agent, term, intention):
             """Sets the PyGomas destination. Expects args to be (x,y,z)"""
             args = asp.grounded(term.args, intention.scope)
@@ -274,7 +279,7 @@ class BDITroop(AbstractAgent, BDIAgent):
                 self.movement.destination.z = self.movement.position.z
             yield
 
-        @troop_actions.add(".shoot", 2)
+        @actions.add(".shoot", 2)
         def _shoot(agent, term, intention):
             """
              The agent shoots in the direction at which he is aiming.
@@ -325,7 +330,7 @@ class BDITroop(AbstractAgent, BDIAgent):
             self.add_behaviour(b)
             yield
 
-        @troop_actions.add(".register_service", 1)
+        @actions.add(".register_service", 1)
         def _register_service(agent, term, intention):
             """Register the service specified by <service>.
 
@@ -338,7 +343,7 @@ class BDITroop(AbstractAgent, BDIAgent):
             self.register_service(service)
             yield
 
-        @troop_actions.add(".get_service", 1)
+        @actions.add(".get_service", 1)
         def _get_service(agent, term, intention):
             """Request for troop agents that offer the service specified by
                <service>. This action sends a FIPA REQUEST
@@ -377,7 +382,7 @@ class BDITroop(AbstractAgent, BDIAgent):
             self.add_behaviour(b, t)
             yield
 
-        @troop_actions.add(".get_medics", 0)
+        @actions.add(".get_medics", 0)
         def _get_medics(agent, term, intention):
             """Request for medic agents. This action sends a FIPA REQUEST
                message to the service agent asking for those who offer the
@@ -411,7 +416,7 @@ class BDITroop(AbstractAgent, BDIAgent):
             self.add_behaviour(b, t)
             yield
 
-        @troop_actions.add(".get_fieldops", 0)
+        @actions.add(".get_fieldops", 0)
         def _get_fieldops(agent, term, intention):
             """Request for fieldop agents. This action sends a FIPA REQUEST
                message to the service agent asking for those who offer the
@@ -445,7 +450,7 @@ class BDITroop(AbstractAgent, BDIAgent):
             self.add_behaviour(b, t)
             yield
 
-        @troop_actions.add(".get_backups", 0)
+        @actions.add(".get_backups", 0)
         def _get_backups(agent, term, intention):
             """Request for backup agents. This action sends a FIPA REQUEST
                message to the service agent asking for those who offer the
@@ -479,7 +484,7 @@ class BDITroop(AbstractAgent, BDIAgent):
             self.add_behaviour(b, t)
             yield
 
-        @troop_actions.add(".look_at", 1)
+        @actions.add(".look_at", 1)
         def _look_at(agent, term, intention):
             """
             Look at a point.
@@ -514,7 +519,7 @@ class BDITroop(AbstractAgent, BDIAgent):
             )
             yield
 
-        @troop_actions.add(".turn", 1)
+        @actions.add(".turn", 1)
         def _turn(agent, term, intention):
             """
             Turns an agent orientation given an angle.
@@ -548,7 +553,7 @@ class BDITroop(AbstractAgent, BDIAgent):
             )
             yield
 
-        @troop_actions.add(".stop", 0)
+        @actions.add(".stop", 0)
         def _stop(agent, term, intention):
             """Stops the PyGomas agent. """
             self.destinations = deque()
@@ -557,16 +562,7 @@ class BDITroop(AbstractAgent, BDIAgent):
             self.movement.destination.z = self.movement.position.z
             yield
 
-        AbstractAgent.__init__(self, jid, team=team, service_jid=service_jid)
-        BDIAgent.__init__(
-            self, jid=jid, password=passwd, asl=asl, actions=troop_actions, **kwargs
-        )
-
-    @staticmethod
-    def get_actions(actions):
-        if not isinstance(actions, asp.Actions):
-            actions = asp.Actions(asp_action)
-        return actions
+        super().add_custom_actions(actions)
 
     def start(self, auto_register=True):
         self.health = MAX_HEALTH

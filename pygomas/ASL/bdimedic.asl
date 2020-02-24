@@ -13,7 +13,7 @@
 
 
 +target_reached(T): patrolling & team(200) 
-  <- 
+  <-
   ?patroll_point(P);
   -+patroll_point(P+1);
   -target_reached(T).

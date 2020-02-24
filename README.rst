@@ -6,8 +6,8 @@ pygomas
 .. image:: https://img.shields.io/pypi/v/pygomas.svg
         :target: https://pypi.python.org/pypi/pygomas
 
-.. image:: https://img.shields.io/travis/sfp932705/pygomas.svg
-        :target: https://travis-ci.org/sfp932705/pygomas
+.. image:: https://img.shields.io/travis/javipalanca/pygomas.svg
+        :target: https://travis-ci.org/javipalanca/pygomas
 
 .. image:: https://readthedocs.org/projects/pygomas/badge/?version=latest
         :target: https://pygomas.readthedocs.io/en/latest/?badge=latest

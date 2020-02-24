@@ -32,13 +32,13 @@ You can either clone the public repository:
 
 .. code-block:: console
 
-    $ git clone git://github.com/sfp932705/pygomas
+    $ git clone git://github.com/javipalanca/pygomas
 
 Or download the `tarball`_:
 
 .. code-block:: console
 
-    $ curl  -OL https://github.com/sfp932705/pygomas/tarball/master
+    $ curl  -OL https://github.com/javipalanca/pygomas/tarball/master
 
 Once you have a copy of the source, you can install it with:
 
@@ -47,5 +47,5 @@ Once you have a copy of the source, you can install it with:
     $ python setup.py install
 
 
-.. _Github repo: https://github.com/sfp932705/pygomas
-.. _tarball: https://github.com/sfp932705/pygomas/tarball/master
+.. _Github repo: https://github.com/javipalanca/pygomas
+.. _tarball: https://github.com/javipalanca/pygomas/tarball/master

@@ -6,6 +6,7 @@ History
 ------------------
 
 * Minor bug fix.
+* Upgraded reference to github repository.
 
 0.3.2 (2020-02-19)
 ------------------

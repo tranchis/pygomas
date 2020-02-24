@@ -52,7 +52,7 @@ setup(
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
-    url='https://github.com/sfp932705/pygomas',
+    url='https://github.com/javipalanca/pygomas',
     version='0.3.3',
     zip_safe=False,
 )

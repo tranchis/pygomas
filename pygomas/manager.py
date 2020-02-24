@@ -802,7 +802,20 @@ class Manager(AbstractAgent, Agent):
         except KeyError:
             return None
 
-        # agents
+        victim, min_distance = self._check_agents_in_row(shooter_agent_id, shooter_agent, victim, min_distance)
+
+        if victim is not None:
+            shooter_agent.destination = victim.locate.position
+            shooter_agent.calculate_new_orientation(shooter_agent.destination)
+            distance_to_obstacle = self.intersect_with_walls(
+                shooter_agent.position, shooter_agent.heading, min_distance
+            )
+            if distance_to_obstacle != 0.0 and distance_to_obstacle < min_distance:
+                victim = None
+
+        return victim
+
+    def _check_agents_in_row(self, shooter_agent_id, shooter_agent, victim, min_distance):
         for agent in self.agents.values():
             if agent.jid == shooter_agent_id:
                 continue
@@ -816,7 +829,7 @@ class Manager(AbstractAgent, Agent):
             d2 = shooter_agent.heading.dot(shooter_agent.heading)
             sq = (dv * dv) - ((d2 * shooter_position.dot(shooter_position)) - 4)
 
-            if sq >= 0:
+            if sq >= 0 and d2 != 0:
                 sq = math.sqrt(sq)
                 dist1 = (-dv + sq) / d2
                 dist2 = (-dv - sq) / d2
@@ -825,30 +838,7 @@ class Manager(AbstractAgent, Agent):
                 if 0 < distance < min_distance:
                     min_distance = distance
                     victim = agent
-
-            """
-            absx = abs(victim_position.x - agent.locate.position.x)
-            absz = abs(victim_position.z - agent.locate.position.z)
-            if (absx < PRECISION_X) and (absz < PRECISION_Z):
-                victim = agent
-                v = Vector3D(v=victim.locate.position)
-                v.sub(shooter_agent.locate.position)
-                min_distance = v.length()
-                break
-            """
-
-        if victim is not None:
-            shooter_agent.destination = victim.locate.position
-            shooter_agent.calculate_new_orientation(shooter_agent.destination)
-            # victim_position = Vector3D(victim.locate.position)
-            # victim_position.sub(shooter_agent.locate.position)
-            distance_to_obstacle = self.intersect_with_walls(
-                shooter_agent.position, shooter_agent.heading, min_distance
-            )
-            if distance_to_obstacle != 0.0 and distance_to_obstacle < min_distance:
-                victim = None
-
-        return victim
+        return victim, min_distance
 
     def intersect_with_walls(self, origin, vector, distance=1e10):
         """

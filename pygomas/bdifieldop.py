@@ -13,10 +13,15 @@ class BDIFieldOp(BDITroop):
     packs_delivered = 0
     ammo_pack_offset = 5
 
-    def __init__(self, actions=None, *args, **kwargs):
-        fieldop_actions = self.get_actions(actions)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.services.append(AMMO_SERVICE)
+        self.eclass = CLASS_FIELDOPS
 
-        @fieldop_actions.add(".reload", 0)
+    def add_custom_actions(self, actions):
+        super().add_custom_actions(actions)
+
+        @actions.add(".reload", 0)
         def _cure(agent, term, intention):
             class CreateAmmoPackBehaviour(OneShotBehaviour):
                 async def run(self):
@@ -25,10 +30,6 @@ class BDIFieldOp(BDITroop):
             b = CreateAmmoPackBehaviour()
             self.add_behaviour(b)
             yield
-
-        super().__init__(actions=fieldop_actions, *args, **kwargs)
-        self.services.append(AMMO_SERVICE)
-        self.eclass = CLASS_FIELDOPS
 
     def perform_ammo_action(self):
         # We can give ammo paks if we have power enough...

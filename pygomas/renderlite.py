@@ -57,7 +57,6 @@ class Render(object):
         self.s = None
         self.screen = None
         self.font = None
-        self.maps_path = None
 
         self.objective_x = -1
         self.objective_y = -1

@@ -2,6 +2,14 @@
 History
 =======
 
+0.3.4 (2020-02-24)
+------------------
+
+* Added add_custom_actions support.
+* Improved create_control_points custom action.
+* Updated spade_bdi requirement to 0.2.0.
+* Fixed maps path in render.
+
 0.3.3 (2020-02-24)
 ------------------
 

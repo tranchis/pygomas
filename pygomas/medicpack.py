@@ -26,6 +26,7 @@ class MedicPack(Pack):
             msg.set_metadata(PERFORMATIVE, PERFORMATIVE_INFORM)
             content = {NAME: self.agent.name, ACTION: DESTROY}
             msg.body = json.dumps(content)
-            await self.send(msg)
-            # await asyncio.sleep(1)
-            # await self.agent.stop()
+            if self.agent.is_alive():
+                await self.send(msg)
+            await asyncio.sleep(1)
+            await self.agent.stop()

@@ -107,7 +107,7 @@ WIDTH: int = 3
 
 
 class MicroAgent:
-    def __init__(self,):
+    def __init__(self):
         self.jid = ""
         self.team = TEAM_NONE
         self.locate = Mobile()
@@ -116,6 +116,7 @@ class MicroAgent:
         self.health = 0
         self.ammo = 0
         self.type = 0
+        self.is_updated = False
 
     def __str__(self):
         return "<{} Team({}) Health({}) Ammo({}) Obj({})>".format(
@@ -138,17 +139,17 @@ class DinObject:
 
 class Manager(AbstractAgent, Agent):
     def __init__(
-        self,
-        name="cmanager@localhost",
-        passwd="secret",
-        players=10,
-        fps=33,
-        match_time=380,
-        map_name="map_01",
-        map_path=None,
-        service_jid="cservice@localhost",
-        service_passwd="secret",
-        port=8001,
+            self,
+            name="cmanager@localhost",
+            passwd="secret",
+            players=10,
+            fps=33,
+            match_time=380,
+            map_name="map_01",
+            map_path=None,
+            service_jid="cservice@localhost",
+            service_passwd="secret",
+            port=8001,
     ):
 
         AbstractAgent.__init__(self, name, service_jid=service_jid)
@@ -281,8 +282,10 @@ class Manager(AbstractAgent, Agent):
         class InformRenderEngineBehaviour(PeriodicBehaviour):
             async def run(self):
                 if (
-                    self.agent.render_server
-                    and len(self.agent.render_server.get_connections()) != 0
+                        self.agent.render_server
+                        and len(self.agent.render_server.get_connections()) != 0
+                        and all([[a.is_updated for a in self.agent.agents.values()]])
+                        and len(self.agent.agents) == self.agent.number_of_agents
                 ):
 
                     msg = {
@@ -310,7 +313,7 @@ class Manager(AbstractAgent, Agent):
                                     agent.locate.heading.z,
                                 ],
                             }
-                            for agent in self.agent.agents.values()
+                            for agent in self.agent.agents.values()  # if agent.is_updated
                         ],
                         MSG_PACKS: [
                             {
@@ -347,9 +350,11 @@ class Manager(AbstractAgent, Agent):
                     if msg:
                         content = json.loads(msg.body)
                         id_agent = content[NAME]
+
                         self.agent.agents[id_agent].locate.position.x = int(content[X])
                         self.agent.agents[id_agent].locate.position.y = int(content[Y])
                         self.agent.agents[id_agent].locate.position.z = int(content[Z])
+                        self.agent.agents[id_agent].is_updated = True
 
                         self.agent.agents[id_agent].locate.velocity.x = float(
                             content[VEL_X]
@@ -577,22 +582,22 @@ class Manager(AbstractAgent, Agent):
                 continue
             din_object = self.din_objects[key]
             if (
-                din_object.type == PACK_MEDICPACK
-                and self.agents[id_agent].health >= 100
+                    din_object.type == PACK_MEDICPACK
+                    and self.agents[id_agent].health >= 100
             ):
                 continue
             if din_object.type == PACK_AMMOPACK and self.agents[id_agent].ammo >= 100:
                 continue
             if (
-                din_object.type == PACK_OBJPACK
-                and din_object.is_taken
-                and din_object.owner != 0
+                    din_object.type == PACK_OBJPACK
+                    and din_object.is_taken
+                    and din_object.owner != 0
             ):
                 continue
 
             if (
-                xmin <= din_object.position.x <= xmax
-                and zmin <= din_object.position.z <= zmax
+                    xmin <= din_object.position.x <= xmax
+                    and zmin <= din_object.position.z <= zmax
             ):
                 # Agent has stepped on pack
                 id_ = din_object.jid
@@ -687,16 +692,16 @@ class Manager(AbstractAgent, Agent):
         return content
 
     def get_objects_in_field_of_view(self, id_agent):
-
         objects_in_sight = list()
         agent = None
 
-        for a in self.agents.values():
-            if a.jid == id_agent:
-                agent = a
-                break
+        # for k, a in self.agents.items():
+        #    if a.jid == id_agent:
+        #        agent = a
+        #        break
+        agent = self.agents[id_agent]
 
-        if agent is None:
+        if agent is None or agent.locate.heading.length() == 0:
             return objects_in_sight
 
         dot_angle = float(agent.locate.angle)
@@ -706,7 +711,7 @@ class Manager(AbstractAgent, Agent):
             if a.jid == id_agent:
                 continue
             if (
-                a.health <= MIN_HEALTH
+                    a.health <= MIN_HEALTH
             ):  # WARNING, we may be interested in seeing dead agents
                 continue
 
@@ -729,7 +734,7 @@ class Manager(AbstractAgent, Agent):
                 try:
                     angle /= agent.locate.heading.length() * v.length()
                 except ZeroDivisionError:
-                    pass
+                    angle = 0
 
                 if angle >= 0:
                     angle = min(1, angle)
@@ -764,7 +769,11 @@ class Manager(AbstractAgent, Agent):
                 if distance < agent.locate.view_radius and distance < distance_terrain:
 
                     angle = agent.locate.heading.dot(v)
-                    angle /= agent.locate.heading.length() * v.length()
+                    try:
+                        angle /= agent.locate.heading.length() * v.length()
+                    except ZeroDivisionError:
+                        angle = 0
+
                     if angle >= 0:
                         angle = min(1, angle)
                         angle = math.acos(angle)
@@ -818,7 +827,7 @@ class Manager(AbstractAgent, Agent):
         return victim
 
     def _check_agents_in_row(
-        self, shooter_agent_id, shooter_agent, victim, min_distance
+            self, shooter_agent_id, shooter_agent, victim, min_distance
     ):
         for agent in self.agents.values():
             if agent.jid == shooter_agent_id:
@@ -902,14 +911,14 @@ class Manager(AbstractAgent, Agent):
                     point.z += step.z
 
                 if not self.map.can_walk(
-                    int(math.floor(point.x)), int(math.floor(point.z))
+                        int(math.floor(point.x)), int(math.floor(point.z))
                 ):
                     return error.length()
 
                 if point.x < 0 or point.y < 0 or point.z < 0:
                     break
                 if point.x >= (self.map.get_size_x()) or point.z >= (
-                    self.map.get_size_z()
+                        self.map.get_size_z()
                 ):
                     break
                 error.add(step)
@@ -931,12 +940,12 @@ class Manager(AbstractAgent, Agent):
             return False
 
         if (
-            self.map.allied_base.init.x
-            < self.agents[id_agent].locate.position.x
-            < self.map.allied_base.end.x
-            and self.map.allied_base.init.z
-            < self.agents[id_agent].locate.position.z
-            < self.map.allied_base.end.z
+                self.map.allied_base.init.x
+                < self.agents[id_agent].locate.position.x
+                < self.map.allied_base.end.x
+                and self.map.allied_base.init.z
+                < self.agents[id_agent].locate.position.z
+                < self.map.allied_base.end.z
         ):
             return True
         return False

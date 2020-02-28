@@ -6,7 +6,7 @@ MAP_SCALE = 1
 
 
 class Mobile(object):
-    def __init__(self):
+    def __init__(self, velocity_value=2):
         self.position = Vector3D()
         self.destination = Vector3D()
         self.velocity = Vector3D()
@@ -14,6 +14,7 @@ class Mobile(object):
         self.view_radius = 50.0
         self.angle = 1.0
         self.min_x = self.min_z = self.max_x = self.max_z = 0
+        self.velocity_value = velocity_value
 
     def set_size(self, max_x, max_z):
         self.min_x = MAP_SCALE
@@ -48,9 +49,9 @@ class Mobile(object):
             self.heading.y = self.velocity.y
             self.heading.z = self.velocity.z
 
-        self.velocity.x *= 2
-        self.velocity.y *= 2
-        self.velocity.z *= 2
+        self.velocity.x *= self.velocity_value
+        self.velocity.y *= self.velocity_value
+        self.velocity.z *= self.velocity_value
 
     def calculate_new_destination(self, radius_x, radius_y):
         x = self.position.x + ((random.random() * (radius_x * 2)) - radius_x)

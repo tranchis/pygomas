@@ -399,7 +399,7 @@ def help(ctx, subcommand):
 
 
 async def run_agents(troops):
-    coros = [agent.start() for agent in troops]
+    coros = [agent.start(auto_register=True) for agent in troops]
     return await asyncio.gather(*coros)
 
 

@@ -45,7 +45,7 @@ from .server import (
 def chunks(l, n):
     """Yield successive n-sized chunks from l."""
     for i in range(0, len(l), n):
-        yield l[i : i + n]
+        yield l[i: i + n]
 
 
 class Render(object):
@@ -84,6 +84,13 @@ class Render(object):
         self.quit = False
 
         self.fps = list()
+
+        this_dir, _ = os.path.split(__file__)
+        self.assets_path = f"{this_dir}{os.sep}assets{os.sep}"
+        self.allied_base_sprite = pygame.image.load(os.path.join(self.assets_path, "base4.png"))
+        self.axis_base_sprite = pygame.image.load(os.path.join(self.assets_path, "base3.png"))
+        self.wall_sprite = pygame.image.load(os.path.join(self.assets_path, "wall2.png"))
+        self.terrain_sprite = pygame.image.load(os.path.join(self.assets_path, "grass2.jpg"))
 
     def main(self):
         if self.text:
@@ -158,6 +165,9 @@ class Render(object):
                         if result["status"] != "ok":
                             error = result["value"]
                             self.quit = True
+
+                        if not self.text:
+                            self.init_sprites()
 
                     elif data[MSG_TYPE] == TCP_AGL:
                         self.agl_parse(data[MSG_BODY])
@@ -241,10 +251,72 @@ class Render(object):
                 self.quit = True
 
         # Clear screen
-        color_background = (0, 0, 0)
-        pygame.draw.rect(
-            self.screen, color_background, (0, 0, self.map_width, self.map_height)
-        )
+        color_background = (189, 236, 182)  # (245, 245, 220)
+        #pygame.draw.rect(
+        #    self.screen, color_background, (0, 0, self.map_width, self.map_height)
+        #)
+        self.screen.blit(self.terrain_sprite, (0, 0))
+
+        # Draw bases
+        if self.allied_base is not None:
+            if len(self.allied_base) == 5:
+                draw = bool(int(self.allied_base[4]))
+            else:
+                draw = True
+            if draw:
+                color = (255, 0, 0)
+                xpos = int(self.allied_base[0]) * self.tile_size + self.xdesp
+                ypos = int(self.allied_base[1]) * self.tile_size + self.ydesp
+                xwidth = (
+                        int(self.allied_base[2]) * self.tile_size
+                        - xpos
+                        + self.tile_size
+                        + self.xdesp
+                )
+                ywidth = (
+                        int(self.allied_base[3]) * self.tile_size
+                        - ypos
+                        + self.tile_size
+                        + self.ydesp
+                )
+
+                # pygame.draw.rect(self.screen, color, (xpos, ypos, xwidth, ywidth))
+                '''s = pygame.Surface((xwidth, ywidth))  # the size of your rect
+                s.set_alpha(128)  # alpha level
+                s.fill(color)  # this fills the entire surface
+                self.screen.blit(s, (xpos, ypos))'''
+
+                self.screen.blit(self.allied_base_sprite, (xpos, ypos))
+
+        if self.axis_base is not None:
+            if len(self.axis_base) == 5:
+                draw = bool(int(self.axis_base[4]))
+            else:
+                draw = True
+            if draw:
+                color = (0, 0, 255)
+                xpos = int(self.axis_base[0]) * self.tile_size + self.xdesp
+                ypos = int(self.axis_base[1]) * self.tile_size + self.ydesp
+                xwidth = (
+                        int(self.axis_base[2]) * self.tile_size
+                        - xpos
+                        + self.tile_size
+                        + self.xdesp
+                )
+                ywidth = (
+                        int(self.axis_base[3]) * self.tile_size
+                        - ypos
+                        + self.tile_size
+                        + self.ydesp
+                )
+
+                # pygame.draw.rect(self.screen, color, (xpos, ypos, xwidth, ywidth))
+                '''s = pygame.Surface((xwidth, ywidth))  # the size of your rect
+                s.set_alpha(128)  # alpha level
+                s.fill(color)  # this fills the entire surface
+                self.screen.blit(s, (xpos, ypos))'''
+
+                self.screen.blit(self.axis_base_sprite, (xpos, ypos))
 
         # Draw Map
         color_wall = (100, 100, 100)
@@ -252,7 +324,7 @@ class Render(object):
             for x in range(0, 32):
                 try:
                     if list(self.graph.items())[y][1][x] == "*":
-                        pygame.draw.rect(
+                        '''pygame.draw.rect(
                             self.screen,
                             color_wall,
                             (
@@ -261,48 +333,10 @@ class Render(object):
                                 self.tile_size,
                                 self.tile_size,
                             ),
-                        )
+                        )'''
+                        self.screen.blit(self.wall_sprite, (x * self.tile_size + self.xdesp, y * self.tile_size + self.ydesp))
                 except:
                     pass
-
-        # Draw bases
-        if self.allied_base is not None:
-            color = (255, 0, 0)
-            xpos = int(self.allied_base[0]) * self.tile_size + self.xdesp
-            ypos = int(self.allied_base[1]) * self.tile_size + self.ydesp
-            xwidth = (
-                int(self.allied_base[2]) * self.tile_size
-                - xpos
-                + self.tile_size
-                + self.xdesp
-            )
-            ywidth = (
-                int(self.allied_base[3]) * self.tile_size
-                - ypos
-                + self.tile_size
-                + self.ydesp
-            )
-
-            pygame.draw.rect(self.screen, color, (xpos, ypos, xwidth, ywidth))
-
-        if self.axis_base is not None:
-            color = (0, 0, 255)
-            xpos = int(self.axis_base[0]) * self.tile_size + self.xdesp
-            ypos = int(self.axis_base[1]) * self.tile_size + self.ydesp
-            xwidth = (
-                int(self.axis_base[2]) * self.tile_size
-                - xpos
-                + self.tile_size
-                + self.xdesp
-            )
-            ywidth = (
-                int(self.axis_base[3]) * self.tile_size
-                - ypos
-                + self.tile_size
-                + self.ydesp
-            )
-
-            pygame.draw.rect(self.screen, color, (xpos, ypos, xwidth, ywidth))
 
         # Draw FPS
         if len(self.fps) > 5:
@@ -325,8 +359,8 @@ class Render(object):
             )
 
             color = {
-                1001: (255, 255, 255),
-                1002: (255, 255, 255),
+                1001: (88, 214, 141),  # (255, 255, 255),
+                1002: (155, 89, 182),  # (255, 255, 255),
                 1003: (255, 255, 0),
             }.get(pack[MSG_CONTENT_TYPE], "X")
 
@@ -348,7 +382,7 @@ class Render(object):
                     agent[MSG_CONTENT_TYPE], "X"
                 )
 
-                team = {100: (255, 100, 100), 200: (100, 100, 255)}.get(
+                team = {100: (255, 50, 50), 200: (100, 100, 255)}.get(
                     agent[MSG_CONTENT_TEAM], (255, 255, 0)
                 )
 
@@ -359,12 +393,12 @@ class Render(object):
                 ammo = float(agent[MSG_CONTENT_AMMO])
 
                 posx = (
-                    int(float(agent[MSG_CONTENT_POSITION][0]) * self.tile_size / 8.0)
-                    + self.xdesp
+                        int(float(agent[MSG_CONTENT_POSITION][0]) * self.tile_size / 8.0)
+                        + self.xdesp
                 )
                 posy = (
-                    int(float(agent[MSG_CONTENT_POSITION][2]) * self.tile_size / 8.0)
-                    + self.ydesp
+                        int(float(agent[MSG_CONTENT_POSITION][2]) * self.tile_size / 8.0)
+                        + self.ydesp
                 )
 
                 # print avatar
@@ -466,8 +500,8 @@ class Render(object):
             curses.init_pair(4, curses.COLOR_WHITE, curses.COLOR_RED)  # ALLIED BASE
             for y in range(int(self.allied_base[1]), int(self.allied_base[3])):
                 for x in range(
-                    int(self.allied_base[0]) * self.factor,
-                    int(self.allied_base[2]) * self.factor,
+                        int(self.allied_base[0]) * self.factor,
+                        int(self.allied_base[2]) * self.factor,
                 ):
                     if height > y:
                         stdscr.addstr(y, x, " ", curses.color_pair(4))
@@ -477,8 +511,8 @@ class Render(object):
             curses.init_pair(3, curses.COLOR_RED, curses.COLOR_BLUE)  # AXIS BASE
             for y in range(int(self.axis_base[1]), int(self.axis_base[3])):
                 for x in range(
-                    int(self.axis_base[0]) * self.factor,
-                    int(self.axis_base[2]) * self.factor,
+                        int(self.axis_base[0]) * self.factor,
+                        int(self.axis_base[2]) * self.factor,
                 ):
                     if height > y:
                         stdscr.addstr(y, x, " ", curses.color_pair(3))
@@ -512,7 +546,7 @@ class Render(object):
             symbol = {1: "*", 2: "+", 3: "Y", 4: "^"}.get(agent[MSG_CONTENT_TYPE], "X")
 
             # Team (or Carrier)
-            team_color = {100: 5, 200: 6,}.get(agent[MSG_CONTENT_TEAM], 1)
+            team_color = {100: 5, 200: 6, }.get(agent[MSG_CONTENT_TEAM], 1)
 
             if agent[MSG_CONTENT_CARRYINGFLAG]:
                 team_color = 2
@@ -620,6 +654,49 @@ class Render(object):
                 "status": "error",
                 "value": str(e) + "\n" + "\n".join([repr(i) for i in tb]),
             }
+
+    def init_sprites(self):
+        xpos = int(self.allied_base[0]) * self.tile_size + self.xdesp
+        ypos = int(self.allied_base[1]) * self.tile_size + self.ydesp
+        xwidth = (
+                int(self.allied_base[2]) * self.tile_size
+                - xpos
+                + self.tile_size
+                + self.xdesp
+        )
+        ywidth = (
+                int(self.allied_base[3]) * self.tile_size
+                - ypos
+                + self.tile_size
+                + self.ydesp
+        )
+
+        self.allied_base_sprite.convert()
+        self.allied_base_sprite = pygame.transform.scale(self.allied_base_sprite, (xwidth, ywidth))
+
+        xpos = int(self.axis_base[0]) * self.tile_size + self.xdesp
+        ypos = int(self.axis_base[1]) * self.tile_size + self.ydesp
+        xwidth = (
+                int(self.axis_base[2]) * self.tile_size
+                - xpos
+                + self.tile_size
+                + self.xdesp
+        )
+        ywidth = (
+                int(self.axis_base[3]) * self.tile_size
+                - ypos
+                + self.tile_size
+                + self.ydesp
+        )
+
+        self.axis_base_sprite.convert()
+        self.axis_base_sprite = pygame.transform.scale(self.axis_base_sprite, (xwidth, ywidth))
+
+        self.wall_sprite.convert()
+        self.wall_sprite = pygame.transform.scale(self.wall_sprite, (self.tile_size, self.tile_size))
+
+        self.terrain_sprite.convert()
+        self.terrain_sprite = pygame.transform.scale(self.terrain_sprite, (self.map_width, self.map_height))
 
 
 if __name__ == "__main__":

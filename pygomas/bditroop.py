@@ -100,7 +100,7 @@ from .vector import Vector3D
 DEFAULT_RADIUS = 20
 ESCAPE_RADIUS = 50
 
-INTERVAL_TO_MOVE = 0.033
+INTERVAL_TO_MOVE = 0.05
 
 ARG_TEAM = 0
 
@@ -125,6 +125,7 @@ class BDITroop(AbstractAgent, BDIAgent):
         map_path=None,
         manager_jid="cmanager@localhost",
         service_jid="cservice@localhost",
+        velocity_value=3,
         *args,
         **kwargs
     ):
@@ -163,6 +164,7 @@ class BDITroop(AbstractAgent, BDIAgent):
 
         # Current position, direction, and so on...
         self.movement = None  # CMobile
+        self.velocity_value = velocity_value
 
         self.soldiers_count = 0
         self.medics_count = 0
@@ -321,7 +323,8 @@ class BDITroop(AbstractAgent, BDIAgent):
                     }
                     logger.info("{} shot!".format(content[NAME]))
                     msg.body = json.dumps(content)
-                    await self.send(msg)
+                    if self.agent.is_alive():
+                        await self.send(msg)
 
                     self.agent.decrease_ammo(shots)
                     return True
@@ -363,7 +366,8 @@ class BDITroop(AbstractAgent, BDIAgent):
                     msg.set_metadata(PERFORMATIVE, PERFORMATIVE_GET)
                     msg.to = self.agent.service_jid
                     msg.body = json.dumps({NAME: service, TEAM: self.agent.team})
-                    await self.send(msg)
+                    if self.agent.is_alive():
+                        await self.send(msg)
                     result = await self.receive(timeout=LONG_RECEIVE_WAIT)
                     if result:
                         result = json.loads(result.body)
@@ -395,7 +399,8 @@ class BDITroop(AbstractAgent, BDIAgent):
                     msg.set_metadata(PERFORMATIVE, PERFORMATIVE_GET)
                     msg.to = self.agent.service_jid
                     msg.body = json.dumps({NAME: MEDIC_SERVICE, TEAM: self.agent.team})
-                    await self.send(msg)
+                    if self.agent.is_alive():
+                        await self.send(msg)
                     result = await self.receive(timeout=LONG_RECEIVE_WAIT)
                     if result:
                         result = json.loads(result.body)
@@ -429,7 +434,8 @@ class BDITroop(AbstractAgent, BDIAgent):
                     msg.set_metadata(PERFORMATIVE, PERFORMATIVE_GET)
                     msg.to = self.agent.service_jid
                     msg.body = json.dumps({NAME: AMMO_SERVICE, TEAM: self.agent.team})
-                    await self.send(msg)
+                    if self.agent.is_alive():
+                        await self.send(msg)
                     result = await self.receive(timeout=LONG_RECEIVE_WAIT)
                     if result:
                         result = json.loads(result.body)
@@ -463,7 +469,8 @@ class BDITroop(AbstractAgent, BDIAgent):
                     msg.set_metadata(PERFORMATIVE, PERFORMATIVE_GET)
                     msg.to = self.agent.service_jid
                     msg.body = json.dumps({NAME: BACKUP_SERVICE, TEAM: self.agent.team})
-                    await self.send(msg)
+                    if self.agent.is_alive():
+                        await self.send(msg)
                     result = await self.receive(timeout=LONG_RECEIVE_WAIT)
                     if result:
                         result = json.loads(result.body)
@@ -682,7 +689,7 @@ class BDITroop(AbstractAgent, BDIAgent):
                 self.agent.path_finder = JPSAlgorithm(
                     self.agent.map.cost_terrain[:, :, 1]
                 )
-                self.agent.movement = Mobile()
+                self.agent.movement = Mobile(self.agent.velocity_value)
                 self.agent.movement.set_size(
                     self.agent.map.get_size_x(), self.agent.map.get_size_z()
                 )
@@ -841,7 +848,8 @@ class BDITroop(AbstractAgent, BDIAgent):
                 msg.set_metadata(PERFORMATIVE, PERFORMATIVE_DATA)
                 msg.body = json.dumps(content)
 
-                await self.send(msg)
+                if self.agent.is_alive():
+                    await self.send(msg)
 
                 info = await self.receive(LONG_RECEIVE_WAIT)
                 if info is None:

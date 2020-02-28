@@ -42,7 +42,7 @@ class AbstractAgent(object, metaclass=ABCMeta):
         logger.info("Agent {} was stopped.".format(self.name))
 
     async def send(self, msg):
-        if self.alive:
+        if self.is_alive():
             await super().send(msg)
 
     def register_service(self, service_name):

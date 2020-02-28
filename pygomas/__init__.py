@@ -12,4 +12,4 @@ import pygomas.ammopack
 import pygomas.medicpack
 import pygomas.objpack
 
-__version__ = "0.3.5"
+__version__ = "0.3.6"

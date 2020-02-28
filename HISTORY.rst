@@ -2,6 +2,15 @@
 History
 =======
 
+0.3.5 (2020-02-25)
+------------------
+
+* Increased agents velocity.
+* Fixed render messaging initialization.
+* Fixed look ZeroDivisionError bug.
+* Improved pygomas render with tiles.
+* Improved pygomas render supporting invisible bases.
+
 0.3.4 (2020-02-24)
 ------------------
 

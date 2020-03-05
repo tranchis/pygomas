@@ -356,16 +356,17 @@ def render(ip, port, maps, text):
     help="Manager's port to connect the dumper (default=8001).",
     type=int,
 )
+@click.option("--maps", default=None, help="The path to your custom maps directory.")
 @click.option("--log", default="/tmp/tv.log", help="File to save the game.")
-def dump(ip, port, log):
+def dump(ip, port, maps, log):
     """Dump a game play to a file, in order to be replayed later."""
-    dump_battle.main(address=ip, port=port, log=log)
+    viewer = renderlite.Render(address=ip, port=port, maps=maps, dump=True, log=log)
+    viewer.main()
 
 
 @cli.command()
 @click.option(
-    "-g",
-    "--game",
+    "--log",
     help="The file that contains the battle to visualize.",
     type=click.Path(exists=True),
 )
@@ -377,9 +378,10 @@ def dump(ip, port, log):
     type=float,
 )
 @click.option("--maps", default=None, help="The path to your custom maps directory.")
-def replay(game, fps, maps):
+def replay(log, fps, maps):
     """Replay a game play from a file."""
-    replay_match.main(game_file=game, fps=fps, maps_path=maps)
+    viewer = renderlite.Render(maps=maps, dump=False, replay=True, log=log, wait_fps=fps)
+    viewer.main()
 
 
 @cli.command()

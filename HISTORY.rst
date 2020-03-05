@@ -2,6 +2,13 @@
 History
 =======
 
+0.3.7 (2020-03-05)
+------------------
+
+* Added warning when goto tries to go to invalid coordinates.
+* Fixed dump and replay options.
+* Changed map_arena.
+
 0.3.6 (2020-02-28)
 ------------------
 

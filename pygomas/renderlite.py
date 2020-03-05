@@ -49,7 +49,8 @@ def chunks(l, n):
 
 
 class Render(object):
-    def __init__(self, address="localhost", port=8001, maps=None, text=False):
+    def __init__(self, address="localhost", port=8001, maps=None, text=False, replay=False, dump=False, log="match.log",
+                 wait_fps=0.033):
         self.address = address
         self.port = port
         self.maps_path = maps
@@ -92,61 +93,113 @@ class Render(object):
         self.wall_sprite = pygame.image.load(os.path.join(self.assets_path, "wall2.png"))
         self.terrain_sprite = pygame.image.load(os.path.join(self.assets_path, "grass2.jpg"))
 
+        self.replay = replay
+        self.dump = dump
+        self.log = log
+        self.file = None
+        self.game_log = []
+        self.wait_fps = wait_fps
+
     def main(self):
         if self.text:
             # curses.wrapper(self._main)
             self._main()
         else:
             self._main()
+            
+    def read_msg(self):
+        if not self.replay:
+            try:
+                size_of_msg = self.s.recv(4)
+            except socket.timeout:
+                size_of_msg = 0
+            if not size_of_msg:
+                return None
+            size_of_msg = struct.unpack(">I", size_of_msg)[0]
+
+            data = bytes()
+            while len(data) < size_of_msg:
+                packet = self.s.recv(size_of_msg - len(data))
+                if not packet:
+                    break
+                data += packet
+
+            if len(data) == 0:
+                data = None
+            data = msgpack.unpackb(data, raw=False)
+            return data
+        else:
+            if len(self.game_log) > 0:
+                data = self.game_log.pop(0)
+                if data:
+                    data = json.loads(data)
+                    data = self._load_json(data)
+                    return data
+            return {MSG_TYPE: TCP_COM, MSG_BODY: QUIT_MSG}
+
+    def _load_json(self, data):
+        if isinstance(data, dict):
+            new_data = dict()
+            for key, value in data.items():
+                new_data[int(key)] = self._load_json(value)
+        elif isinstance(data, list):
+            new_data = list()
+            for element in data:
+                new_data.append(self._load_json(element))
+        else:
+            new_data = data
+        return new_data
 
     def _main(self, stdscr=None):
         error = False
-        if not self.text:
-            # Init pygame
-            pygame.init()
-            self.font = pygame.font.SysFont("ttf-font-awesome", 12)
+        if not self.dump:
+            if not self.text:
+                # Init pygame
+                pygame.init()
+                self.font = pygame.font.SysFont("ttf-font-awesome", 12)
 
-            # Set the height and width of the self.screen
-            self.screen = pygame.display.set_mode(self.size)
+                # Set the height and width of the self.screen
+                self.screen = pygame.display.set_mode(self.size)
+
+            else:
+                stdscr = curses.initscr()
+                curses.start_color()
+                curses.noecho()
+                curses.cbreak()
+                stdscr.keypad(1)
 
         else:
-            stdscr = curses.initscr()
-            curses.start_color()
-            curses.noecho()
-            curses.cbreak()
-            stdscr.keypad(1)
+            logger.success(f"Dumping log to {self.log}")
+            self.file = open(self.log, "w")
 
         try:
-            # Init socket
-            self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            if self.s:
-                self.s.settimeout(0.1)
-                self.s.connect((self.address, self.port))
+            if self.replay:
+                logger.success(f"Loading log from {self.log}")
+                with open(self.log, "r") as rfile:
+                    self.game_log = rfile.read()
+                self.game_log = self.game_log.split("\nSEP\n")
+            else:
+                # Init socket
+                self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                if self.s:
+                    self.s.settimeout(0.1)
+                    self.s.connect((self.address, self.port))
 
-                while not self.quit:
-                    start_time = time.time()
+            while not self.quit:
+                start_time = time.time()
+                if not self.dump:
                     self.draw(stdscr)
-                    try:
-                        size_of_msg = self.s.recv(4)
-                    except socket.timeout:
-                        size_of_msg = 0
-                    if not size_of_msg:
-                        continue
-                    size_of_msg = struct.unpack(">I", size_of_msg)[0]
+                if self.replay:
+                    time.sleep(self.wait_fps)
 
-                    data = bytes()
-                    while len(data) < size_of_msg:
-                        packet = self.s.recv(size_of_msg - len(data))
-                        if not packet:
-                            break
-                        data += packet
+                data = self.read_msg()
 
-                    if len(data) == 0:
-                        continue
-                    data = msgpack.unpackb(data, raw=False)
+                if data is None:
+                    continue
 
-                    if data[MSG_TYPE] == TCP_COM:
-                        if data[MSG_BODY] == WELCOME_MSG:
+                if data[MSG_TYPE] == TCP_COM:
+                    if data[MSG_BODY] == WELCOME_MSG:
+                        if not self.replay:
                             msg_to_send = msgpack.packb(
                                 {MSG_TYPE: TCP_COM, MSG_BODY: READY_MSG},
                                 use_bin_type=True,
@@ -154,12 +207,15 @@ class Render(object):
                             size_of_package = len(msg_to_send)
                             msg = struct.pack(">I", size_of_package) + msg_to_send
                             self.s.send(msg)
-                        elif data[MSG_BODY] == ACCEPT_MSG:
-                            pass
-                        elif data[MSG_BODY] == QUIT_MSG:
-                            self.quit = True
+                    elif data[MSG_BODY] == ACCEPT_MSG:
+                        pass
+                    elif data[MSG_BODY] == QUIT_MSG:
+                        self.quit = True
 
-                    elif data[MSG_TYPE] == TCP_MAP:
+                elif data[MSG_TYPE] == TCP_MAP:
+                    if self.dump:
+                        self.dump_data(data)
+                    else:
                         mapname = data[MSG_BODY]
                         result = self.load_map(mapname)
                         if result["status"] != "ok":
@@ -169,49 +225,62 @@ class Render(object):
                         if not self.text:
                             self.init_sprites()
 
-                    elif data[MSG_TYPE] == TCP_AGL:
+                elif data[MSG_TYPE] == TCP_AGL:
+                    if self.dump:
+                        self.dump_data(data)
+                    else:
                         self.agl_parse(data[MSG_BODY])
                         self.fps.append(1 / (time.time() - start_time))
 
-                    elif data[MSG_TYPE] == TCP_TIME:
-                        pass
-                    elif data[MSG_TYPE] == TCP_ERR:
-                        pass
-                    else:
-                        # Unknown message type
-                        pass
+                elif data[MSG_TYPE] == TCP_TIME:
+                    pass
+                elif data[MSG_TYPE] == TCP_ERR:
+                    pass
+                else:
+                    # Unknown message type
+                    pass
 
         except Exception as e:
             tb = traceback.format_exc()
             error = str(e) + "\n" + tb
-            curses.nocbreak()
-            # self.stdscr.keypad(False)
-            curses.echo()
-            curses.endwin()
-            logger.exception("Exception.")
-
-        finally:
-            logger.info("Sending QUIT message...")
-            msg_to_send = msgpack.packb(
-                {MSG_TYPE: TCP_COM, MSG_BODY: QUIT_MSG}, use_bin_type=True,
-            )
-            size_of_package = len(msg_to_send)
-            msg = struct.pack(">I", size_of_package) + msg_to_send
-            self.s.send(msg)
-
-            logger.info("Closing...")
-            # Close socket
-            self.s.close()
-            if not self.text:
-                pygame.quit()
-            else:
+            if self.text:
                 curses.nocbreak()
                 # self.stdscr.keypad(False)
                 curses.echo()
                 curses.endwin()
+            logger.exception("Exception.")
 
+        finally:
+            if not self.replay:
+                logger.info("Sending QUIT message...")
+                msg_to_send = msgpack.packb(
+                    {MSG_TYPE: TCP_COM, MSG_BODY: QUIT_MSG}, use_bin_type=True,
+                )
+                size_of_package = len(msg_to_send)
+                msg = struct.pack(">I", size_of_package) + msg_to_send
+                self.s.send(msg)
+
+                logger.info("Closing...")
+                # Close socket
+                self.s.close()
+
+            if not self.dump:
+                if not self.text:
+                    pygame.quit()
+                else:
+                    curses.nocbreak()
+                    # self.stdscr.keypad(False)
+                    curses.echo()
+                    curses.endwin()
+            else:
+                logger.info("Closing...")
+                self.file.close()
             if error:
                 logger.error(str(error))
+
+    def dump_data(self, data):
+        self.file.write(json.dumps(data))
+        self.file.write("\nSEP\n")
 
     def agl_parse(self, data):
         self.dins = {}
@@ -252,9 +321,9 @@ class Render(object):
 
         # Clear screen
         color_background = (189, 236, 182)  # (245, 245, 220)
-        #pygame.draw.rect(
+        # pygame.draw.rect(
         #    self.screen, color_background, (0, 0, self.map_width, self.map_height)
-        #)
+        # )
         self.screen.blit(self.terrain_sprite, (0, 0))
 
         # Draw bases
@@ -711,6 +780,8 @@ if __name__ == "__main__":
         "--maps", default=None, help="The path to your custom maps directory"
     )
     parser.add_argument("--text", default=False, help="Use text render")
+
+    parser.add_argument("--log", default="match.log", help="File to save the game")
 
     args = parser.parse_args()
     render = Render(args.ip, args.port, args.maps, args.text)

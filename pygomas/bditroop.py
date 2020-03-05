@@ -246,39 +246,43 @@ class BDITroop(AbstractAgent, BDIAgent):
             self.movement.destination.z = args[0][2]
             start = (self.movement.position.x, self.movement.position.z)
             end = (self.movement.destination.x, self.movement.destination.z)
-            path = self.path_finder.get_path(start, end)
-            if path:
-                self.destinations = deque(path)
-                x, z = path[0]
-                self.movement.calculate_new_orientation(Vector3D(x=x, y=0, z=z))
-                self.bdi.set_belief(
-                    DESTINATION, tuple((args[0][0], args[0][1], args[0][2]))
-                )
-                self.bdi.set_belief(
-                    VELOCITY,
-                    tuple(
-                        (
-                            self.movement.velocity.x,
-                            self.movement.velocity.y,
-                            self.movement.velocity.z,
-                        )
-                    ),
-                )
-                self.bdi.set_belief(
-                    HEADING,
-                    tuple(
-                        (
-                            self.movement.heading.x,
-                            self.movement.heading.y,
-                            self.movement.heading.z,
-                        )
-                    ),
-                )
+
+            if self.map.can_walk(end[0], end[1]):
+                path = self.path_finder.get_path(start, end)
+                if path:
+                    self.destinations = deque(path)
+                    x, z = path[0]
+                    self.movement.calculate_new_orientation(Vector3D(x=x, y=0, z=z))
+                    self.bdi.set_belief(
+                        DESTINATION, tuple((args[0][0], args[0][1], args[0][2]))
+                    )
+                    self.bdi.set_belief(
+                        VELOCITY,
+                        tuple(
+                            (
+                                self.movement.velocity.x,
+                                self.movement.velocity.y,
+                                self.movement.velocity.z,
+                            )
+                        ),
+                    )
+                    self.bdi.set_belief(
+                        HEADING,
+                        tuple(
+                            (
+                                self.movement.heading.x,
+                                self.movement.heading.y,
+                                self.movement.heading.z,
+                            )
+                        ),
+                    )
+                else:
+                    self.destinations = deque()
+                    self.movement.destination.x = self.movement.position.x
+                    self.movement.destination.y = self.movement.position.y
+                    self.movement.destination.z = self.movement.position.z
             else:
-                self.destinations = deque()
-                self.movement.destination.x = self.movement.position.x
-                self.movement.destination.y = self.movement.position.y
-                self.movement.destination.z = self.movement.position.z
+                logger.warning(f"[{self.jid.localpart}] goto: can't walk to {end}")
             yield
 
         @actions.add(".shoot", 2)

@@ -2,6 +2,13 @@
 History
 =======
 
+0.4.0 (2020-03-06)
+------------------
+
+* Improved create_control_points.
+* Fixed import bug.
+* New pygame render. With new sprites and animations.
+
 0.3.7 (2020-03-05)
 ------------------
 

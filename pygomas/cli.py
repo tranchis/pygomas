@@ -20,8 +20,6 @@ import click
 from spade import quit_spade
 from spade.container import Container
 
-from . import dump_battle
-from . import replay_match
 from . import renderlite
 from .config import TEAM_ALLIED, TEAM_AXIS
 from .bdifieldop import BDIFieldOp
@@ -356,11 +354,10 @@ def render(ip, port, maps, text):
     help="Manager's port to connect the dumper (default=8001).",
     type=int,
 )
-@click.option("--maps", default=None, help="The path to your custom maps directory.")
 @click.option("--log", default="/tmp/tv.log", help="File to save the game.")
-def dump(ip, port, maps, log):
+def dump(ip, port, log):
     """Dump a game play to a file, in order to be replayed later."""
-    viewer = renderlite.Render(address=ip, port=port, maps=maps, dump=True, log=log)
+    viewer = renderlite.Render(address=ip, port=port, dump=True, log=log)
     viewer.main()
 
 
@@ -380,7 +377,9 @@ def dump(ip, port, maps, log):
 @click.option("--maps", default=None, help="The path to your custom maps directory.")
 def replay(log, fps, maps):
     """Replay a game play from a file."""
-    viewer = renderlite.Render(maps=maps, dump=False, replay=True, log=log, wait_fps=fps)
+    viewer = renderlite.Render(
+        maps=maps, dump=False, replay=True, log=log, wait_fps=fps
+    )
     viewer.main()
 
 

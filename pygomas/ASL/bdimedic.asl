@@ -4,7 +4,6 @@
   <-
   .create_control_points(F,25,3,C);
   +control_points(C);
-  .wait(5000);
   .length(C,L);
   +total_control_points(L);
   +patrolling;
@@ -46,6 +45,7 @@
 
 +heading(H): exploring
   <-
+  .cure;
   .wait(2000);
   .turn(0.375).
 

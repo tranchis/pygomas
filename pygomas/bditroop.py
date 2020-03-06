@@ -127,7 +127,7 @@ class BDITroop(AbstractAgent, BDIAgent):
         service_jid="cservice@localhost",
         velocity_value=3,
         *args,
-        **kwargs
+        **kwargs,
     ):
 
         AbstractAgent.__init__(self, jid, team=team, service_jid=service_jid)
@@ -190,33 +190,22 @@ class BDITroop(AbstractAgent, BDIAgent):
             Expects args to be [x,y,z],radius and number of points
             """
 
-            center_x = center[0]
-            center_y = center[1]
-            center_z = center[2]
-            control_points = []
-            initial_radius = radius
-            for i in range(n):
-                radius = initial_radius
-                while True:
-                    x = center_x + ((radius / 2) - (random.random() * radius))
-                    x = max(0, x)
-                    x = int(min(self.map.size_x - 1, x))
-                    y = 0
-                    z = center_z + ((radius / 2) - (random.random() * radius))
-                    z = max(0, z)
-                    z = int(min(self.map.size_z - 1, z))
+            center_x = int(center[0])
+            center_z = int(center[2])
+            radius = int(radius)
 
-                    if self.check_static_position(x, z):
-                        if i != 0:
-                            if (x, y, z) != control_points[i - 1]:
-                                control_points.append((x, y, z))
-                                break
-                        else:
-                            control_points.append((x, y, z))
-                            break
-                    radius = min(1, radius - 1)
-                logger.debug("Control point generated {}".format((x, y, z)))
-            logger.info("{} Control points: {}".format(self.jid.localpart, control_points))
+            possible_positions = []
+
+            for i in range(center_x - radius, center_x + radius):
+                for j in range(center_z - radius, center_z + radius):
+                    if self.map.can_walk(i, j):
+                        possible_positions.append((i, 0, j))
+
+            control_points = random.sample(possible_positions, n)
+
+            logger.info(
+                "[{}] Control points: {}".format(self.jid.localpart, control_points)
+            )
             return tuple(control_points)
 
         @actions.add_function(".shuffle", (tuple))
@@ -247,7 +236,7 @@ class BDITroop(AbstractAgent, BDIAgent):
             start = (self.movement.position.x, self.movement.position.z)
             end = (self.movement.destination.x, self.movement.destination.z)
 
-            if self.map.can_walk(end[0], end[1]):
+            if self.check_static_position(x=end[0], z=end[1]):
                 path = self.path_finder.get_path(start, end)
                 if path:
                     self.destinations = deque(path)

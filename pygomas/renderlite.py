@@ -1,22 +1,26 @@
 #!/usr/bin/env python
 # -*- coding: UTF8 -*-
 import argparse
+import copy
+import curses
 import json
+import math
+import os
 import socket
 import struct
 import sys
-import os
 import time
 import traceback
-import copy
+from itertools import cycle
 
 import msgpack
 import pygame
 from pygame import gfxdraw
-import curses
-import math
 from loguru import logger
+from pygame.rect import Rect
 
+from pygomas.bditroop import CLASS_NONE, CLASS_SOLDIER, CLASS_MEDIC, CLASS_ENGINEER, CLASS_FIELDOPS
+from pygomas.config import TEAM_AXIS, TEAM_ALLIED, TEAM_NONE
 from .server import (
     MSG_TYPE,
     MSG_BODY,
@@ -41,6 +45,8 @@ from .server import (
     ACCEPT_MSG,
 )
 
+draw_rect = False
+
 
 def chunks(l, n):
     """Yield successive n-sized chunks from l."""
@@ -48,9 +54,34 @@ def chunks(l, n):
         yield l[i: i + n]
 
 
+def get_angle(angx, angy):
+    if angx == 0:
+        div = 1000
+    else:
+        div = angy / angx
+    if angy >= 0 and angx >= 0:  # q1
+        angle = math.atan(div) * (180 / math.pi)
+    elif angy >= 0 >= angx:  # q2
+        angle = math.atan(div) * (180 / math.pi) + 180
+    elif angy <= 0 and angx <= 0:  # q3
+        angle = math.atan(div) * (180 / math.pi) + 180
+    else:  # q4
+        angle = math.atan(div) * (180 / math.pi) + 360
+    return angle
+
+
 class Render(object):
-    def __init__(self, address="localhost", port=8001, maps=None, text=False, replay=False, dump=False, log="match.log",
-                 wait_fps=0.033):
+    def __init__(
+            self,
+            address="localhost",
+            port=8001,
+            maps=None,
+            text=False,
+            replay=False,
+            dump=False,
+            log="match.log",
+            wait_fps=0.033,
+    ):
         self.address = address
         self.port = port
         self.maps_path = maps
@@ -88,10 +119,24 @@ class Render(object):
 
         this_dir, _ = os.path.split(__file__)
         self.assets_path = f"{this_dir}{os.sep}assets{os.sep}"
-        self.allied_base_sprite = pygame.image.load(os.path.join(self.assets_path, "base4.png"))
-        self.axis_base_sprite = pygame.image.load(os.path.join(self.assets_path, "base3.png"))
-        self.wall_sprite = pygame.image.load(os.path.join(self.assets_path, "wall2.png"))
-        self.terrain_sprite = pygame.image.load(os.path.join(self.assets_path, "grass2.jpg"))
+        self.allied_base_sprite = pygame.image.load(
+            os.path.join(self.assets_path, "base4.png")
+        )
+        self.axis_base_sprite = pygame.image.load(
+            os.path.join(self.assets_path, "base3.png")
+        )
+        self.wall_sprite = pygame.image.load(
+            os.path.join(self.assets_path, "wall2.png")
+        )
+        self.terrain_sprites = cycle([pygame.image.load(os.path.join(self.assets_path, "grass2.jpg")),
+                                      pygame.image.load(os.path.join(self.assets_path, "terrain.jpg")),
+                                      pygame.image.load(os.path.join(self.assets_path, "grass.jpg"))]
+                                     )
+        self.terrain_sprite = next(self.terrain_sprites)
+
+        self.sprites = {}
+        self.graves = {}
+        self.flag_sprite = None
 
         self.replay = replay
         self.dump = dump
@@ -106,7 +151,7 @@ class Render(object):
             self._main()
         else:
             self._main()
-            
+
     def read_msg(self):
         if not self.replay:
             try:
@@ -156,7 +201,7 @@ class Render(object):
             if not self.text:
                 # Init pygame
                 pygame.init()
-                self.font = pygame.font.SysFont("ttf-font-awesome", 12)
+                self.font = pygame.font.SysFont("ttf-font-awesome", 16)
 
                 # Set the height and width of the self.screen
                 self.screen = pygame.display.set_mode(self.size)
@@ -298,6 +343,7 @@ class Render(object):
             self.pygamedraw()
 
     def pygamedraw(self):
+        global draw_rect
 
         events = pygame.event.get()
         for event in events:
@@ -316,17 +362,198 @@ class Render(object):
                     self.tile_size -= 2
                 elif event.key == pygame.K_f:
                     self.show_fovs = not self.show_fovs
+                elif event.key == pygame.K_b:
+                    self.terrain_sprite = next(self.terrain_sprites)
+                elif event.key == pygame.K_r:
+                    draw_rect = not draw_rect
             elif event.type == pygame.QUIT:
                 self.quit = True
 
         # Clear screen
-        color_background = (189, 236, 182)  # (245, 245, 220)
-        # pygame.draw.rect(
-        #    self.screen, color_background, (0, 0, self.map_width, self.map_height)
-        # )
-        self.screen.blit(self.terrain_sprite, (0, 0))
+        self.pygame_draw_background()
 
         # Draw bases
+        self.pygame_draw_bases()
+
+        # Draw Map
+        self.pygame_draw_walls()
+
+        # Draw FPS
+        self.pygame_draw_fps()
+
+        # Draw items
+        self.pygame_draw_packs()
+
+        # Draw units
+        self.pygame_draw_units()
+
+        pygame.display.update()  # flip()
+        self.iteration += 1
+
+    def pygame_draw_units(self):
+        for name, agent in self.agents.items():
+            health = float(agent[MSG_CONTENT_HEALTH])
+            posx = (
+                    int(float(agent[MSG_CONTENT_POSITION][0]) * self.tile_size / 8.0)
+                    + self.xdesp
+            )
+            posy = (
+                    int(float(agent[MSG_CONTENT_POSITION][2]) * self.tile_size / 8.0)
+                    + self.ydesp
+            )
+
+            if float(health) > 0:
+                carrying = agent[MSG_CONTENT_CARRYINGFLAG]
+
+                # agent_type = {0: "X", 1: "*", 2: "+", 3: "Y", 4: "^"}.get(
+                agent_type = {CLASS_NONE: "soldier", CLASS_SOLDIER: "soldier", CLASS_MEDIC: "medic", CLASS_ENGINEER: "engineer",
+                              CLASS_FIELDOPS: "fieldops"}.get(agent[MSG_CONTENT_TYPE], "soldier")
+
+                team = {TEAM_ALLIED: (255, 50, 50), TEAM_AXIS: (100, 100, 255)}.get(
+                    agent[MSG_CONTENT_TEAM], (255, 255, 0)
+                )
+
+                team_aplha = {TEAM_ALLIED: (255, 100, 100, 100), TEAM_AXIS: (100, 100, 255, 100)}.get(
+                    agent[MSG_CONTENT_TEAM], (255, 255, 0, 255)
+                )
+
+                ammo = float(agent[MSG_CONTENT_AMMO])
+
+                # print avatar
+                if name not in self.sprites:
+                    sprite = MySprite(name=agent_type, team=agent[MSG_CONTENT_TEAM], num_sprites=8, scale=0.75)
+                    # self.sprites[name] = pygame.sprite.Group(sprite)
+                    self.sprites[name] = sprite
+                angx = float(agent[MSG_CONTENT_HEADING][0])
+                angy = float(agent[MSG_CONTENT_HEADING][2])
+                self.sprites[name].update(posx, posy, angx, angy)
+                self.sprites[name].draw(self.screen)
+                # pygame.draw.circle(self.screen, team, [posx, posy], 8)
+                # print name
+                text = self.font.render(agent[MSG_CONTENT_NAME], True, (255, 255, 255))
+                self.screen.blit(
+                    text,
+                    (
+                        posx - text.get_width() // 2 + 25,
+                        posy - text.get_height() // 2 - 25,
+                    ),
+                )
+
+                rect = self.sprites[name].rect
+                health_bar = Rect(rect.bottomleft[0], rect.bottomleft[1], rect.width, 4)
+                pygame.draw.rect(self.screen, (255, 0, 0), health_bar)
+                health_bar = Rect(rect.bottomleft[0], rect.bottomleft[1], health * rect.width / 100, 4)
+                pygame.draw.rect(self.screen, (0, 255, 0), health_bar)
+
+                ammo_bar = Rect(rect.bottomleft[0], rect.bottomleft[1] + 5, rect.width, 4)
+                pygame.draw.rect(self.screen, (255, 255, 255), ammo_bar)
+                ammo_bar = Rect(rect.bottomleft[0], rect.bottomleft[1] + 5, ammo * rect.width / 100, 4)
+                pygame.draw.rect(self.screen, (106, 115, 120), ammo_bar)
+
+                # is carring flag?
+                if carrying:
+                    # pygame.draw.circle(self.screen, (255, 255, 0), [posx, posy], 5)
+                    flagx, flagy = self.sprites[name].rect.topright
+                    self.flag_sprite.update(flagx, flagy, 0, -1, force_animation=True)
+                    self.flag_sprite.draw(self.screen)
+
+                # print fov
+                if self.show_fovs:
+                    # compute direction
+                    angx = float(agent[MSG_CONTENT_HEADING][0])
+                    angy = float(agent[MSG_CONTENT_HEADING][2])
+
+                    angle = get_angle(angx, angy)
+
+                    for j in range(0, int(48 * (self.tile_size / 8)), 1):
+                        pygame.gfxdraw.arc(
+                            self.screen,
+                            posx,
+                            posy,
+                            j,
+                            int(-45 + angle),
+                            int(45 + angle),
+                            team_aplha,
+                        )
+
+                # print function
+                # text = self.font.render(agent_type, True, (0, 0, 0))
+                # self.screen.blit(
+                #    text, (posx - text.get_width() // 2, posy - text.get_height() // 2)
+                # )
+
+            else:
+                team = agent[MSG_CONTENT_TEAM]
+                if team not in self.graves:
+                    sprite = MySprite(name="grave", team=team, num_sprites=1, scale=0.35)
+                    self.graves[team] = sprite
+                self.graves[team].update(posx, posy, 0, -1)
+                self.graves[team].draw(self.screen)
+
+    def pygame_draw_packs(self):
+        # for i in range(0, len(list(self.dins.items()))):
+        for pack in self.dins.values():
+            posx = int(
+                pack[MSG_CONTENT_POSITION][0] * (self.tile_size / 8.0) + self.xdesp
+            )
+            posy = int(
+                pack[MSG_CONTENT_POSITION][2] * (self.tile_size / 8.0) + self.ydesp
+            )
+
+            item_type = {1001: "M", 1002: "A", 1003: "F"}.get(
+                pack[MSG_CONTENT_TYPE], "X"
+            )
+
+            if item_type != "F":
+
+                color = {
+                    1001: (88, 214, 141),  # (255, 255, 255),
+                    1002: (155, 89, 182),  # (255, 255, 255),
+                    1003: (255, 255, 0),
+                }.get(pack[MSG_CONTENT_TYPE], "X")
+
+                pygame.draw.circle(self.screen, color, [posx, posy], 6)
+                text = self.font.render(item_type, True, (0, 0, 0))
+                self.screen.blit(
+                    text, (posx - text.get_width() // 2, posy - text.get_height() // 2)
+                )
+            else:
+                self.flag_sprite.update(posx, posy, 0, -1, force_animation=True)
+                self.flag_sprite.draw(self.screen)
+
+    def pygame_draw_fps(self):
+        if len(self.fps) > 5:
+            fps = int(sum(self.fps[-5:]) / 5)
+            text = self.font.render(str(fps) + " FPS", True, (255, 255, 255))
+            self.screen.blit(text, (1, 1))
+
+    def pygame_draw_walls(self):
+        color_wall = (100, 100, 100)
+        for y in range(0, len(list(self.graph.items()))):
+            for x in range(0, 32):
+                try:
+                    if list(self.graph.items())[y][1][x] == "*":
+                        """pygame.draw.rect(
+                            self.screen,
+                            color_wall,
+                            (
+                                x * self.tile_size + self.xdesp,
+                                y * self.tile_size + self.ydesp,
+                                self.tile_size,
+                                self.tile_size,
+                            ),
+                        )"""
+                        self.screen.blit(
+                            self.wall_sprite,
+                            (
+                                x * self.tile_size + self.xdesp,
+                                y * self.tile_size + self.ydesp,
+                            ),
+                        )
+                except:
+                    pass
+
+    def pygame_draw_bases(self):
         if self.allied_base is not None:
             if len(self.allied_base) == 5:
                 draw = bool(int(self.allied_base[4]))
@@ -350,13 +577,12 @@ class Render(object):
                 )
 
                 # pygame.draw.rect(self.screen, color, (xpos, ypos, xwidth, ywidth))
-                '''s = pygame.Surface((xwidth, ywidth))  # the size of your rect
+                """s = pygame.Surface((xwidth, ywidth))  # the size of your rect
                 s.set_alpha(128)  # alpha level
                 s.fill(color)  # this fills the entire surface
-                self.screen.blit(s, (xpos, ypos))'''
+                self.screen.blit(s, (xpos, ypos))"""
 
                 self.screen.blit(self.allied_base_sprite, (xpos, ypos))
-
         if self.axis_base is not None:
             if len(self.axis_base) == 5:
                 draw = bool(int(self.axis_base[4]))
@@ -380,174 +606,19 @@ class Render(object):
                 )
 
                 # pygame.draw.rect(self.screen, color, (xpos, ypos, xwidth, ywidth))
-                '''s = pygame.Surface((xwidth, ywidth))  # the size of your rect
+                """s = pygame.Surface((xwidth, ywidth))  # the size of your rect
                 s.set_alpha(128)  # alpha level
                 s.fill(color)  # this fills the entire surface
-                self.screen.blit(s, (xpos, ypos))'''
+                self.screen.blit(s, (xpos, ypos))"""
 
                 self.screen.blit(self.axis_base_sprite, (xpos, ypos))
 
-        # Draw Map
-        color_wall = (100, 100, 100)
-        for y in range(0, len(list(self.graph.items()))):
-            for x in range(0, 32):
-                try:
-                    if list(self.graph.items())[y][1][x] == "*":
-                        '''pygame.draw.rect(
-                            self.screen,
-                            color_wall,
-                            (
-                                x * self.tile_size + self.xdesp,
-                                y * self.tile_size + self.ydesp,
-                                self.tile_size,
-                                self.tile_size,
-                            ),
-                        )'''
-                        self.screen.blit(self.wall_sprite, (x * self.tile_size + self.xdesp, y * self.tile_size + self.ydesp))
-                except:
-                    pass
-
-        # Draw FPS
-        if len(self.fps) > 5:
-            fps = int(sum(self.fps[-5:]) / 5)
-            text = self.font.render(str(fps) + " FPS", True, (255, 255, 255))
-            self.screen.blit(text, (1, 1))
-
-        # Draw items
-        # for i in range(0, len(list(self.dins.items()))):
-        for pack in self.dins.values():
-            posx = int(
-                pack[MSG_CONTENT_POSITION][0] * (self.tile_size / 8.0) + self.xdesp
-            )
-            posy = int(
-                pack[MSG_CONTENT_POSITION][2] * (self.tile_size / 8.0) + self.ydesp
-            )
-
-            item_type = {1001: "M", 1002: "A", 1003: "F"}.get(
-                pack[MSG_CONTENT_TYPE], "X"
-            )
-
-            color = {
-                1001: (88, 214, 141),  # (255, 255, 255),
-                1002: (155, 89, 182),  # (255, 255, 255),
-                1003: (255, 255, 0),
-            }.get(pack[MSG_CONTENT_TYPE], "X")
-
-            pygame.draw.circle(self.screen, color, [posx, posy], 6)
-            text = self.font.render(item_type, True, (0, 0, 0))
-            self.screen.blit(
-                text, (posx - text.get_width() // 2, posy - text.get_height() // 2)
-            )
-
-        # Draw units
-        # for i in list(self.agents.items()):
-        for agent in self.agents.values():
-            health = float(agent[MSG_CONTENT_HEALTH])
-
-            if float(health) > 0:
-                carrying = agent[MSG_CONTENT_CARRYINGFLAG]
-
-                agent_type = {0: "X", 1: "*", 2: "+", 3: "Y", 4: "^"}.get(
-                    agent[MSG_CONTENT_TYPE], "X"
-                )
-
-                team = {100: (255, 50, 50), 200: (100, 100, 255)}.get(
-                    agent[MSG_CONTENT_TEAM], (255, 255, 0)
-                )
-
-                team_aplha = {100: (255, 100, 100, 100), 200: (100, 100, 255, 100)}.get(
-                    agent[MSG_CONTENT_TEAM], (255, 255, 0, 255)
-                )
-
-                ammo = float(agent[MSG_CONTENT_AMMO])
-
-                posx = (
-                        int(float(agent[MSG_CONTENT_POSITION][0]) * self.tile_size / 8.0)
-                        + self.xdesp
-                )
-                posy = (
-                        int(float(agent[MSG_CONTENT_POSITION][2]) * self.tile_size / 8.0)
-                        + self.ydesp
-                )
-
-                # print avatar
-                pygame.draw.circle(self.screen, team, [posx, posy], 8)
-                # print name
-                text = self.font.render(agent[MSG_CONTENT_NAME], True, (255, 255, 255))
-                self.screen.blit(
-                    text,
-                    (
-                        posx - text.get_width() // 2 + 15,
-                        posy - text.get_height() // 2 - 15,
-                    ),
-                )
-                # print health
-                pygame.gfxdraw.aacircle(self.screen, posx, posy, 10, (255, 0, 0))
-                pygame.gfxdraw.aacircle(self.screen, posx, posy, 9, (255, 0, 0))
-                pygame.gfxdraw.arc(
-                    self.screen, posx, posy, 10, 0, int(health * 3.6) - 1, (0, 255, 0)
-                )
-                pygame.gfxdraw.arc(
-                    self.screen, posx, posy, 9, 0, int(health * 3.6) - 1, (0, 255, 0)
-                )
-                # print ammo
-                if ammo >= 1:
-                    pygame.gfxdraw.arc(
-                        self.screen,
-                        posx,
-                        posy,
-                        6,
-                        0,
-                        int(ammo * 3.6) - 1,
-                        (255, 255, 255),
-                    )
-                pygame.gfxdraw.arc(
-                    self.screen, posx, posy, 7, 0, int(ammo * 3.6) - 1, (255, 255, 255)
-                )
-
-                # is carring flag?
-                if carrying:
-                    pygame.draw.circle(self.screen, (255, 255, 0), [posx, posy], 5)
-
-                # print fov
-                if self.show_fovs:
-                    # compute direction
-                    angx = float(agent[MSG_CONTENT_HEADING][0])
-                    angy = float(agent[MSG_CONTENT_HEADING][2])
-
-                    if angx == 0:
-                        div = 1000
-                    else:
-                        div = angy / angx
-
-                    if angy >= 0 and angx >= 0:  # q1
-                        angle = math.atan(div) * (180 / math.pi)
-                    elif angy >= 0 >= angx:  # q2
-                        angle = math.atan(div) * (180 / math.pi) + 180
-                    elif angy <= 0 and angx <= 0:  # q3
-                        angle = math.atan(div) * (180 / math.pi) + 180
-                    else:  # q4
-                        angle = math.atan(div) * (180 / math.pi) + 360
-
-                    for j in range(0, int(48 * (self.tile_size / 8)), 1):
-                        pygame.gfxdraw.arc(
-                            self.screen,
-                            posx,
-                            posy,
-                            j,
-                            int(-45 + angle),
-                            int(45 + angle),
-                            team_aplha,
-                        )
-
-                # print function
-                text = self.font.render(agent_type, True, (0, 0, 0))
-                self.screen.blit(
-                    text, (posx - text.get_width() // 2, posy - text.get_height() // 2)
-                )
-
-        pygame.display.flip()
-        self.iteration += 1
+    def pygame_draw_background(self):
+        color_background = (189, 236, 182)  # (245, 245, 220)
+        # pygame.draw.rect(
+        #    self.screen, color_background, (0, 0, self.map_width, self.map_height)
+        # )
+        self.screen.blit(self.terrain_sprite, (0, 0))
 
     def textdraw(self, stdscr):
         height, width = stdscr.getmaxyx()
@@ -741,31 +812,87 @@ class Render(object):
         )
 
         self.allied_base_sprite.convert()
-        self.allied_base_sprite = pygame.transform.scale(self.allied_base_sprite, (xwidth, ywidth))
+        self.allied_base_sprite = pygame.transform.scale(
+            self.allied_base_sprite, (xwidth, ywidth)
+        )
 
         xpos = int(self.axis_base[0]) * self.tile_size + self.xdesp
         ypos = int(self.axis_base[1]) * self.tile_size + self.ydesp
         xwidth = (
-                int(self.axis_base[2]) * self.tile_size
-                - xpos
-                + self.tile_size
-                + self.xdesp
+                int(self.axis_base[2]) * self.tile_size - xpos + self.tile_size + self.xdesp
         )
         ywidth = (
-                int(self.axis_base[3]) * self.tile_size
-                - ypos
-                + self.tile_size
-                + self.ydesp
+                int(self.axis_base[3]) * self.tile_size - ypos + self.tile_size + self.ydesp
         )
 
         self.axis_base_sprite.convert()
-        self.axis_base_sprite = pygame.transform.scale(self.axis_base_sprite, (xwidth, ywidth))
+        self.axis_base_sprite = pygame.transform.scale(
+            self.axis_base_sprite, (xwidth, ywidth)
+        )
 
         self.wall_sprite.convert()
-        self.wall_sprite = pygame.transform.scale(self.wall_sprite, (self.tile_size, self.tile_size))
+        self.wall_sprite = pygame.transform.scale(
+            self.wall_sprite, (self.tile_size, self.tile_size)
+        )
 
         self.terrain_sprite.convert()
-        self.terrain_sprite = pygame.transform.scale(self.terrain_sprite, (self.map_width, self.map_height))
+        self.terrain_sprite = pygame.transform.scale(
+            self.terrain_sprite, (self.map_width, self.map_height)
+        )
+
+        self.flag_sprite = MySprite(name="flag", team=TEAM_NONE, num_sprites=16, scale=0.2, fr=3)
+
+
+class MySprite(pygame.sprite.Sprite):
+    def __init__(self, name: str, team: int, num_sprites: int, folder: str = "assets", scale: float = 1.0, fr=1):
+        super(MySprite, self).__init__()
+        # adding all the images to sprite array
+        this_dir, _ = os.path.split(__file__)
+
+        team = {TEAM_ALLIED: "allied", TEAM_AXIS: "axis", TEAM_NONE: ""}.get(team)
+        self.images = [pygame.image.load(f'{this_dir}{os.sep}{folder}{os.sep}{name}_{team}{i}.png') for i in
+                       range(1, num_sprites + 1)]
+        self.images = [pygame.transform.scale(img, (int(img.get_size()[0] * scale), int(img.get_size()[1] * scale)))
+                       for img in self.images]
+        self.images = [pygame.transform.rotate(img, -90) for img in self.images]
+        self.original_images = [copy.copy(img) for img in self.images]
+
+        # index value to get the image from the array
+        # initially it is 0
+        self.index = 0
+
+        # now the image that we will display will be the index from the image array
+        self.image = self.images[self.index]
+        self.x = 0
+        self.y = 0
+
+        self.rect = self.image.get_rect(center=(self.x, self.y))
+        self.fr = cycle(range(fr))
+
+    def update(self, x, y, angx, angy, force_animation=False):
+
+        fr = next(self.fr)
+        if fr == 0:
+            if self.x != x or self.y != y or force_animation:
+                # when the update method is called, we will increment the index
+                self.index += 1
+
+                # if the index is larger than the total images
+                if self.index >= len(self.images):
+                    # we will make the index to 0 again
+                    self.index = 0
+
+        self.x, self.y = x, y
+
+        angle = get_angle(angx, angy)
+
+        self.image = pygame.transform.rotate(self.original_images[self.index], -angle)
+        self.rect = self.image.get_rect(center=(self.x, self.y))
+
+    def draw(self, surface):
+        if draw_rect:
+            pygame.draw.rect(surface, (255, 0, 0), self.rect, 1)
+        surface.blit(self.image, self.rect)
 
 
 if __name__ == "__main__":

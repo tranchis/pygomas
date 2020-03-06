@@ -840,7 +840,7 @@ class Render(object):
             self.terrain_sprite, (self.map_width, self.map_height)
         )
 
-        self.flag_sprite = MySprite(name="flag", team=TEAM_NONE, num_sprites=16, scale=0.2, fr=3)
+        self.flag_sprite = MySprite(name="flag", team=TEAM_NONE, num_sprites=8, scale=0.2, fr=3)
 
 
 class MySprite(pygame.sprite.Sprite):

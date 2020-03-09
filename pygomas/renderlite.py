@@ -112,7 +112,9 @@ class Render(object):
         self.ydesp = 0
         self.size = [self.map_width, self.map_height]
 
+        self.show_help = False
         self.show_fovs = True
+        self.show_info = True
         self.quit = False
 
         self.fps = list()
@@ -128,8 +130,9 @@ class Render(object):
         self.wall_sprite = pygame.image.load(
             os.path.join(self.assets_path, "wall2.png")
         )
-        self.terrain_sprites = cycle([pygame.image.load(os.path.join(self.assets_path, "grass2.jpg")),
+        self.terrain_sprites = cycle([
                                       pygame.image.load(os.path.join(self.assets_path, "terrain.jpg")),
+                                      pygame.image.load(os.path.join(self.assets_path, "grass2.jpg")),
                                       pygame.image.load(os.path.join(self.assets_path, "grass.jpg"))]
                                      )
         self.terrain_sprite = next(self.terrain_sprites)
@@ -202,6 +205,7 @@ class Render(object):
                 # Init pygame
                 pygame.init()
                 self.font = pygame.font.SysFont("ttf-font-awesome", 16)
+                self.help_font = pygame.font.SysFont("ttf-font-awesome", 42)
 
                 # Set the height and width of the self.screen
                 self.screen = pygame.display.set_mode(self.size)
@@ -362,10 +366,16 @@ class Render(object):
                     self.tile_size -= 2
                 elif event.key == pygame.K_f:
                     self.show_fovs = not self.show_fovs
+                elif event.key == pygame.K_i:
+                    self.show_info = not self.show_info
                 elif event.key == pygame.K_b:
                     self.terrain_sprite = next(self.terrain_sprites)
                 elif event.key == pygame.K_r:
                     draw_rect = not draw_rect
+                elif event.key == pygame.K_h:
+                    self.show_help = not self.show_help
+                elif event.key == pygame.K_ESCAPE:
+                    self.quit = True
             elif event.type == pygame.QUIT:
                 self.quit = True
 
@@ -386,6 +396,9 @@ class Render(object):
 
         # Draw units
         self.pygame_draw_units()
+
+        # Show help
+        self.pygame_draw_help()
 
         pygame.display.update()  # flip()
         self.iteration += 1
@@ -421,38 +434,36 @@ class Render(object):
 
                 # print avatar
                 if name not in self.sprites:
-                    sprite = MySprite(name=agent_type, team=agent[MSG_CONTENT_TEAM], num_sprites=8, scale=0.75)
-                    # self.sprites[name] = pygame.sprite.Group(sprite)
+                    sprite = MySprite(name=agent_type, team=agent[MSG_CONTENT_TEAM], num_sprites=8, scale=0.55)
                     self.sprites[name] = sprite
                 angx = float(agent[MSG_CONTENT_HEADING][0])
                 angy = float(agent[MSG_CONTENT_HEADING][2])
                 self.sprites[name].update(posx, posy, angx, angy)
                 self.sprites[name].draw(self.screen)
-                # pygame.draw.circle(self.screen, team, [posx, posy], 8)
-                # print name
-                text = self.font.render(agent[MSG_CONTENT_NAME], True, (255, 255, 255))
-                self.screen.blit(
-                    text,
-                    (
-                        posx - text.get_width() // 2 + 25,
-                        posy - text.get_height() // 2 - 25,
-                    ),
-                )
 
-                rect = self.sprites[name].rect
-                health_bar = Rect(rect.bottomleft[0], rect.bottomleft[1], rect.width, 4)
-                pygame.draw.rect(self.screen, (255, 0, 0), health_bar)
-                health_bar = Rect(rect.bottomleft[0], rect.bottomleft[1], health * rect.width / 100, 4)
-                pygame.draw.rect(self.screen, (0, 255, 0), health_bar)
+                if self.show_info:
+                    # print name
+                    text = self.font.render(agent[MSG_CONTENT_NAME], True, (255, 255, 255))
+                    self.screen.blit(
+                        text,
+                        (
+                            posx - text.get_width() // 2 + 25,
+                            posy - text.get_height() // 2 - 25,
+                        ),
+                    )
+                    rect = self.sprites[name].rect
+                    health_bar = Rect(rect.bottomleft[0], rect.bottomleft[1], rect.width, 4)
+                    pygame.draw.rect(self.screen, (255, 0, 0), health_bar)
+                    health_bar = Rect(rect.bottomleft[0], rect.bottomleft[1], min(100, health * rect.width / 100), 4)
+                    pygame.draw.rect(self.screen, (0, 255, 0), health_bar)
 
-                ammo_bar = Rect(rect.bottomleft[0], rect.bottomleft[1] + 5, rect.width, 4)
-                pygame.draw.rect(self.screen, (255, 255, 255), ammo_bar)
-                ammo_bar = Rect(rect.bottomleft[0], rect.bottomleft[1] + 5, ammo * rect.width / 100, 4)
-                pygame.draw.rect(self.screen, (106, 115, 120), ammo_bar)
+                    ammo_bar = Rect(rect.bottomleft[0], rect.bottomleft[1] + 5, rect.width, 4)
+                    pygame.draw.rect(self.screen, (255, 255, 255), ammo_bar)
+                    ammo_bar = Rect(rect.bottomleft[0], rect.bottomleft[1] + 5, min(100, ammo * rect.width / 100), 4)
+                    pygame.draw.rect(self.screen, (106, 115, 120), ammo_bar)
 
                 # is carring flag?
                 if carrying:
-                    # pygame.draw.circle(self.screen, (255, 255, 0), [posx, posy], 5)
                     flagx, flagy = self.sprites[name].rect.topright
                     self.flag_sprite.update(flagx, flagy, 0, -1, force_animation=True)
                     self.flag_sprite.draw(self.screen)
@@ -476,22 +487,15 @@ class Render(object):
                             team_aplha,
                         )
 
-                # print function
-                # text = self.font.render(agent_type, True, (0, 0, 0))
-                # self.screen.blit(
-                #    text, (posx - text.get_width() // 2, posy - text.get_height() // 2)
-                # )
-
             else:
                 team = agent[MSG_CONTENT_TEAM]
                 if team not in self.graves:
-                    sprite = MySprite(name="grave", team=team, num_sprites=1, scale=0.35)
+                    sprite = MySprite(name="grave", team=team, num_sprites=1, scale=0.3)
                     self.graves[team] = sprite
                 self.graves[team].update(posx, posy, 0, -1)
                 self.graves[team].draw(self.screen)
 
     def pygame_draw_packs(self):
-        # for i in range(0, len(list(self.dins.items()))):
         for pack in self.dins.values():
             posx = int(
                 pack[MSG_CONTENT_POSITION][0] * (self.tile_size / 8.0) + self.xdesp
@@ -576,12 +580,6 @@ class Render(object):
                         + self.ydesp
                 )
 
-                # pygame.draw.rect(self.screen, color, (xpos, ypos, xwidth, ywidth))
-                """s = pygame.Surface((xwidth, ywidth))  # the size of your rect
-                s.set_alpha(128)  # alpha level
-                s.fill(color)  # this fills the entire surface
-                self.screen.blit(s, (xpos, ypos))"""
-
                 self.screen.blit(self.allied_base_sprite, (xpos, ypos))
         if self.axis_base is not None:
             if len(self.axis_base) == 5:
@@ -604,12 +602,6 @@ class Render(object):
                         + self.tile_size
                         + self.ydesp
                 )
-
-                # pygame.draw.rect(self.screen, color, (xpos, ypos, xwidth, ywidth))
-                """s = pygame.Surface((xwidth, ywidth))  # the size of your rect
-                s.set_alpha(128)  # alpha level
-                s.fill(color)  # this fills the entire surface
-                self.screen.blit(s, (xpos, ypos))"""
 
                 self.screen.blit(self.axis_base_sprite, (xpos, ypos))
 
@@ -840,7 +832,30 @@ class Render(object):
             self.terrain_sprite, (self.map_width, self.map_height)
         )
 
-        self.flag_sprite = MySprite(name="flag", team=TEAM_NONE, num_sprites=8, scale=0.2, fr=3)
+        self.flag_sprite = MySprite(name="flag", team=TEAM_NONE, num_sprites=8, scale=0.1, fr=4)
+
+    def pygame_draw_help(self):
+        if self.show_help:
+            text = self.help_font.render("Show/Hide Field of View: F", True, (255, 255, 255))
+            self.screen.blit(text, (150, 70), )
+
+            text = self.help_font.render("Show/Hide Info (Bars and names): I", True, (255, 255, 255))
+            self.screen.blit(text, (150, 100), )
+
+            text = self.help_font.render("Change background : B", True, (255, 255, 255))
+            self.screen.blit(text, (150, 130), )
+
+            text = self.help_font.render("Show/Hide Bounding Boxes: R", True, (255, 255, 255))
+            self.screen.blit(text, (150, 160), )
+
+            text = self.help_font.render("Move camera: Arrows", True, (255, 255, 255))
+            self.screen.blit(text, (150, 190), )
+
+            text = self.help_font.render("Zoom In/Out: X,Z", True, (255, 255, 255))
+            self.screen.blit(text, (150, 220), )
+
+            text = self.help_font.render("Quit: ESCAPE", True, (255, 255, 255))
+            self.screen.blit(text, (150, 250), )
 
 
 class MySprite(pygame.sprite.Sprite):

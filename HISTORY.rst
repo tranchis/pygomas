@@ -2,6 +2,14 @@
 History
 =======
 
+0.4.2 (2020-03-09)
+------------------
+
+* Pygame render improvements.
+* Sprite size modified.
+* Help dialog.
+* Show/hide info (health bars and names).
+
 0.4.1 (2020-03-06)
 ------------------
 

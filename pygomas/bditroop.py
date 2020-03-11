@@ -132,6 +132,7 @@ class BDITroop(AbstractAgent, BDIAgent):
 
         AbstractAgent.__init__(self, jid, team=team, service_jid=service_jid)
         BDIAgent.__init__(self, jid=jid, password=passwd, asl=asl, **kwargs)
+        self.pause_bdi()
 
         self.service_types = []
 
@@ -163,7 +164,7 @@ class BDITroop(AbstractAgent, BDIAgent):
         self.is_escaping = False
 
         # Current position, direction, and so on...
-        self.movement = None  # CMobile
+        self.movement = Mobile()
         self.velocity_value = velocity_value
 
         self.soldiers_count = 0
@@ -695,6 +696,7 @@ class BDITroop(AbstractAgent, BDIAgent):
                 )
 
                 self.kill()
+                self.agent.resume_bdi()
 
     # Behaviour to get the objective of the game, to create the corresponding task
     class ObjectiveBehaviour(CyclicBehaviour):

@@ -15,12 +15,13 @@ from itertools import cycle
 
 import msgpack
 import pygame
-from pygame import gfxdraw
 from loguru import logger
+from pygame import gfxdraw
 from pygame.rect import Rect
 
 from pygomas.bditroop import CLASS_NONE, CLASS_SOLDIER, CLASS_MEDIC, CLASS_ENGINEER, CLASS_FIELDOPS
 from pygomas.config import TEAM_AXIS, TEAM_ALLIED, TEAM_NONE
+from pygomas.pack import PACK_MEDICPACK, PACK_AMMOPACK, PACK_OBJPACK
 from .server import (
     MSG_TYPE,
     MSG_BODY,
@@ -131,11 +132,16 @@ class Render(object):
             os.path.join(self.assets_path, "wall2.png")
         )
         self.terrain_sprites = cycle([
-                                      pygame.image.load(os.path.join(self.assets_path, "terrain.jpg")),
-                                      pygame.image.load(os.path.join(self.assets_path, "grass2.jpg")),
-                                      pygame.image.load(os.path.join(self.assets_path, "grass.jpg"))]
-                                     )
+            pygame.image.load(os.path.join(self.assets_path, "terrain.jpg")),
+            pygame.image.load(os.path.join(self.assets_path, "grass2.jpg")),
+            pygame.image.load(os.path.join(self.assets_path, "grass.jpg"))]
+        )
         self.terrain_sprite = next(self.terrain_sprites)
+
+        self.pack_images = {
+            PACK_MEDICPACK: pygame.image.load(os.path.join(self.assets_path, "medpack2.png")),
+            PACK_AMMOPACK: pygame.image.load(os.path.join(self.assets_path, "ammopack.png"))
+        }
 
         self.sprites = {}
         self.graves = {}
@@ -504,13 +510,13 @@ class Render(object):
                 pack[MSG_CONTENT_POSITION][2] * (self.tile_size / 8.0) + self.ydesp
             )
 
-            item_type = {1001: "M", 1002: "A", 1003: "F"}.get(
-                pack[MSG_CONTENT_TYPE], "X"
-            )
+            item_type = pack[MSG_CONTENT_TYPE]  # {1001: "M", 1002: "A", 1003: "F"}.get(
+            # pack[MSG_CONTENT_TYPE], "X"
+            # )
 
-            if item_type != "F":
+            if item_type != PACK_OBJPACK:
 
-                color = {
+                '''color = {
                     1001: (88, 214, 141),  # (255, 255, 255),
                     1002: (155, 89, 182),  # (255, 255, 255),
                     1003: (255, 255, 0),
@@ -520,6 +526,12 @@ class Render(object):
                 text = self.font.render(item_type, True, (0, 0, 0))
                 self.screen.blit(
                     text, (posx - text.get_width() // 2, posy - text.get_height() // 2)
+                )'''
+                self.screen.blit(
+                    self.pack_images[item_type],
+                    (
+                        posx, posy
+                    ),
                 )
             else:
                 self.flag_sprite.update(posx, posy, 0, -1, force_animation=True)
@@ -833,6 +845,10 @@ class Render(object):
         )
 
         self.flag_sprite = MySprite(name="flag", team=TEAM_NONE, num_sprites=8, scale=0.1, fr=4)
+
+        scale = 0.15
+        self.pack_images = {k: pygame.transform.scale(img, (int(img.get_size()[0] * scale), int(img.get_size()[1] * scale))) for
+                            k, img in self.pack_images.items()}
 
     def pygame_draw_help(self):
         if self.show_help:

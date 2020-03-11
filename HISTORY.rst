@@ -2,6 +2,14 @@
 History
 =======
 
+0.4.3 (2020-03-11)
+------------------
+
+* Fixed BDI initialization.
+* Fixed allied uniform color.
+* New pack sprites.
+* Default asl now generates packs at target_reached for axis troops
+
 0.4.2 (2020-03-09)
 ------------------
 

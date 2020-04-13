@@ -2,6 +2,12 @@
 History
 =======
 
+0.4.4 (2020-04-13)
+------------------
+
+* Upgraded spade and spade-bdi versions.
+* Fixed shot method with negative values.
+
 0.4.3 (2020-03-11)
 ------------------
 

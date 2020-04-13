@@ -426,7 +426,7 @@ class Manager(AbstractAgent, Agent):
                         return
 
                     damage = 2 if shooter.type == CLASS_SOLDIER else 1
-                    damage *= shots
+                    damage *= max(0, shots)
                     victim.health -= damage
                     logger.info("Victim hit: {}".format(victim))
 

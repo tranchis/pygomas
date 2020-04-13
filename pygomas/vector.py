@@ -3,30 +3,30 @@ import math
 
 class Vector3D(object):
 
-    # Modulo
+    # Vector length
     def length(self):
         return math.sqrt(self.x * self.x + self.y * self.y + self.z * self.z)
 
     def __len__(self):
         return self.length()
 
-    # Suma de vectores
+    # Vector addition
     def add(self, v):
         self.x = self.x + v.x
         self.y = self.y + v.y
         self.z = self.z + v.z
 
-    # Resta de vectores
+    # Vector subtraction
     def sub(self, v):
         self.x = self.x - v.x
         self.y = self.y - v.y
         self.z = self.z - v.z
 
-    # Multiplicacion escalar
+    # Dot product
     def dot(self, v):
         return self.x * v.x + self.y * v.y + self.z * v.z
 
-    # Normalizar
+    # Vector normalization
     def normalize(self):
         l = self.length()
         if l == 0:
@@ -35,7 +35,7 @@ class Vector3D(object):
         self.y = self.y / l
         self.z = self.z / l
 
-    # Producto vectorial
+    # Cross product
     def cross(self, v):
         u = Vector3D()
         u.x = self.y * v.z - self.z * v.y

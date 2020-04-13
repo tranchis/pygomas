@@ -2,8 +2,8 @@ import json
 
 from loguru import logger
 
-from pygomas.ontology import TEAM_AXIS
-from .ontology import X, Y, Z, TEAM, PERFORMATIVE, PERFORMATIVE_PACK_LOST
+from .ontology import X, Y, Z, PERFORMATIVE, PERFORMATIVE_PACK_LOST, TEAM
+from .config import TEAM_AXIS
 from .pack import Pack, PACK_OBJPACK
 from .vector import Vector3D
 from spade.behaviour import CyclicBehaviour
@@ -11,7 +11,6 @@ from spade.template import Template
 
 
 class ObjectivePack(Pack):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.is_taken = False

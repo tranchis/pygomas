@@ -2,7 +2,6 @@ from .vector import Vector3D
 
 
 class Sight(object):
-
     def __init__(self):
         self.position = Vector3D()
         self.sight_id = 0

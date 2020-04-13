@@ -5,6 +5,9 @@ include LICENSE
 include README.rst
 
 recursive-include tests *
+recursive-include pygomas/maps *
+recursive-include pygomas/ASL *
+recursive-include pygomas/assets *
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
 

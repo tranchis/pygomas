@@ -46,25 +46,16 @@ PERFORMATIVE_SERVICES: str = "services"
 PERFORMATIVE_SIGHT: str = "sight"
 PERFORMATIVE_SHOOT: str = "shot"
 
-# Precisions
-PRECISION_Z = 0.5
-PRECISION_X = 0.5
-
 # Services
 AMMO_SERVICE: str = "fieldops"
 BACKUP_SERVICE: str = "backup"
 MANAGEMENT_SERVICE: str = "management"
 MEDIC_SERVICE: str = "medic"
 
-# Teams
-TEAM_NONE: int = 0
-TEAM_ALLIED: int = 100
-TEAM_AXIS: int = 200
-
 # Set of beliefs
 AMMO: str = "ammo"
 BASE: str = "base"
-CONTROL_POINTS: str = "control_points"
+CLASS: str = "class"
 DESTINATION: str = "destination"
 ENEMIES_IN_FOV: str = "enemies_in_fov"
 FRIENDS_IN_FOV: str = "friends_in_fov"

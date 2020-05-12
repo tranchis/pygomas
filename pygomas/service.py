@@ -117,8 +117,8 @@ class DeregisterAgentBehaviour(CyclicBehaviour):
     async def run(self):
         msg = await self.receive(timeout=LONG_RECEIVE_WAIT)
         if msg:
-            self.agent.deregister_agent(str(msg.sender))
-            logger.info("Agent {} deregistered".format(msg.sender))
+            self.agent.deregister_agent(str(msg.sender.bare()))
+            logger.info("Agent {} deregistered".format(msg.sender.bare()))
 
 
 class GetServiceBehaviour(CyclicBehaviour):

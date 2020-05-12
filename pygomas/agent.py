@@ -71,10 +71,11 @@ class AbstractAgent(object, metaclass=ABCMeta):
                 msg = Message(to=self.agent.service_jid)
                 msg.set_metadata(PERFORMATIVE, PERFORMATIVE_DEREGISTER_AGENT)
                 await self.send(msg)
+                logger.info("Agent {}  stopped sends message to deregister to service agent.".format(self.agent.name))
 
         behav = DeregisterAgentBehaviour()
         self.add_behaviour(behav)
-        # await behav.join(timeout=5)
+        await behav.join(timeout=5)
 
     @property
     def name(self):

@@ -2,6 +2,11 @@
 History
 =======
 
+0.4.5 (2020-05-12)
+------------------
+
+* Fixed minor bug when deregistering services.
+
 0.4.4 (2020-04-13)
 ------------------
 

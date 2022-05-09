@@ -421,6 +421,15 @@ class BDITroop(AbstractAgent, BDIAgent):
             self.movement.destination.z = self.movement.position.z
             yield
 
+        @troop_actions.add_function(".delete", (int, tuple, ))
+        def _delete(index, tuple_):
+            if index == 0:
+                return tuple_[1:]
+            elif index == len(tuple_) - 1:
+                return tuple_[:index]
+            else:
+                return tuple_[0:index] + tuple_[index + 1:]
+
         AbstractAgent.__init__(self, jid, team=team, service_jid=service_jid)
         BDIAgent.__init__(self, jid=jid, password=passwd, asl=asl, actions=troop_actions, **kwargs)
 

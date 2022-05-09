@@ -1,8 +1,19 @@
 import json
 from loguru import logger
 
-from .config import PERFORMATIVE, PERFORMATIVE_PACK, PERFORMATIVE_PACK_TAKEN, TEAM, X, Y, Z, NAME, ACTION, CREATE, \
-    TYPE
+from .ontology import (
+    ACTION,
+    CREATE,
+    TYPE,
+    X,
+    Y,
+    Z,
+    PERFORMATIVE,
+    PERFORMATIVE_PACK,
+    NAME,
+    PERFORMATIVE_PACK_TAKEN,
+    TEAM,
+)
 from .agent import AbstractAgent, LONG_RECEIVE_WAIT
 from .vector import Vector3D
 from spade.message import Message
@@ -16,21 +27,22 @@ PACK_AMMOPACK: int = 1002
 PACK_OBJPACK: int = 1003
 
 PACK_NAME = {
-    PACK_NONE: 'NONE',
-    PACK_MEDICPACK: 'MEDIC',
-    PACK_AMMOPACK: 'AMMO',
-    PACK_OBJPACK: 'OBJ'
+    PACK_NONE: "NONE",
+    PACK_MEDICPACK: "MEDIC",
+    PACK_AMMOPACK: "AMMO",
+    PACK_OBJPACK: "OBJ",
 }
 
 PACK_AUTODESTROY_TIMEOUT: int = 25
 
 
 class Pack(AbstractAgent, Agent):
-
     def __str__(self):
         return "P(" + str(PACK_NAME[self.type]) + "," + str(self.position) + ")"
 
-    def __init__(self, name, passwd="secret", manager_jid="cmanager@localhost", x=0, z=0, team=0):
+    def __init__(
+        self, name, passwd="secret", manager_jid="cmanager@localhost", x=0, z=0, team=0
+    ):
         Agent.__init__(self, name, passwd)
         AbstractAgent.__init__(self, name, team)
 
@@ -53,15 +65,17 @@ class Pack(AbstractAgent, Agent):
         async def run(self):
             msg = Message(to=self.agent.manager)
             msg.set_metadata(PERFORMATIVE, PERFORMATIVE_PACK)
-            msg.body = json.dumps({
-                NAME: self.agent.name,
-                TEAM: self.agent.team,
-                ACTION: CREATE,
-                TYPE: self.agent.type,
-                X: self.agent.position.x,
-                Y: self.agent.position.y,
-                Z: self.agent.position.z
-            })
+            msg.body = json.dumps(
+                {
+                    NAME: self.agent.name,
+                    TEAM: self.agent.team,
+                    ACTION: CREATE,
+                    TYPE: self.agent.type,
+                    X: self.agent.position.x,
+                    Y: self.agent.position.y,
+                    Z: self.agent.position.z,
+                }
+            )
             await self.send(msg)
             logger.info("CreatePack msg sent: {}".format(msg))
 

@@ -1,12 +1,12 @@
+import random
+
 from loguru import logger
 from spade.behaviour import OneShotBehaviour
-from . import POWER_UNIT
+
+from .config import POWER_UNIT
 from .ammopack import AmmoPack
 from .bditroop import BDITroop, CLASS_FIELDOPS
-from .config import AMMO_SERVICE
-import random
-from agentspeak import Actions
-from agentspeak.stdlib import actions as asp_action
+from .ontology import AMMO_SERVICE
 
 
 class BDIFieldOp(BDITroop):
@@ -14,9 +14,14 @@ class BDIFieldOp(BDITroop):
     ammo_pack_offset = 5
 
     def __init__(self, *args, **kwargs):
-        fieldop_actions = Actions(asp_action)
+        super().__init__(*args, **kwargs)
+        self.services.append(AMMO_SERVICE)
+        self.eclass = CLASS_FIELDOPS
 
-        @fieldop_actions.add(".reload", 0)
+    def add_custom_actions(self, actions):
+        super().add_custom_actions(actions)
+
+        @actions.add(".reload", 0)
         def _cure(agent, term, intention):
             class CreateAmmoPackBehaviour(OneShotBehaviour):
                 async def run(self):
@@ -25,10 +30,6 @@ class BDIFieldOp(BDITroop):
             b = CreateAmmoPackBehaviour()
             self.add_behaviour(b)
             yield
-
-        super().__init__(actions=fieldop_actions, *args, **kwargs)
-        self.services.append(AMMO_SERVICE)
-        self.eclass = CLASS_FIELDOPS
 
     def perform_ammo_action(self):
         # We can give ammo paks if we have power enough...
@@ -49,18 +50,30 @@ class BDIFieldOp(BDITroop):
         logger.info("{} Creating ammo packs.".format(self.name))
         while self.perform_ammo_action():
             BDIFieldOp.packs_delivered += 1
-            name = "ammopack{}@{}".format(BDIFieldOp.packs_delivered, self.jid.domain)
+            name = "ammopack_{}_{}@{}".format(
+                self.jid.localpart, BDIFieldOp.packs_delivered, self.jid.domain
+            )
             x = self.movement.position.x + random.random() * BDIFieldOp.ammo_pack_offset
             z = self.movement.position.z + random.random() * BDIFieldOp.ammo_pack_offset
 
             while not self.check_static_position(x, z):
-                x = self.movement.position.x + random.random() * BDIFieldOp.ammo_pack_offset
-                z = self.movement.position.z + random.random() * BDIFieldOp.ammo_pack_offset
+                x = (
+                    self.movement.position.x
+                    + random.random() * BDIFieldOp.ammo_pack_offset
+                )
+                z = (
+                    self.movement.position.z
+                    + random.random() * BDIFieldOp.ammo_pack_offset
+                )
 
             try:
-                pack = AmmoPack(name=name, passwd="secret", x=x, z=z, manager_jid=self.manager)
+                pack = AmmoPack(
+                    name=name, passwd="secret", x=x, z=z, manager_jid=self.manager
+                )
                 await pack.start()
             except Exception as e:
-                logger.warning("FieldOps {} could not create AmmoPack: {}".format(self.name, e))
+                logger.warning(
+                    "FieldOps {} could not create AmmoPack: {}".format(self.name, e)
+                )
 
             logger.info("AmmoPack {} created.".format(name))

@@ -1,43 +1,81 @@
 # -*- coding: utf-8 -*-
 
 """Console script for pygomas."""
+import logging
 import os
 import random
 import string
 
-os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
+os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "hide"
 import asyncio
 import json
 import sys
 import time
 from importlib import import_module
 
+from loguru import logger
+
 import click
 
 from spade import quit_spade
 from spade.container import Container
 
-from . import dump_battle
-from . import replay_match
-from . import canvasviewer
-from . import textviewer
+from . import renderlite
+from .config import TEAM_ALLIED, TEAM_AXIS
 from .bdifieldop import BDIFieldOp
 from .bdimedic import BDIMedic
 from .bdisoldier import BDISoldier
-from .manager import Manager, TEAM_AXIS, TEAM_ALLIED
+from .manager import Manager
 
 help_config = json.dumps(
-    {"host": "127.0.0.1", "manager": "cmanager", "service": "cservice",
-     "axis": [{"rank": "BDISoldier", "name": "soldier_axis1", "password": "secret", "asl": "myASL/mybditroop.asl"},
-              {"rank": "BDIMedic", "name": "medic_axis1", "password": "secret", "asl": "myASL/mymedic.asl"},
-              {"rank": "BDIFieldOp", "name": "fieldops_axis1", "password": "secret", "asl": "myASL/myfieldops.asl"}],
-     "allied": [
-         {"rank": "mytroops.MySoldier", "name": "soldier_allied1", "password": "secret", "asl": "myASL/mybditroop.asl"},
-         {"rank": "mytroops.MyMedic", "name": "medic_allied1", "password": "secret", "asl": "myASL/mymedic.asl"},
-         {"rank": "mytroops.MyFieldOp", "name": "fieldops_allied1", "password": "secret", "amount": 2,
-          "asl": "myASL/myfieldops.asl"}]
-     },
-    indent=4)
+    {
+        "host": "127.0.0.1",
+        "manager": "cmanager",
+        "service": "cservice",
+        "axis": [
+            {
+                "rank": "BDISoldier",
+                "name": "soldier_axis1",
+                "password": "secret",
+                "asl": "myASL/mybditroop.asl",
+            },
+            {
+                "rank": "BDIMedic",
+                "name": "medic_axis1",
+                "password": "secret",
+                "asl": "myASL/mymedic.asl",
+            },
+            {
+                "rank": "BDIFieldOp",
+                "name": "fieldops_axis1",
+                "password": "secret",
+                "asl": "myASL/myfieldops.asl",
+            },
+        ],
+        "allied": [
+            {
+                "rank": "mytroops.MySoldier",
+                "name": "soldier_allied1",
+                "password": "secret",
+                "asl": "myASL/mybditroop.asl",
+            },
+            {
+                "rank": "mytroops.MyMedic",
+                "name": "medic_allied1",
+                "password": "secret",
+                "asl": "myASL/mymedic.asl",
+            },
+            {
+                "rank": "mytroops.MyFieldOp",
+                "name": "fieldops_allied1",
+                "password": "secret",
+                "amount": 2,
+                "asl": "myASL/myfieldops.asl",
+            },
+        ],
+    },
+    indent=4,
+)
 
 
 @click.group()
@@ -46,25 +84,99 @@ def cli():
 
 
 @cli.command()
-@click.option('-j', "--jid", default="cmanager@127.0.0.1", help="XMPP manager's JID (default=cmanager@127.0.0.1).")
-@click.option('-p', "--password", default="secret", help="Manager's password (default=secret).")
-@click.option('-np', "--num-players", help="Number of players (required).", required=True, type=int)
-@click.option('-m', "--map", "map_name", default="map_01", help="Map name (default=map_01).")
-@click.option('-mp', "--map-path", "map_path", default=None, help="The path to your custom maps directory.")
-@click.option('-sj', "--service-jid", default="cservice@127.0.0.1",
-              help="XMPP Service agent's JID (default=cservice@127.0.0.1).")
-@click.option('-sp', "--service-password", default="secret", help="Service agent's password (default=secret).")
-@click.option('-t', "--match-time", default=360, help="Max time in seconds for a match (default=360).", type=int)
-@click.option("--fps", default=0.033, help="Frame rate in seconds per frame to inform renders (default=0.033).",
-              type=float)
-@click.option("--port", default=8001, help="Port to connect with renders (default=8001).", type=int)
-def manager(jid, password, num_players, map_name, map_path, service_jid, service_password, match_time, fps, port):
+@click.option(
+    "-j",
+    "--jid",
+    default="cmanager@127.0.0.1",
+    help="XMPP manager's JID (default=cmanager@127.0.0.1).",
+)
+@click.option(
+    "-p", "--password", default="secret", help="Manager's password (default=secret)."
+)
+@click.option(
+    "-np",
+    "--num-players",
+    help="Number of players (required).",
+    required=True,
+    type=int,
+)
+@click.option(
+    "-m", "--map", "map_name", default="map_01", help="Map name (default=map_01)."
+)
+@click.option(
+    "-mp",
+    "--map-path",
+    "map_path",
+    default=None,
+    help="The path to your custom maps directory.",
+)
+@click.option(
+    "-sj",
+    "--service-jid",
+    default="cservice@127.0.0.1",
+    help="XMPP Service agent's JID (default=cservice@127.0.0.1).",
+)
+@click.option(
+    "-sp",
+    "--service-password",
+    default="secret",
+    help="Service agent's password (default=secret).",
+)
+@click.option(
+    "-t",
+    "--match-time",
+    default=360,
+    help="Max time in seconds for a match (default=360).",
+    type=int,
+)
+@click.option(
+    "--fps",
+    default=33,
+    help="Frame rate in seconds per frame to inform renders (default=33).",
+    type=float,
+)
+@click.option(
+    "--port",
+    default=8001,
+    help="Port to connect with renders (default=8001).",
+    type=int,
+)
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    help="Show verbose debug level: -v level 1, -vv level 2, -vvv level 3, -vvvv level 4",
+)
+def manager(
+    jid,
+    password,
+    num_players,
+    map_name,
+    map_path,
+    service_jid,
+    service_password,
+    match_time,
+    fps,
+    port,
+    verbose,
+):
     """Run the manager which controls the game."""
     click.echo("Running manager agent {}".format(jid))
 
-    manager_agent = Manager(players=int(num_players), name=jid, passwd=password, map_name=map_name, map_path=map_path,
-                            service_jid=service_jid, service_passwd=service_password,
-                            match_time=match_time, fps=fps, port=port)
+    set_verbosity(verbose)
+
+    manager_agent = Manager(
+        players=int(num_players),
+        name=jid,
+        passwd=password,
+        map_name=map_name,
+        map_path=map_path,
+        service_jid=service_jid,
+        service_passwd=service_password,
+        match_time=match_time,
+        fps=fps,
+        port=port,
+    )
     future = manager_agent.start()
     future.result()
 
@@ -74,7 +186,7 @@ def manager(jid, password, num_players, map_name, map_path, service_jid, service
         except KeyboardInterrupt:
             break
     click.echo("Stopping manager . . .")
-    manager_agent.stop()
+    manager_agent.stop().result()
 
     quit_spade()
 
@@ -82,16 +194,39 @@ def manager(jid, password, num_players, map_name, map_path, service_jid, service
 
 
 @cli.command()
-@click.option("-g", "--game", help="JSON file with game config (pygomas help run to get a sample)",
-              type=click.Path(exists=True))
-@click.option('-mp', "--map-path", "map_path", default=None, help="The path to your custom maps directory.")
-def run(game, map_path):
+@click.option(
+    "-g",
+    "--game",
+    help="JSON file with game config (pygomas help run to get a sample)",
+    type=click.Path(exists=True),
+)
+@click.option(
+    "-mp",
+    "--map-path",
+    "map_path",
+    default=None,
+    help="The path to your custom maps directory.",
+)
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    help="Show verbose debug level: -v level 1, -vv level 2, -vvv level 3, -vvvv level 4",
+)
+def run(game, map_path, verbose):
     """Run a JSON game file with the players definition."""
+
+    set_verbosity(verbose)
+
     try:
         with open(game) as f:
             config = json.load(f)
     except json.decoder.JSONDecodeError:
-        click.echo("{} must be a valid JSON file. Run pygomas help run to see an example.".format(game))
+        click.echo(
+            "{} must be a valid JSON file. Run pygomas help run to see an example.".format(
+                game
+            )
+        )
         return -1
 
     default = {
@@ -99,7 +234,7 @@ def run(game, map_path):
         "manager": "cmanager",
         "service": "cservice",
         "axis": [],
-        "allied": []
+        "allied": [],
     }
     for key in default.keys():
         if key not in config:
@@ -112,11 +247,15 @@ def run(game, map_path):
     troops = list()
 
     for troop in config["axis"]:
-        new_troops = create_troops(troop, host, manager_jid, service_jid, map_path, team=TEAM_AXIS)
+        new_troops = create_troops(
+            troop, host, manager_jid, service_jid, map_path, team=TEAM_AXIS
+        )
         troops += new_troops
 
     for troop in config["allied"]:
-        new_troops = create_troops(troop, host, manager_jid, service_jid, map_path, team=TEAM_ALLIED)
+        new_troops = create_troops(
+            troop, host, manager_jid, service_jid, map_path, team=TEAM_ALLIED
+        )
         troops += new_troops
 
     container = Container()
@@ -142,14 +281,18 @@ def create_troops(troop, host, manager_jid, service_jid, map_path, team):
     this_dir, _ = os.path.split(__file__)
     asl_path = f"{this_dir}{os.sep}ASL{os.sep}"
     asl = {
-        "BDISoldier": asl_path + 'bdisoldier.asl',
-        "BDIMedic": asl_path + 'bdimedic.asl',
-        "BDIFieldOp": asl_path + 'bdifieldop.asl'
+        "BDISoldier": asl_path + "bdisoldier.asl",
+        "BDIMedic": asl_path + "bdimedic.asl",
+        "BDIFieldOp": asl_path + "bdifieldop.asl",
     }
     assert "rank" in troop, "You must provide a rank for every troop"
     assert "password" in troop, "You must provide a password for every troop"
 
-    name = troop["name"] if "name" in troop else ''.join(random.choice(string.ascii_lowercase) for _ in range(10))
+    name = (
+        troop["name"]
+        if "name" in troop
+        else "".join(random.choice(string.ascii_lowercase) for _ in range(10))
+    )
 
     amount = troop["amount"] if "amount" in troop else 1
     new_troops = list()
@@ -159,50 +302,89 @@ def create_troops(troop, host, manager_jid, service_jid, map_path, team):
         try:
             agent_asl = troop["asl"] if "asl" in troop else asl[troop["rank"]]
         except KeyError:
-            click.secho(f"No valid ASL file provided for agent {name}", fg="red", err=True)
+            click.secho(
+                f"No valid ASL file provided for agent {name}", fg="red", err=True
+            )
             raise click.Abort()
 
-        new_troop = _class(jid=jid, passwd=troop["password"], asl=agent_asl, team=team, map_path=map_path,
-                           manager_jid=manager_jid, service_jid=service_jid)
+        new_troop = _class(
+            jid=jid,
+            passwd=troop["password"],
+            asl=agent_asl,
+            team=team,
+            map_path=map_path,
+            manager_jid=manager_jid,
+            service_jid=service_jid,
+        )
         new_troops.append(new_troop)
     return new_troops
 
 
 @cli.command()
-@click.option("--ip", default="localhost", help="Manager's address to connect the render (default=localhost).",
-              type=str)
-@click.option("--port", default=8001, help="Manager's port to connect the render (default=8001).", type=int)
-@click.option('--maps', default=None, help="The path to your custom maps directory.")
-@click.option('--text', is_flag=True, help="Use the curses text render.")
+@click.option(
+    "--ip",
+    default="localhost",
+    help="Manager's address to connect the render (default=localhost).",
+    type=str,
+)
+@click.option(
+    "--port",
+    default=8001,
+    help="Manager's port to connect the render (default=8001).",
+    type=int,
+)
+@click.option("--maps", default=None, help="The path to your custom maps directory.")
+@click.option("--text", is_flag=True, help="Use the curses text render.")
 def render(ip, port, maps, text):
     """Show the render to visualize a game."""
-    if text:
-        textviewer.main(address=ip, port=port, maps=maps)
-    else:
-        canvasviewer.main(address=ip, port=port, maps=maps)
+    viewer = renderlite.Render(address=ip, port=port, maps=maps, text=text)
+    viewer.main()
 
 
 @cli.command()
-@click.option("--ip", default="localhost", help="Manager's address to connect the dumper (default=localhost).",
-              type=str)
-@click.option("--port", default=8001, help="Manager's port to connect the dumper (default=8001).", type=int)
-@click.option('--log', default="/tmp/tv.log", help="File to save the game.")
+@click.option(
+    "--ip",
+    default="localhost",
+    help="Manager's address to connect the dumper (default=localhost).",
+    type=str,
+)
+@click.option(
+    "--port",
+    default=8001,
+    help="Manager's port to connect the dumper (default=8001).",
+    type=int,
+)
+@click.option("--log", default="/tmp/tv.log", help="File to save the game.")
 def dump(ip, port, log):
     """Dump a game play to a file, in order to be replayed later."""
-    dump_battle.main(address=ip, port=port, log=log)
+    viewer = renderlite.Render(address=ip, port=port, dump=True, log=log)
+    viewer.main()
 
 
 @cli.command()
-@click.option("-g", "--game", help="The file that contains the battle to visualize.", type=click.Path(exists=True))
-@click.option('-f', "--fps", default=0.033, help="Frame rate speed to replay the game in seconds per frame.", type=float)
-@click.option('--maps', default=None, help="The path to your custom maps directory.")
-def replay(game, fps, maps):
+@click.option(
+    "--log",
+    help="The file that contains the battle to visualize.",
+    type=click.Path(exists=True),
+)
+@click.option(
+    "-f",
+    "--fps",
+    default=0.033,
+    help="Frame rate speed to replay the game in seconds per frame.",
+    type=float,
+)
+@click.option("--maps", default=None, help="The path to your custom maps directory.")
+def replay(log, fps, maps):
     """Replay a game play from a file."""
-    replay_match.main(game_file=game, fps=fps, maps_path=maps)
+    viewer = renderlite.Render(
+        maps=maps, dump=False, replay=True, log=log, wait_fps=fps
+    )
+    viewer.main()
 
 
 @cli.command()
-@click.argument('subcommand')
+@click.argument("subcommand")
 @click.pass_context
 def help(ctx, subcommand):
     """Show help about the other commands."""
@@ -218,7 +400,7 @@ def help(ctx, subcommand):
 
 
 async def run_agents(troops):
-    coros = [agent.start() for agent in troops]
+    coros = [agent.start(auto_register=True) for agent in troops]
     return await asyncio.gather(*coros)
 
 
@@ -230,11 +412,7 @@ def load_class(class_path):
     Returns:
         class: the class imported and ready to be instantiated.
     """
-    ranks = {
-        "BDISoldier": BDISoldier,
-        "BDIMedic": BDIMedic,
-        "BDIFieldOp": BDIFieldOp
-    }
+    ranks = {"BDISoldier": BDISoldier, "BDIMedic": BDIMedic, "BDIFieldOp": BDIFieldOp}
 
     if class_path in ranks:
         return ranks[class_path]
@@ -243,6 +421,28 @@ def load_class(class_path):
         module_path, class_name = class_path.rsplit(".", 1)
         mod = import_module(module_path)
         return getattr(mod, class_name)
+
+
+def set_verbosity(verbose):
+    logger.remove()
+    if verbose == 0:
+        logger.add(sys.stderr, level="SUCCESS")
+    elif verbose == 1:
+        logger.add(sys.stderr, level="INFO")
+    else:
+        logger.add(sys.stderr, level="TRACE")
+
+    logging.getLogger("aiohttp").setLevel(logging.WARNING)
+    logging.getLogger("aioopenssl").setLevel(logging.WARNING)
+    logging.getLogger("aiosasl").setLevel(logging.WARNING)
+    logging.getLogger("asyncio").setLevel(logging.WARNING)
+    logging.getLogger("spade").setLevel(logging.WARNING)
+    if verbose > 2:
+        logging.getLogger("spade").setLevel(logging.INFO)
+    if verbose > 3:
+        logging.getLogger("aioxmpp").setLevel(logging.INFO)
+    else:
+        logging.getLogger("aioxmpp").setLevel(logging.WARNING)
 
 
 if __name__ == "__main__":

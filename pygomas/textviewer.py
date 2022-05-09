@@ -23,7 +23,7 @@ maps_path = None
 def chunks(l, n):
     """Yield successive n-sized chunks from l."""
     for i in range(0, len(l), n):
-        yield l[i:i + n]
+        yield l[i : i + n]
 
 
 def agl_parse(data):
@@ -42,11 +42,16 @@ def agl_parse(data):
     din_data = agl[separator:]
     f.write("AGENT_DATA: {}\n".format(agent_data))
     for i in range(nagents):
-        agents[agent_data[0]] = {"type": agent_data[1], "team": agent_data[2], "health": agent_data[3],
-                                 "ammo": agent_data[4], "carrying": agent_data[5],
-                                 "posx": int(float(agent_data[6].strip("(,)"))),
-                                 "posy": int(float(agent_data[7].strip("(,)"))),
-                                 "posz": int(float(agent_data[8].strip("(,)")))}
+        agents[agent_data[0]] = {
+            "type": agent_data[1],
+            "team": agent_data[2],
+            "health": agent_data[3],
+            "ammo": agent_data[4],
+            "carrying": agent_data[5],
+            "posx": int(float(agent_data[6].strip("(,)"))),
+            "posy": int(float(agent_data[7].strip("(,)"))),
+            "posz": int(float(agent_data[8].strip("(,)"))),
+        }
         f.write("AGENT {}\n".format(agents[agent_data[0]]))
         agent_data = agent_data[15:]
 
@@ -56,10 +61,12 @@ def agl_parse(data):
     din_data = din_data[1:]
     dins = {}
     for din in range(ndin):
-        dins[din_data[0]] = {"type": din_data[1],
-                             "posx": int(float(din_data[2].strip("(,)"))),
-                             "posy": int(float(din_data[3].strip("(,)"))),
-                             "posz": int(float(din_data[4].strip("(,)")))}
+        dins[din_data[0]] = {
+            "type": din_data[1],
+            "posx": int(float(din_data[2].strip("(,)"))),
+            "posy": int(float(din_data[3].strip("(,)"))),
+            "posz": int(float(din_data[4].strip("(,)"))),
+        }
         f.write("DIN {}\n".format(dins[din_data[0]]))
         din_data = din_data[5:]
 
@@ -83,18 +90,17 @@ def draw():
     # Draw bases
     try:
         # ALLIED BASE
-        curses.init_pair(4, curses.COLOR_WHITE,
-                         curses.COLOR_RED)  # ALLIED BASE
+        curses.init_pair(4, curses.COLOR_WHITE, curses.COLOR_RED)  # ALLIED BASE
         for y in range(int(allied_base[1]), int(allied_base[3])):
             for x in range(int(allied_base[0]) * factor, int(allied_base[2]) * factor):
-                f.write("BASE " + str(y) + " " + str(x) + '; \n')
+                f.write("BASE " + str(y) + " " + str(x) + "; \n")
                 stdscr.addstr(y, x, " ", curses.color_pair(4))
         curses.init_pair(3, curses.COLOR_RED, curses.COLOR_BLUE)  # AXIS BASE
 
         # AXIS BASE
         for y in range(int(axis_base[1]), int(axis_base[3])):
             for x in range(int(axis_base[0]) * factor, int(axis_base[2]) * factor):
-                f.write("BASE " + str(y) + " " + str(x) + '; \n')
+                f.write("BASE " + str(y) + " " + str(x) + "; \n")
                 stdscr.addstr(y, x, " ", curses.color_pair(3))
 
         curses.init_pair(2, curses.COLOR_BLACK, curses.COLOR_YELLOW)
@@ -154,14 +160,18 @@ def draw():
             if v["team"] == "100":
                 if int(v["health"]) > 0:
                     # stats_allied += " | %s %s %03d %03d " % (c, k, int(v["health"]), int(v["ammo"]))
-                    stats_allied.append(f" | {c} {k.ljust(4)} {int(v['health']):03d} {int(v['ammo']):03d} ")
+                    stats_allied.append(
+                        f" | {c} {k.ljust(4)} {int(v['health']):03d} {int(v['ammo']):03d} "
+                    )
                 else:
                     # stats_allied += " | %s %s --- --- " % (c, k)
                     stats_allied.append(f" | {c} {k.ljust(4)} --- --- ")
             elif v["team"] == "200":
                 if int(v["health"]) > 0:
                     # stats_axis += " | %s %s %03d %03d " % (c, k, int(v["health"]), int(v["ammo"]))
-                    stats_axis.append(f" | {c} {k.ljust(4)} {int(v['health']):03d} {int(v['ammo']):03d} ")
+                    stats_axis.append(
+                        f" | {c} {k.ljust(4)} {int(v['health']):03d} {int(v['ammo']):03d} "
+                    )
                 else:
                     # stats_axis += " | %s %s --- --- " % (c, k)
                     stats_axis.append(f" | {c} {k.ljust(4)} --- --- ")
@@ -261,13 +271,13 @@ def main(address="localhost", port=8001, maps=None):
 
     try:
         # Init socket
-        f.write(f'ADDRESS: {address}\n')
+        f.write(f"ADDRESS: {address}\n")
         f.write(f"PORT: {port}\n")
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         if s:
             s.connect((address, port))
-            rfile = s.makefile('rb', -1)
-            wfile = s.makefile('wb', 0)
+            rfile = s.makefile("rb", -1)
+            wfile = s.makefile("wb", 0)
             f.write("SOCKET OPEN %s\n" % (str(s)))
             data = rfile.readline()
             f.write("Server sent: %s\n" % (data))
@@ -307,7 +317,6 @@ def main(address="localhost", port=8001, maps=None):
             s.send(bytes("QUIT\n", encoding="UTF-8"))
             s.close()
 
-
     except Exception as e:
         # Terminate
         if s:
@@ -324,9 +333,15 @@ def main(address="localhost", port=8001, maps=None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--ip', default="localhost", help="Manager's address to connect the render")
-    parser.add_argument('--port', default=8001, help="Manager's port to connect the render")
-    parser.add_argument('--maps', default=None, help="The path to your custom maps directory")
+    parser.add_argument(
+        "--ip", default="localhost", help="Manager's address to connect the render"
+    )
+    parser.add_argument(
+        "--port", default=8001, help="Manager's port to connect the render"
+    )
+    parser.add_argument(
+        "--maps", default=None, help="The path to your custom maps directory"
+    )
 
     args = parser.parse_args()
     main(args.ip, args.port, args.maps)

@@ -2,9 +2,8 @@
 
 +flag (F): team(200) 
   <-
-  .create_control_points(F,25,5,C);
+  .create_control_points(F,25,3,C);
   +control_points(C);
-  .wait(5000);
   .length(C,L);
   +total_control_points(L);
   +patrolling;
@@ -13,7 +12,9 @@
 
 
 +target_reached(T): patrolling & team(200) 
-  <- 
+  <-
+  .print("MEDPACK!");
+  .cure;
   ?patroll_point(P);
   -+patroll_point(P+1);
   -target_reached(T).
@@ -46,12 +47,13 @@
 
 +heading(H): exploring
   <-
+  .cure;
   .wait(2000);
   .turn(0.375).
 
-+heading(H): returning
-  <-
-  .print("returning").
+//+heading(H): returning
+//  <-
+//  .print("returning").
 
 +target_reached(T): team(100)
   <- 

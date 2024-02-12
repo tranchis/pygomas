@@ -106,3 +106,4 @@ venv.bak/
 PGOMAS_Statistics.txt
 
 .idea
+.DS_Store
